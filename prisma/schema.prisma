@@ -1,0 +1,177 @@
+// ============================================================
+// Budget Tracker — Prisma Schema
+// ============================================================
+// This file defines your entire database structure. Prisma uses
+// it to: (1) generate SQL migrations, (2) generate a type-safe
+// TypeScript client, and (3) power Prisma Studio (visual DB browser).
+//
+// Key concepts:
+//   model    = a database table
+//   @id      = primary key
+//   @default = default value (uuid(), now(), etc.)
+//   @unique  = unique constraint
+//   @@unique = composite unique (multiple columns together)
+//   @@index  = database index for faster queries
+//   ?        = optional/nullable field
+//   enum     = a fixed set of allowed values
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---- Enums ----
+// Enums restrict a column to specific values. PostgreSQL stores
+// them efficiently and validates at the DB level.
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+// ---- Models ----
+
+// Currency: EUR, USD, BRL, etc.
+// Stored as a lookup table so transactions/accounts reference it by ID.
+model Currency {
+  id     String @id @default(uuid())
+  code   String @unique // ISO 4217: "EUR", "USD", "BRL"
+  name   String // "Euro", "US Dollar", "Brazilian Real"
+  symbol String // "€", "$", "R$"
+
+  accounts Account[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// AccountType: Checking, Savings, Credit Card, Cash, etc.
+// Separating this into its own table lets you add new types without
+// changing code — just insert a row.
+model AccountType {
+  id   String @id @default(uuid())
+  name String @unique // "Checking", "Savings", "Credit Card"
+
+  accounts Account[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Account: A bank account, credit card, or cash wallet.
+// Balance is NOT stored here — it's computed from transactions
+// (initialBalance + income - expenses + transfers_in - transfers_out).
+// This avoids balance drift (a common bug when you store computed values).
+model Account {
+  id             String  @id @default(uuid())
+  name           String // "Nubank Checking", "Wise EUR"
+  initialBalance Decimal @default(0) @db.Decimal(12, 2)
+  isActive       Boolean @default(true) // soft-delete flag
+
+  // Relations
+  currencyId    String
+  currency      Currency    @relation(fields: [currencyId], references: [id])
+  accountTypeId String
+  accountType   AccountType @relation(fields: [accountTypeId], references: [id])
+
+  // A transaction debits FROM this account (expenses, transfers out)
+  transactionsFrom Transaction[] @relation("TransactionFromAccount")
+  // A transaction credits TO this account (income, transfers in)
+  transactionsTo   Transaction[] @relation("TransactionToAccount")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([currencyId])
+  @@index([accountTypeId])
+}
+
+// Category: Hierarchical — parent categories contain child subcategories.
+// Example: "Food" (parent) → "Groceries", "Restaurants" (children)
+//
+// Self-referencing relation: parentId points to another Category row.
+// Two levels enforced in app logic (not DB constraint).
+model Category {
+  id       String  @id @default(uuid())
+  name     String
+  isActive Boolean @default(true) // soft-delete flag
+
+  // Self-referencing: parent/child hierarchy
+  parentId String?
+  parent   Category?  @relation("CategoryParent", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryParent")
+
+  transactions Transaction[]
+  budgets      Budget[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+}
+
+// Transaction: The core record — every income, expense, or transfer.
+//
+// Design decisions:
+//   - amount is always POSITIVE. Direction is determined by `type`.
+//   - For INCOME:   money goes INTO fromAccountId (the receiving account)
+//   - For EXPENSE:  money goes OUT OF fromAccountId (the paying account)
+//   - For TRANSFER: money moves FROM fromAccountId TO toAccountId
+//   - toAccountId and toAmount are only used for TRANSFER type
+//   - toAmount allows cross-currency transfers (e.g., send 100 EUR, receive 550 BRL)
+//   - importRef is for future bank statement import — used to detect duplicates
+model Transaction {
+  id          String          @id @default(uuid())
+  type        TransactionType
+  amount      Decimal         @db.Decimal(12, 2) // always positive
+  description String?
+  date        DateTime        @db.Date
+  importRef   String?         @unique // deduplication key for bank imports
+
+  // Primary account (used for all transaction types)
+  fromAccountId String
+  fromAccount   Account @relation("TransactionFromAccount", fields: [fromAccountId], references: [id])
+
+  // Destination account (TRANSFER only)
+  toAccountId String?
+  toAccount   Account? @relation("TransactionToAccount", fields: [toAccountId], references: [id])
+  toAmount    Decimal? @db.Decimal(12, 2) // amount in destination currency (cross-currency transfers)
+
+  // Category (required for INCOME/EXPENSE, optional for TRANSFER)
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+  @@index([type])
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([categoryId])
+}
+
+// Budget: Annual spending target per category.
+// Example: "Food" budget for 2025 = €6,000
+// The @@unique constraint ensures one budget entry per year+category pair.
+// Upsert pattern: try to update, create if it doesn't exist.
+model Budget {
+  id     String  @id @default(uuid())
+  year   Int
+  amount Decimal @db.Decimal(12, 2) // annual budgeted amount
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([year, categoryId]) // only one budget per year per category
+  @@index([year])
+}
