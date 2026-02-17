@@ -1,0 +1,67 @@
+// Edit Transaction Page
+// =====================
+// Fetches an existing transaction and renders the form in edit mode.
+//
+// This is a SERVER component that fetches data on the server side,
+// then passes it to the TransactionForm (Client Component).
+// This pattern avoids showing a loading spinner — the page arrives
+// with the data already loaded.
+
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { PageHeader } from "@/components/layout/page-header";
+import { TransactionForm } from "@/components/transactions/transaction-form";
+import { DeleteTransactionButton } from "@/components/transactions/delete-transaction-button";
+
+export const metadata: Metadata = {
+  title: "Edit Transaction",
+};
+
+export default async function EditTransactionPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  // Fetch directly from the database on the server.
+  // No API call needed — Server Components can access the DB directly.
+  const transaction = await prisma.transaction.findUnique({
+    where: { id },
+    include: {
+      fromAccount: { include: { currency: true } },
+      toAccount: { include: { currency: true } },
+      category: true,
+    },
+  });
+
+  // notFound() triggers Next.js's built-in 404 page
+  if (!transaction) {
+    notFound();
+  }
+
+  // Transform the Prisma result into the shape the form expects
+  const initialData = {
+    id: transaction.id,
+    type: transaction.type as "INCOME" | "EXPENSE" | "TRANSFER",
+    amount: Number(transaction.amount),
+    description: transaction.description || "",
+    date: transaction.date,
+    fromAccountId: transaction.fromAccountId,
+    ...(transaction.type === "TRANSFER" && {
+      toAccountId: transaction.toAccountId!,
+      toAmount: transaction.toAmount ? Number(transaction.toAmount) : undefined,
+    }),
+    ...(transaction.categoryId && { categoryId: transaction.categoryId }),
+  };
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Edit Transaction">
+        <DeleteTransactionButton transactionId={id} />
+      </PageHeader>
+      <TransactionForm initialData={initialData} />
+    </div>
+  );
+}
