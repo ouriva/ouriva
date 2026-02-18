@@ -4,10 +4,11 @@
 -- This script creates the PRODUCTION database and user.
 -- For development setup, see database-setup.sql.
 --
--- The production user has restricted permissions — it can only
--- SELECT, INSERT, UPDATE, DELETE on existing tables. It cannot
--- create, alter, or drop tables, create databases, or perform
--- any DDL operations.
+-- Two users are involved in production:
+--   - homelab_admin: Runs migrations (CREATE TABLE, ALTER, etc.)
+--     You already have this user. No changes needed to it.
+--   - budget_app:    Runs the app (SELECT, INSERT, UPDATE, DELETE)
+--     This script creates it with restricted permissions.
 --
 -- Prerequisites:
 --   - PostgreSQL server running
@@ -18,13 +19,6 @@
 --
 -- After running this script, set your production DATABASE_URL to:
 --   DATABASE_URL="postgresql://budget_app:<password>@<db-host>:5432/personal_finance"
---
--- Deployment workflow:
---   1. Apply migrations using the dev user (budget_app_dev) which
---      has DDL permissions:
---      DATABASE_URL="...budget_app_dev..." npx prisma migrate deploy
---   2. Run the app using the prod user (budget_app):
---      DATABASE_URL="...budget_app..." npm run start
 -- ============================================================
 
 -- 1. Create the production database
@@ -52,17 +46,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO budget_ap
 -- 7. Grant sequence access (needed for UUID generation and defaults)
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO budget_app;
 
--- 8. Auto-grant on future tables created by budget_app_dev (via migrations)
---    When you run `prisma migrate deploy` as budget_app_dev and new tables
+-- 8. Auto-grant on future tables created by homelab_admin (via migrations)
+--    When you run `prisma migrate deploy` as homelab_admin and new tables
 --    are created, budget_app automatically gets CRUD access to them.
---
---    NOTE: For this to work, you need to first make budget_app_dev the
---    owner of the production database so it can run migrations:
---      ALTER DATABASE personal_finance OWNER TO budget_app_dev;
---    After migrations, you can optionally change ownership back.
-ALTER DEFAULT PRIVILEGES FOR USER budget_app_dev IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR USER homelab_admin IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO budget_app;
-ALTER DEFAULT PRIVILEGES FOR USER budget_app_dev IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR USER homelab_admin IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO budget_app;
 
 -- ============================================================
