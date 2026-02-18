@@ -34,6 +34,11 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  // Icons — apple-touch-icon is used when adding to iPhone home screen
+  icons: {
+    icon: "/icons/icon-192.svg",
+    apple: "/icons/icon-192.svg",
+  },
 };
 
 // Viewport is exported separately in Next.js 14+ (was part of metadata before).
