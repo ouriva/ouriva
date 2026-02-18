@@ -1,11 +1,12 @@
 // Dashboard Page
 // ==============
-// The `metadata` export sets the <title> tag for this page.
-// Combined with the root layout's template, this renders as:
-// "Dashboard | Budget Tracker"
+// The home screen of the app. Shows account balances, current month
+// income/expenses, and recent transactions. All data is fetched
+// client-side in DashboardContent using parallel API calls.
 
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -18,9 +19,7 @@ export default function DashboardPage() {
         title="Dashboard"
         description="Overview of your finances"
       />
-      <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        Dashboard content coming soon
-      </div>
+      <DashboardContent />
     </div>
   );
 }
