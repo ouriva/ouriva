@@ -30,6 +30,15 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  // Silence the "webpack config with no turbopack config" error.
+  // Serwist injects a webpack config for building the service worker,
+  // but dev mode uses Turbopack (where Serwist is disabled anyway).
+  turbopack: {},
+  // "standalone" traces only the files the server needs and copies
+  // them into .next/standalone. This produces a ~20MB self-contained
+  // server instead of requiring the full node_modules (~300MB+).
+  // Essential for small Docker images, especially on a Raspberry Pi.
+  output: "standalone",
 };
 
 export default withSerwist(nextConfig);

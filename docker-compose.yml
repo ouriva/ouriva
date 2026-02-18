@@ -1,0 +1,38 @@
+# ============================================================
+# Budget Tracker — Docker Compose (Production)
+# ============================================================
+# Defines how to run the app container on the Raspberry Pi.
+#
+# Usage:
+#   Build and start:  docker compose up -d --build
+#   View logs:        docker compose logs -f
+#   Stop:             docker compose down
+#   Rebuild after code changes: docker compose up -d --build
+#
+# The DATABASE_URL connects to PostgreSQL on the same LAN.
+# Replace <db-host> with the IP of your database server
+# (e.g., 192.168.1.X) and <password> with the actual password.
+# ============================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      # Map host port 3000 to container port 3000
+      # Access the app at http://<raspberry-pi-ip>:3000
+      - "3000:3000"
+    environment:
+      # IMPORTANT: Update these values before deploying!
+      - DATABASE_URL=postgresql://budget_app:CHANGE_ME@CHANGE_DB_HOST:5432/personal_finance
+      - NODE_ENV=production
+    restart: unless-stopped
+    # Health check — Docker will restart the container if the
+    # app stops responding. curl hits the root page every 30s.
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

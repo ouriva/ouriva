@@ -1,0 +1,25 @@
+# Dependencies (installed fresh in the container)
+node_modules
+
+# Build output (rebuilt in the container)
+.next
+
+# Environment files (secrets — passed via docker-compose instead)
+.env
+.env.*
+
+# Git
+.git
+.gitignore
+
+# Documentation
+docs
+*.md
+
+# IDE
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
