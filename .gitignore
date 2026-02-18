@@ -30,8 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — never commit real credentials
 .env*
+# Exception: the example template (has no real values, safe to commit)
+!.env.production.example
 
 # vercel
 .vercel

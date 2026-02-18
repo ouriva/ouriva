@@ -5,28 +5,28 @@
 # The image is built on your Mac and transferred via deploy.sh.
 #
 # Setup (one-time on the Pi):
-#   1. Create this directory:  mkdir ~/budget-tracker
-#   2. Copy this file there:   scp docker-compose.yml pi:~/budget-tracker/
-#   3. Edit DATABASE_URL below with your actual values
+#   1. mkdir ~/budget-tracker && cd ~/budget-tracker
+#   2. Copy this file: scp docker-compose.yml pi:~/budget-tracker/
+#   3. Create .env with your real DATABASE_URL:
+#      echo 'DATABASE_URL=postgresql://budget_app:YOUR_PASS@DB_HOST:5432/personal_finance' > .env
 #
 # Usage:
 #   Start:    docker compose up -d
 #   Logs:     docker compose logs -f
 #   Stop:     docker compose down
-#   Restart:  docker compose up -d  (after deploy.sh loads a new image)
 # ============================================================
 
 services:
   app:
     image: budget-tracker:latest
     ports:
-      # Access the app at http://<raspberry-pi-ip>:3000
       - "3000:3000"
     environment:
-      # IMPORTANT: Update these values before first deploy!
-      # <db-host> = LAN IP of your database server (e.g., 192.168.1.X)
-      # <password> = the budget_app password you set in database-production.sql
-      - DATABASE_URL=postgresql://budget_app:CHANGE_ME@CHANGE_DB_HOST:5432/personal_finance
+      # Read DATABASE_URL from the .env file on the Pi.
+      # Docker Compose automatically loads .env from the same
+      # directory as docker-compose.yml. The ${VAR} syntax
+      # substitutes the value from that file.
+      - DATABASE_URL=${DATABASE_URL}
       - NODE_ENV=production
     restart: unless-stopped
     healthcheck:
