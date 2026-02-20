@@ -1,0 +1,46 @@
+# ============================================================
+# Budget Tracker — Dev Database (Local Docker)
+# ============================================================
+# Runs a PostgreSQL instance on your Mac for development.
+# No SSH tunnels needed — the database runs locally.
+#
+# Usage:
+#   Start:    docker compose -f docker-compose.dev.yml up -d
+#   Stop:     docker compose -f docker-compose.dev.yml down
+#   Reset:    docker compose -f docker-compose.dev.yml down -v
+#             (the -v flag deletes the volume, wiping all data)
+#   Logs:     docker compose -f docker-compose.dev.yml logs -f
+#   psql:     docker exec -it budget-tracker-db psql -U budget_app_dev -d personal_finance_dev
+#
+# Data is persisted in a Docker volume (budget_tracker_dev_data).
+# Stopping the container does NOT delete your data. Only
+# `down -v` removes the volume and wipes the database.
+# ============================================================
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: budget-tracker-db
+    ports:
+      # Expose on port 5432 (default PostgreSQL port)
+      - "5432:5432"
+    environment:
+      # These env vars are used by the PostgreSQL image on first
+      # startup to create the database and user automatically.
+      # After the first run, changing them has no effect (the data
+      # volume already contains the initialized database).
+      POSTGRES_DB: personal_finance_dev
+      POSTGRES_USER: budget_app_dev
+      POSTGRES_PASSWORD: dev_password_change_me
+    volumes:
+      # Named volume — persists data across container restarts.
+      # Docker manages the storage location automatically.
+      - budget_tracker_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U budget_app_dev -d personal_finance_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  budget_tracker_dev_data:
