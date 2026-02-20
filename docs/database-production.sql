@@ -41,6 +41,9 @@ GRANT USAGE ON SCHEMA public TO budget_app;
 
 -- 6. Grant CRUD on all existing tables
 --    No ALTER, DROP, TRUNCATE, or REFERENCES — only data operations
+--    NOTE: If you run this BEFORE migrations, these grant on zero tables.
+--    After running migrations, re-run steps 6 and 7 to grant on the
+--    newly created tables.
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO budget_app;
 
 -- 7. Grant sequence access (needed for UUID generation and defaults)

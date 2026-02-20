@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Budget Tracker
 
-## Getting Started
+A mobile-first personal finance PWA for tracking multi-currency bank accounts, categorizing transactions, setting annual budgets, and viewing monthly/annual summaries.
 
-First, run the development server:
+## Tech Stack
+
+- **Next.js 16** (App Router) — full-stack TypeScript
+- **Tailwind CSS + shadcn/ui** — mobile-first UI
+- **Prisma 7** — PostgreSQL ORM with driver adapters
+- **Recharts** — responsive SVG charts
+- **Zod + react-hook-form** — validation and forms
+- **Serwist** — PWA / service worker
+- **Docker** — containerized deployment
+
+## Development Setup
+
+### Prerequisites
+
+- Node.js 20+
+- Docker Desktop (for the dev database)
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Start the dev database
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+This starts a local PostgreSQL 17 container (`personal_finance_dev` / `budget_app_dev`).
+
+### 3. Set up environment
+
+The `.env` file should already point to the local dev database:
+
+```
+DATABASE_URL="postgresql://budget_app_dev:dev_password_change_me@localhost:5432/personal_finance_dev"
+```
+
+### 4. Run migrations and seed
+
+```bash
+npx prisma migrate dev
+npx prisma db seed
+```
+
+### 5. Start the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) on your browser or phone.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Production Deployment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The app is deployed to a Raspberry Pi via Docker, with PostgreSQL on a separate server.
 
-## Learn More
+### First-time setup
 
-To learn more about Next.js, take a look at the following resources:
+1. Set up the production database — see `docs/database-production.sql`
+2. Copy `docker-compose.yml` to the Pi
+3. Create `.env` on the Pi with your `DATABASE_URL`
+4. Configure deploy credentials — see `.env.production.example`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Deploy
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+git tag v1.x.x
+./scripts/deploy.sh
+```
 
-## Deploy on Vercel
+The deploy script builds the Docker image on your Mac, runs migrations via SSH tunnel, transfers the image to the Pi, and restarts the container. See `scripts/deploy.sh` for details.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── (app)/              # Routes with bottom nav layout
+│   │   ├── dashboard/      # Account balances + overview
+│   │   ├── transactions/   # List, add, edit
+│   │   ├── summary/        # Monthly + annual views
+│   │   ├── budget/         # Annual budget management
+│   │   └── settings/       # Accounts, categories, currencies
+│   └── api/                # REST API routes
+├── components/             # UI components (shadcn + custom)
+├── validators/             # Zod schemas
+├── hooks/                  # Data fetching hooks
+├── lib/                    # Prisma client, formatters, utils
+└── types/                  # Shared TypeScript types
+prisma/
+├── schema.prisma           # Database schema
+└── seed.ts                 # Seed data
+docs/                       # Database setup scripts
+scripts/
+└── deploy.sh               # Build + deploy to Raspberry Pi
+```

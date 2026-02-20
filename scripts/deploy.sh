@@ -125,15 +125,32 @@ echo ""
 # Step 2: Run production database migrations
 # ----------------------------------------------------------
 echo "[2/6] Running production database migrations..."
-echo "      Starting SSH tunnel to DB server (port 5433)..."
 
-ssh -f -N -L 5433:localhost:5432 "${DB_SSH}"
-TUNNEL_PID=$!
-sleep 2
+# Check if port 5433 is already in use (leftover tunnel from a previous run).
+# lsof -ti lists PIDs using the port. If something is there, we reuse it
+# instead of failing.
+EXISTING_PID=$(lsof -ti :5433 2>/dev/null || true)
+CREATED_TUNNEL=false
+
+if [ -n "${EXISTING_PID}" ]; then
+  echo "      Port 5433 already in use (PID ${EXISTING_PID}) — reusing existing tunnel."
+else
+  echo "      Starting SSH tunnel to DB server (port 5433)..."
+  # -f = fork to background after authentication
+  # -N = no remote command (tunnel only)
+  # -L = forward local port 5433 to remote port 5432
+  ssh -f -N -L 5433:localhost:5432 "${DB_SSH}"
+  CREATED_TUNNEL=true
+  sleep 2
+fi
 
 DATABASE_URL="${MIGRATE_DB_URL}" npx prisma migrate deploy --schema="${PROJECT_DIR}/prisma/schema.prisma"
 
-kill "${TUNNEL_PID}" 2>/dev/null || true
+# Only kill the tunnel if we created it
+if [ "${CREATED_TUNNEL}" = true ]; then
+  TUNNEL_PID=$(lsof -ti :5433 2>/dev/null || true)
+  kill "${TUNNEL_PID}" 2>/dev/null || true
+fi
 echo "      Migrations applied."
 echo ""
 
@@ -159,14 +176,13 @@ echo ""
 # Step 5: Load image and restart on the Pi
 # ----------------------------------------------------------
 echo "[5/6] Loading image and restarting app on Pi..."
-ssh "${PI_SSH}" << REMOTE_COMMANDS
+ssh "${PI_SSH}" bash -s << REMOTE_COMMANDS
   echo "      Loading Docker image..."
   docker load < /tmp/budget-tracker-image.tar.gz
   rm /tmp/budget-tracker-image.tar.gz
 
   echo "      Restarting app..."
-  cd ${PI_APP_DIR}
-  docker compose up -d
+  cd "${PI_APP_DIR}" && docker compose up -d
   echo "      Done."
 REMOTE_COMMANDS
 
