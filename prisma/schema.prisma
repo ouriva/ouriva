@@ -95,6 +95,18 @@ model Budget {
   @@index([year])
 }
 
+model ImportProfile {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  fileType  String   // "csv" or "xlsx"
+  columnMap Json     // { date: 0, description: 1, amount: 2, reference?: 3 }
+  dateFormat String  @default("yyyy-MM-dd")
+  delimiter String?  // CSV delimiter override (null = auto-detect)
+  skipRows  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum TransactionType {
   INCOME
   EXPENSE
