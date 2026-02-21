@@ -12,7 +12,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Transactions",
@@ -24,7 +24,14 @@ export default function TransactionsPage() {
       <PageHeader
         title="Transactions"
         description="All your income, expenses, and transfers"
-      />
+      >
+        <Link href="/transactions/import">
+          <Button variant="outline" size="sm">
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        </Link>
+      </PageHeader>
 
       {/* Transaction list (Client Component) */}
       <TransactionList />
