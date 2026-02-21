@@ -53,6 +53,7 @@ export function StepUpload({ onComplete }: StepUploadProps) {
   const [accountId, setAccountId] = useState("");
   const [profileId, setProfileId] = useState("");
   const [skipRows, setSkipRows] = useState(0);
+  const [delimiter, setDelimiter] = useState("auto");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [profiles, setProfiles] = useState<ImportProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -90,11 +91,13 @@ export function StepUpload({ onComplete }: StepUploadProps) {
       const formData = new FormData();
       formData.append("file", file);
 
-      // Use profile's skipRows if selected, otherwise use the manual input
+      // Use profile values if selected, otherwise use the manual inputs
       const effectiveSkipRows = selectedProfile ? selectedProfile.skipRows : skipRows;
       formData.append("skipRows", String(effectiveSkipRows));
-      if (selectedProfile?.delimiter) {
-        formData.append("delimiter", selectedProfile.delimiter);
+
+      const effectiveDelimiter = selectedProfile?.delimiter || (delimiter !== "auto" ? delimiter : null);
+      if (effectiveDelimiter) {
+        formData.append("delimiter", effectiveDelimiter);
       }
 
       const res = await fetch("/api/import/parse", {
@@ -150,20 +153,38 @@ export function StepUpload({ onComplete }: StepUploadProps) {
           </Select>
         </div>
 
-        {/* Skip rows — for files with metadata before the header row */}
-        <div>
-          <Label>Skip Rows</Label>
-          <Input
-            type="number"
-            min="0"
-            value={skipRows}
-            onChange={(e) => setSkipRows(parseInt(e.target.value) || 0)}
-            className="mt-2"
-            placeholder="Number of rows to skip before the header"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Skip metadata rows before the column headers (e.g., bank name, date range)
-          </p>
+        {/* CSV parsing options */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label>Delimiter</Label>
+            <Select value={delimiter} onValueChange={setDelimiter}>
+              <SelectTrigger className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="auto">Auto-detect</SelectItem>
+                <SelectItem value=";">Semicolon (;)</SelectItem>
+                <SelectItem value=",">Comma (,)</SelectItem>
+                <SelectItem value="\t">Tab</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-xs text-muted-foreground">
+              European CSVs typically use semicolons
+            </p>
+          </div>
+          <div>
+            <Label>Skip Rows</Label>
+            <Input
+              type="number"
+              min="0"
+              value={skipRows}
+              onChange={(e) => setSkipRows(parseInt(e.target.value) || 0)}
+              className="mt-2"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Skip metadata rows before the column headers
+            </p>
+          </div>
         </div>
 
         {/* Profile selection (optional) */}
