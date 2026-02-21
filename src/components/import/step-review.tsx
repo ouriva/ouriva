@@ -30,6 +30,7 @@ import { Loader2 } from "lucide-react";
 import {
   generateImportRef,
   buildOccurrenceCounters,
+  getAmountString,
 } from "@/lib/import-ref";
 import { parseDate, parseAmount } from "./step-review-utils";
 import type { ImportState } from "./import-wizard";
@@ -76,24 +77,56 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       // Step 1: Parse rows and generate importRefs (async because of Web Crypto)
       const counters = buildOccurrenceCounters(state.rows, state.columnMap);
 
+      const isSplitMode = state.columnMap.debitAmount !== undefined
+        || state.columnMap.creditAmount !== undefined;
+
       const parsed: ParsedRow[] = await Promise.all(
         state.rows.map(async (row, i) => {
           const rawDate = row[state.columnMap.date] ?? "";
           const description = row[state.columnMap.description] ?? "";
-          const rawAmount = row[state.columnMap.amount] ?? "0";
           const reference = state.columnMap.reference !== undefined
             ? row[state.columnMap.reference]
             : undefined;
 
           const date = parseDate(rawDate, state.dateFormat);
-          const amount = parseAmount(rawAmount);
-          const type: "INCOME" | "EXPENSE" = amount >= 0 ? "INCOME" : "EXPENSE";
+
+          // Parse amount based on mode
+          let amount: number;
+          let type: "INCOME" | "EXPENSE";
+
+          if (isSplitMode) {
+            // Split mode: separate Debit (expense) and Credit (income) columns
+            const rawDebit = state.columnMap.debitAmount !== undefined
+              ? (row[state.columnMap.debitAmount] ?? "").trim()
+              : "";
+            const rawCredit = state.columnMap.creditAmount !== undefined
+              ? (row[state.columnMap.creditAmount] ?? "").trim()
+              : "";
+
+            if (rawDebit) {
+              amount = -Math.abs(parseAmount(rawDebit));
+              type = "EXPENSE";
+            } else {
+              amount = Math.abs(parseAmount(rawCredit));
+              type = "INCOME";
+            }
+          } else {
+            // Single column mode: sign determines type
+            const rawAmount = state.columnMap.amount !== undefined
+              ? (row[state.columnMap.amount] ?? "0")
+              : "0";
+            amount = parseAmount(rawAmount);
+            type = amount >= 0 ? "INCOME" : "EXPENSE";
+          }
+
+          // For the hash, use the raw amount string from the file
+          const rawAmountForHash = getAmountString(row, state.columnMap);
 
           const importRef = await generateImportRef({
             accountId: state.accountId,
             date,
             description,
-            amount: String(Math.abs(amount)),
+            amount: rawAmountForHash,
             reference,
             occurrenceCounter: counters[i],
           });

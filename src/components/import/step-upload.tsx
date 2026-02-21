@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -51,6 +52,7 @@ export function StepUpload({ onComplete }: StepUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState("");
   const [profileId, setProfileId] = useState("");
+  const [skipRows, setSkipRows] = useState(0);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [profiles, setProfiles] = useState<ImportProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,11 +89,12 @@ export function StepUpload({ onComplete }: StepUploadProps) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      if (selectedProfile) {
-        formData.append("skipRows", String(selectedProfile.skipRows));
-        if (selectedProfile.delimiter) {
-          formData.append("delimiter", selectedProfile.delimiter);
-        }
+
+      // Use profile's skipRows if selected, otherwise use the manual input
+      const effectiveSkipRows = selectedProfile ? selectedProfile.skipRows : skipRows;
+      formData.append("skipRows", String(effectiveSkipRows));
+      if (selectedProfile?.delimiter) {
+        formData.append("delimiter", selectedProfile.delimiter);
       }
 
       const res = await fetch("/api/import/parse", {
@@ -145,6 +148,22 @@ export function StepUpload({ onComplete }: StepUploadProps) {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Skip rows — for files with metadata before the header row */}
+        <div>
+          <Label>Skip Rows</Label>
+          <Input
+            type="number"
+            min="0"
+            value={skipRows}
+            onChange={(e) => setSkipRows(parseInt(e.target.value) || 0)}
+            className="mt-2"
+            placeholder="Number of rows to skip before the header"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Skip metadata rows before the column headers (e.g., bank name, date range)
+          </p>
         </div>
 
         {/* Profile selection (optional) */}

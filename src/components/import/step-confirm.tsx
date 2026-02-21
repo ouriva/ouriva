@@ -31,20 +31,38 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
 
   // Build the list of transactions to import
   const transactions = useMemo(() => {
+    const isSplitMode = state.columnMap.debitAmount !== undefined
+      || state.columnMap.creditAmount !== undefined;
+
     return state.rows
       .map((row, i) => {
         if (!state.selectedRows[i]) return null;
 
         const rawDate = row[state.columnMap.date] ?? "";
         const description = row[state.columnMap.description] ?? "";
-        const rawAmount = row[state.columnMap.amount] ?? "0";
 
         const date = parseDate(rawDate, state.dateFormat);
-        const amount = parseAmount(rawAmount);
+
+        // Parse amount based on mode
+        let amount: number;
+        if (isSplitMode) {
+          const rawDebit = state.columnMap.debitAmount !== undefined
+            ? (row[state.columnMap.debitAmount] ?? "").trim()
+            : "";
+          const rawCredit = state.columnMap.creditAmount !== undefined
+            ? (row[state.columnMap.creditAmount] ?? "").trim()
+            : "";
+          amount = rawDebit ? Math.abs(parseAmount(rawDebit)) : Math.abs(parseAmount(rawCredit));
+        } else {
+          const rawAmount = state.columnMap.amount !== undefined
+            ? (row[state.columnMap.amount] ?? "0")
+            : "0";
+          amount = Math.abs(parseAmount(rawAmount));
+        }
 
         return {
-          type: state.transactionTypes[i] || (amount >= 0 ? "INCOME" as const : "EXPENSE" as const),
-          amount: Math.abs(amount),
+          type: state.transactionTypes[i] || ("EXPENSE" as const),
+          amount,
           description: description || undefined,
           date,
           fromAccountId: state.accountId,

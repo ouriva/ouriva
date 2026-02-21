@@ -10,8 +10,27 @@
 export type ColumnMap = {
   date: number
   description: number
-  amount: number
+  // Single amount column (positive = income, negative = expense)
+  amount?: number
+  // Split columns (European banks: separate Debit and Credit columns)
+  debitAmount?: number
+  creditAmount?: number
+  // Optional bank reference for most reliable dedup
   reference?: number
+}
+
+/**
+ * Get the raw amount string from a row, handling both single and split columns.
+ * For split columns, returns whichever column has a value (debit or credit).
+ */
+export function getAmountString(row: string[], columnMap: ColumnMap): string {
+  if (columnMap.amount !== undefined) {
+    return row[columnMap.amount] ?? ""
+  }
+  // Split columns: return the non-empty one
+  const debit = columnMap.debitAmount !== undefined ? (row[columnMap.debitAmount] ?? "") : ""
+  const credit = columnMap.creditAmount !== undefined ? (row[columnMap.creditAmount] ?? "") : ""
+  return debit.trim() || credit.trim() || ""
 }
 
 /**
@@ -71,7 +90,7 @@ export function buildOccurrenceCounters(
     const key = [
       row[columnMap.date] ?? "",
       row[columnMap.description] ?? "",
-      row[columnMap.amount] ?? "",
+      getAmountString(row, columnMap),
     ].join("|")
     const count = seen.get(key) ?? 0
     seen.set(key, count + 1)

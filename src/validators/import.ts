@@ -14,14 +14,24 @@ import { z } from "zod/v4";
 
 // --- Column Mapping ---
 // Maps file column indices to transaction fields.
+//
+// Amount can be mapped two ways:
+//   1. Single column: `amount` — positive values = income, negative = expense
+//   2. Split columns: `debitAmount` + `creditAmount` — common in European banks
+//      that have separate "Débito" and "Crédito" columns
+//
 // `reference` is optional — when provided, the bank's own transaction ID
 // is used for deduplication instead of a content-based hash.
 
+const columnIndex = z.number().int().min(0);
+
 export const columnMapSchema = z.object({
-  date: z.number().int().min(0),
-  description: z.number().int().min(0),
-  amount: z.number().int().min(0),
-  reference: z.number().int().min(0).optional(),
+  date: columnIndex,
+  description: columnIndex,
+  amount: columnIndex.optional(),
+  debitAmount: columnIndex.optional(),
+  creditAmount: columnIndex.optional(),
+  reference: columnIndex.optional(),
 });
 
 export type ColumnMap = z.infer<typeof columnMapSchema>;
