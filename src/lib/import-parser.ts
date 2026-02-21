@@ -1,17 +1,18 @@
+// Import File Parser (Server-only)
+// =================================
+// Parses CSV and XLSX files on the server side.
+// This module uses Node.js Buffer and libraries that only work
+// server-side — it should NOT be imported by client components.
+//
+// For client-safe utilities (importRef generation, occurrence counters),
+// see import-ref.ts.
+
 import Papa from "papaparse"
 import readXlsxFile from "read-excel-file"
-import { createHash } from "crypto"
 
 export type ParsedFile = {
   headers: string[]
   rows: string[][]
-}
-
-export type ColumnMap = {
-  date: number
-  description: number
-  amount: number
-  reference?: number
 }
 
 /**
@@ -58,8 +59,12 @@ async function parseXlsx(
   buffer: Buffer,
   skipRows: number
 ): Promise<ParsedFile> {
-  // read-excel-file expects a Buffer directly in Node.js
-  const sheetRows = await readXlsxFile(buffer)
+  // read-excel-file expects an ArrayBuffer in newer versions
+  const arrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength
+  ) as ArrayBuffer
+  const sheetRows = await readXlsxFile(arrayBuffer)
   const allRows = sheetRows.slice(skipRows)
   if (allRows.length === 0) {
     return { headers: [], rows: [] }
@@ -71,64 +76,4 @@ async function parseXlsx(
     row.map((cell) => String(cell ?? ""))
   )
   return { headers, rows }
-}
-
-/**
- * Generate a deterministic importRef for a transaction row.
- *
- * When a bank reference column is mapped, uses that directly for the most
- * reliable dedup: `imp_ref_<accountId>_<reference>`.
- *
- * Otherwise, hashes the transaction data with an occurrence counter:
- * `imp_<sha256(accountId|date|description|amount|occurrenceCounter)>`.
- *
- * The occurrence counter tracks how many times the same (date, description, amount)
- * tuple has appeared before this row in the file. This ensures the same transaction
- * produces the same hash regardless of its row position in overlapping files.
- */
-export function generateImportRef(params: {
-  accountId: string
-  date: string
-  description: string
-  amount: string
-  reference?: string
-  occurrenceCounter: number
-}): string {
-  if (params.reference) {
-    return `imp_ref_${params.accountId}_${params.reference}`
-  }
-
-  const data = [
-    params.accountId,
-    params.date,
-    params.description,
-    params.amount,
-    String(params.occurrenceCounter),
-  ].join("|")
-
-  const hash = createHash("sha256").update(data).digest("hex").slice(0, 16)
-  return `imp_${hash}`
-}
-
-/**
- * Build occurrence counters for a set of rows.
- * Returns an array of counters, one per row, where each counter represents
- * how many times the same (date, description, amount) tuple appeared
- * before that row.
- */
-export function buildOccurrenceCounters(
-  rows: string[][],
-  columnMap: ColumnMap
-): number[] {
-  const seen = new Map<string, number>()
-  return rows.map((row) => {
-    const key = [
-      row[columnMap.date] ?? "",
-      row[columnMap.description] ?? "",
-      row[columnMap.amount] ?? "",
-    ].join("|")
-    const count = seen.get(key) ?? 0
-    seen.set(key, count + 1)
-    return count
-  })
 }
