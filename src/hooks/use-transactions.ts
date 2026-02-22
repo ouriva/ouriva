@@ -26,6 +26,8 @@ export interface TransactionWithRelations {
   type: "INCOME" | "EXPENSE" | "TRANSFER";
   amount: string; // Decimal comes as string from JSON
   description: string | null;
+  friendlyName: string | null;
+  notes: string | null;
   date: string; // ISO date string
   fromAccount: {
     id: string;
