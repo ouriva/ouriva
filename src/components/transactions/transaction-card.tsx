@@ -7,7 +7,7 @@
 // This is a Server Component (no "use client") — it receives
 // data as props and renders HTML. No browser JavaScript needed.
 
-import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, AlertTriangle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
@@ -45,7 +45,10 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
   const currency = transaction.fromAccount.currency;
 
   // Build the subtitle: category name or transfer accounts
-  const subtitle =
+  const isUncategorized =
+    transaction.type !== "TRANSFER" && !transaction.category;
+
+  const subtitleText =
     transaction.type === "TRANSFER"
       ? `${transaction.fromAccount.name} → ${transaction.toAccount?.name}`
       : transaction.category
@@ -72,9 +75,18 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
       {/* Description and category */}
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">
-          {transaction.description || subtitle}
+          {transaction.description || subtitleText}
         </p>
-        <p className="truncate text-sm text-muted-foreground">{subtitle}</p>
+        <p className="truncate text-sm text-muted-foreground">
+          {isUncategorized ? (
+            <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Uncategorized
+            </span>
+          ) : (
+            subtitleText
+          )}
+        </p>
       </div>
 
       {/* Amount and date */}
