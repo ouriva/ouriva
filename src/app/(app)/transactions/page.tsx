@@ -21,10 +21,7 @@ export const metadata: Metadata = {
 export default function TransactionsPage() {
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Transactions"
-        description="All your income, expenses, and transfers"
-      >
+      <PageHeader title="Transactions">
         <Link href="/transactions/import">
           <Button variant="outline" size="sm">
             <Upload className="mr-2 h-4 w-4" />
