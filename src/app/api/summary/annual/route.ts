@@ -96,6 +96,21 @@ export async function GET(request: NextRequest) {
             }
             parent.children.get(tx.category.id)!.total += amount;
           }
+        } else {
+          // Uncategorized expenses — group under a special bucket
+          const uncatKey = "__uncategorized__";
+          if (!categoryMap.has(uncatKey)) {
+            categoryMap.set(uncatKey, {
+              id: uncatKey,
+              name: "Uncategorized",
+              total: 0,
+              months: new Array(12).fill(0),
+              children: new Map(),
+            });
+          }
+          const uncat = categoryMap.get(uncatKey)!;
+          uncat.total += amount;
+          uncat.months[monthIndex] += amount;
         }
       }
     }

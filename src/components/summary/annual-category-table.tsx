@@ -11,6 +11,8 @@
 
 "use client";
 
+import { AlertTriangle } from "lucide-react";
+
 const MONTH_LABELS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
@@ -67,7 +69,14 @@ export function AnnualCategoryTable({ categories }: AnnualCategoryTableProps) {
           {categories.map((category) => (
             <tr key={category.id} className="border-b">
               <td className="sticky left-0 bg-background px-3 py-2 font-medium">
-                {category.name}
+                {category.id === "__uncategorized__" ? (
+                  <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {category.name}
+                  </span>
+                ) : (
+                  category.name
+                )}
               </td>
               <td className="px-3 py-2 text-right tabular-nums font-semibold">
                 {category.total.toFixed(2)}

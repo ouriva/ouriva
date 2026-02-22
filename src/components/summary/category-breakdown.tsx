@@ -10,6 +10,7 @@
 
 "use client";
 
+import { AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 interface ChildCategory {
@@ -57,7 +58,12 @@ export function CategoryBreakdown({
               {/* Parent category row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{category.name}</span>
+                  <span className={`font-medium ${category.id === "__uncategorized__" ? "inline-flex items-center gap-1 text-amber-600 dark:text-amber-400" : ""}`}>
+                    {category.id === "__uncategorized__" && (
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                    )}
+                    {category.name}
+                  </span>
                   <span className="text-sm text-muted-foreground">
                     {percentage}%
                   </span>

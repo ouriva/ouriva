@@ -70,32 +70,46 @@ export async function GET(request: NextRequest) {
         totalExpense += amount;
       }
 
-      // Only build category breakdown for expenses
-      if (tx.type === "EXPENSE" && tx.category) {
-        const parentCategory = tx.category.parent || tx.category;
-        const isChild = !!tx.category.parent;
+      // Build category breakdown for expenses
+      if (tx.type === "EXPENSE") {
+        if (tx.category) {
+          const parentCategory = tx.category.parent || tx.category;
+          const isChild = !!tx.category.parent;
 
-        if (!categoryMap.has(parentCategory.id)) {
-          categoryMap.set(parentCategory.id, {
-            id: parentCategory.id,
-            name: parentCategory.name,
-            total: 0,
-            children: new Map(),
-          });
-        }
-
-        const parent = categoryMap.get(parentCategory.id)!;
-        parent.total += amount;
-
-        if (isChild) {
-          if (!parent.children.has(tx.category.id)) {
-            parent.children.set(tx.category.id, {
-              id: tx.category.id,
-              name: tx.category.name,
+          if (!categoryMap.has(parentCategory.id)) {
+            categoryMap.set(parentCategory.id, {
+              id: parentCategory.id,
+              name: parentCategory.name,
               total: 0,
+              children: new Map(),
             });
           }
-          parent.children.get(tx.category.id)!.total += amount;
+
+          const parent = categoryMap.get(parentCategory.id)!;
+          parent.total += amount;
+
+          if (isChild) {
+            if (!parent.children.has(tx.category.id)) {
+              parent.children.set(tx.category.id, {
+                id: tx.category.id,
+                name: tx.category.name,
+                total: 0,
+              });
+            }
+            parent.children.get(tx.category.id)!.total += amount;
+          }
+        } else {
+          // Uncategorized expenses — group under a special bucket
+          const uncatKey = "__uncategorized__";
+          if (!categoryMap.has(uncatKey)) {
+            categoryMap.set(uncatKey, {
+              id: uncatKey,
+              name: "Uncategorized",
+              total: 0,
+              children: new Map(),
+            });
+          }
+          categoryMap.get(uncatKey)!.total += amount;
         }
       }
     }
