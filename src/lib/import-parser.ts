@@ -33,12 +33,28 @@ export async function parseFile(
   return parseXlsx(buffer, skipRows)
 }
 
+/**
+ * Decode a buffer to text, auto-detecting encoding.
+ * Tries UTF-8 first. If the result contains the Unicode replacement
+ * character (U+FFFD), the file isn't valid UTF-8 — fall back to
+ * Latin-1 (Windows-1252), which is common for European bank exports.
+ */
+function decodeBuffer(buffer: Buffer): string {
+  const utf8 = buffer.toString("utf-8")
+  if (!utf8.includes("\uFFFD")) {
+    return utf8
+  }
+  // Latin-1 maps bytes 0x00–0xFF directly to Unicode code points,
+  // so it never produces replacement characters.
+  return buffer.toString("latin1")
+}
+
 function parseCsv(
   buffer: Buffer,
   skipRows: number,
   delimiter?: string
 ): ParsedFile {
-  const text = buffer.toString("utf-8")
+  const text = decodeBuffer(buffer)
 
   // Skip rows on the raw text BEFORE parsing, so the count matches
   // physical line numbers in the file (including blank lines).
