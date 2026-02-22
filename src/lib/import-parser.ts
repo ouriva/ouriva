@@ -39,19 +39,25 @@ function parseCsv(
   delimiter?: string
 ): ParsedFile {
   const text = buffer.toString("utf-8")
-  const result = Papa.parse<string[]>(text, {
+
+  // Skip rows on the raw text BEFORE parsing, so the count matches
+  // physical line numbers in the file (including blank lines).
+  // This avoids confusion when skipEmptyLines removes blanks.
+  const lines = text.split(/\r?\n/)
+  const remaining = lines.slice(skipRows).join("\n")
+
+  const result = Papa.parse<string[]>(remaining, {
     header: false,
     skipEmptyLines: true,
     delimiter: delimiter || undefined, // undefined = auto-detect
   })
 
-  const allRows = result.data.slice(skipRows)
-  if (allRows.length === 0) {
+  if (result.data.length === 0) {
     return { headers: [], rows: [] }
   }
 
-  const headers = allRows[0]
-  const rows = allRows.slice(1)
+  const headers = result.data[0]
+  const rows = result.data.slice(1)
   return { headers, rows }
 }
 
