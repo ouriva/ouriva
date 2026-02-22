@@ -41,6 +41,8 @@ export interface ImportState {
   transactionTypes: ("INCOME" | "EXPENSE")[];
   importRefs: string[];
   duplicateRefs: Set<string>;
+  friendlyNames: (string | undefined)[];
+  notes: (string | undefined)[];
 }
 
 const STEP_LABELS = ["Upload", "Map Columns", "Review", "Confirm"];
@@ -93,6 +95,8 @@ export function ImportWizard() {
               transactionTypes: [],
               importRefs: [],
               duplicateRefs: new Set(),
+              friendlyNames: [],
+              notes: [],
             });
             setStep(1);
           }}
@@ -113,10 +117,10 @@ export function ImportWizard() {
       {step === 2 && state && (
         <StepReview
           state={state}
-          onComplete={(selectedRows, categoryIds, transactionTypes, importRefs, duplicateRefs) => {
+          onComplete={(selectedRows, categoryIds, transactionTypes, importRefs, duplicateRefs, friendlyNames, notes) => {
             setState((prev) =>
               prev
-                ? { ...prev, selectedRows, categoryIds, transactionTypes, importRefs, duplicateRefs }
+                ? { ...prev, selectedRows, categoryIds, transactionTypes, importRefs, duplicateRefs, friendlyNames, notes }
                 : prev
             );
             setStep(3);

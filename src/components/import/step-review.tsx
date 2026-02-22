@@ -57,7 +57,9 @@ interface StepReviewProps {
     categoryIds: (string | undefined)[],
     transactionTypes: ("INCOME" | "EXPENSE")[],
     importRefs: string[],
-    duplicateRefs: Set<string>
+    duplicateRefs: Set<string>,
+    friendlyNames: (string | undefined)[],
+    notes: (string | undefined)[]
   ) => void;
   onBack: () => void;
 }
@@ -69,6 +71,8 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const [categoryIds, setCategoryIds] = useState<(string | undefined)[]>([]);
   const [transactionTypes, setTransactionTypes] = useState<("INCOME" | "EXPENSE")[]>([]);
   const [duplicateRefs, setDuplicateRefs] = useState<Set<string>>(new Set());
+  const [friendlyNames, setFriendlyNames] = useState<(string | undefined)[]>([]);
+  const [notes, setNotes] = useState<(string | undefined)[]>([]);
   const [isChecking, setIsChecking] = useState(true);
 
   // Parse rows, generate importRefs, load categories, check duplicates
@@ -166,6 +170,8 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       setSelectedRows(parsed.map((r) => !dupSet.has(r.importRef)));
       setCategoryIds(new Array(parsed.length).fill(undefined));
       setTransactionTypes(parsed.map((r) => r.type));
+      setFriendlyNames(new Array(parsed.length).fill(undefined));
+      setNotes(new Array(parsed.length).fill(undefined));
       setIsChecking(false);
     }
     init();
@@ -264,6 +270,29 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
                   <p className="truncate text-sm font-medium">
                     {row.description || "(no description)"}
                   </p>
+                  {/* Inline edit: friendly name and notes */}
+                  <input
+                    type="text"
+                    placeholder="Display name (optional)"
+                    value={friendlyNames[i] ?? ""}
+                    onChange={(e) => {
+                      const next = [...friendlyNames];
+                      next[i] = e.target.value || undefined;
+                      setFriendlyNames(next);
+                    }}
+                    className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Notes (optional)"
+                    value={notes[i] ?? ""}
+                    onChange={(e) => {
+                      const next = [...notes];
+                      next[i] = e.target.value || undefined;
+                      setNotes(next);
+                    }}
+                    className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
+                  />
                   <div className="flex items-center gap-2">
                     {/* Type toggle */}
                     <Select
@@ -345,7 +374,9 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
                 categoryIds,
                 transactionTypes,
                 parsedRows.map((r) => r.importRef),
-                duplicateRefs
+                duplicateRefs,
+                friendlyNames,
+                notes
               )
             }
             disabled={selectedCount === 0}

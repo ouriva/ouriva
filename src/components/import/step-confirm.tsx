@@ -64,6 +64,8 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
           type: state.transactionTypes[i] || ("EXPENSE" as const),
           amount,
           description: description || undefined,
+          friendlyName: state.friendlyNames[i] || undefined,
+          notes: state.notes[i] || undefined,
           date,
           fromAccountId: state.accountId,
           categoryId: state.categoryIds[i],
