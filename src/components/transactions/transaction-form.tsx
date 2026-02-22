@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 
 // Types for the account and category data loaded from the API
@@ -57,6 +58,8 @@ interface TransactionFormData {
   type: "INCOME" | "EXPENSE" | "TRANSFER";
   amount: number;
   description?: string;
+  friendlyName?: string;
+  notes?: string;
   date: Date;
   fromAccountId: string;
   toAccountId?: string;
@@ -95,6 +98,8 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
       type: "EXPENSE",
       amount: undefined,
       description: "",
+      friendlyName: "",
+      notes: "",
       date: new Date(),
       fromAccountId: "",
       categoryId: "",
@@ -218,6 +223,32 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           placeholder="What was this for?"
           {...register("description")}
           className="mt-2"
+        />
+      </div>
+
+      {/* Display Name (friendly name) */}
+      <div>
+        <Label htmlFor="friendlyName">Display Name</Label>
+        <Input
+          id="friendlyName"
+          placeholder="Short name to display (optional)"
+          {...register("friendlyName")}
+          className="mt-2"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">
+          Overrides the description when shown in lists
+        </p>
+      </div>
+
+      {/* Notes */}
+      <div>
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          placeholder="Additional details (optional)"
+          {...register("notes")}
+          className="mt-2"
+          rows={3}
         />
       </div>
 

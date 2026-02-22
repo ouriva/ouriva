@@ -47,6 +47,8 @@ export default async function EditTransactionPage({
     type: transaction.type as "INCOME" | "EXPENSE" | "TRANSFER",
     amount: Number(transaction.amount),
     description: transaction.description || "",
+    friendlyName: transaction.friendlyName || "",
+    notes: transaction.notes || "",
     date: transaction.date,
     fromAccountId: transaction.fromAccountId,
     ...(transaction.type === "TRANSFER" && {
