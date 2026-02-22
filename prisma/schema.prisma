@@ -63,6 +63,8 @@ model Transaction {
   type          TransactionType
   amount        Decimal         @db.Decimal(12, 2)
   description   String?
+  friendlyName  String?         @db.VarChar(255)
+  notes         String?         @db.Text
   date          DateTime        @db.Date
   importRef     String?         @unique
   fromAccountId String
