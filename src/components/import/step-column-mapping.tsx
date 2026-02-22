@@ -151,8 +151,8 @@ export function StepColumnMapping({
           fileType: state.fileType,
           columnMap: getCleanColumnMap(),
           dateFormat,
-          delimiter: null,
-          skipRows: 0,
+          delimiter: state.delimiter,
+          skipRows: state.skipRows,
         }),
       });
       setProfileName("");

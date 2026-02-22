@@ -28,6 +28,8 @@ export interface ImportState {
   headers: string[];
   rows: string[][];
   accountId: string;
+  skipRows: number;
+  delimiter: string | null;
 
   // Step 2: Column mapping
   columnMap: ColumnMap;
@@ -70,10 +72,22 @@ export function ImportWizard() {
       {step === 0 && (
         <StepUpload
           onComplete={(data) => {
+            // If a saved profile was selected, use its column mapping
+            // and date format. Otherwise fall back to sensible defaults.
+            const profile = data.profile;
+
             setState({
-              ...data,
-              columnMap: { date: 0, description: 1, amount: 2 },
-              dateFormat: "yyyy-MM-dd",
+              fileName: data.fileName,
+              fileType: data.fileType,
+              headers: data.headers,
+              rows: data.rows,
+              accountId: data.accountId,
+              skipRows: data.skipRows,
+              delimiter: data.delimiter,
+              columnMap: profile?.columnMap
+                ? (profile.columnMap as ColumnMap)
+                : { date: 0, description: 1, amount: 2 },
+              dateFormat: profile?.dateFormat || "yyyy-MM-dd",
               selectedRows: [],
               categoryIds: [],
               transactionTypes: [],

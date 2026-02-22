@@ -44,6 +44,8 @@ interface StepUploadProps {
     headers: string[];
     rows: string[][];
     accountId: string;
+    skipRows: number;
+    delimiter: string | null;
     profile?: ImportProfile;
   }) => void;
 }
@@ -112,12 +114,19 @@ export function StepUpload({ onComplete }: StepUploadProps) {
 
       const { data } = await res.json();
 
+      // Pass the effective skipRows/delimiter so the wizard can store them
+      // for later use (e.g., saving a profile in the column mapping step)
+      const effectiveSkip = selectedProfile ? selectedProfile.skipRows : skipRows;
+      const effectiveDelim = selectedProfile?.delimiter || (delimiter !== "auto" ? delimiter : null);
+
       onComplete({
         fileName: data.fileName,
         fileType: data.fileType,
         headers: data.headers,
         rows: data.rows,
         accountId,
+        skipRows: effectiveSkip,
+        delimiter: effectiveDelim,
         profile: selectedProfile,
       });
     } catch (err) {
