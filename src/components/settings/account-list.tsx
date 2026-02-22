@@ -9,8 +9,23 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ToggleLeft, ToggleRight } from "lucide-react";
-import { SettingsItemForm } from "./settings-item-form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Loader2, Pencil, Plus, ToggleLeft, ToggleRight } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 
@@ -84,24 +99,12 @@ export function AccountList() {
     );
   }
 
-  // Build select fields for the form dynamically from loaded data
-  const formFields = [
-    { name: "name", label: "Account Name", placeholder: "e.g., Main Checking" },
-    {
-      name: "initialBalance",
-      label: "Initial Balance",
-      placeholder: "0.00",
-      type: "number",
-    },
-  ];
-
   return (
     <div className="space-y-4">
       <div className="flex justify-end">
-        <SettingsItemForm
-          title="Account"
-          fields={formFields}
-          apiEndpoint="/api/accounts"
+        <AccountForm
+          currencies={currencies}
+          accountTypes={accountTypes}
           onSuccess={fetchData}
         />
       </div>
@@ -123,18 +126,14 @@ export function AccountList() {
               </p>
             </div>
             <div className="flex items-center gap-1">
-              <SettingsItemForm
-                title="Account"
-                fields={formFields}
-                initialValues={{
-                  name: account.name,
-                  initialBalance: String(account.initialBalance),
-                }}
-                apiEndpoint="/api/accounts"
-                itemId={account.id}
+              <AccountForm
+                currencies={currencies}
+                accountTypes={accountTypes}
+                account={account}
                 onSuccess={fetchData}
                 trigger={
                   <Button variant="ghost" size="sm">
+                    <Pencil className="mr-1 h-4 w-4" />
                     Edit
                   </Button>
                 }
@@ -157,5 +156,185 @@ export function AccountList() {
         </Card>
       ))}
     </div>
+  );
+}
+
+// --- Account Form (Sheet) ---
+
+interface AccountFormProps {
+  currencies: Currency[];
+  accountTypes: AccountType[];
+  account?: Account;
+  onSuccess: () => void;
+  trigger?: React.ReactNode;
+}
+
+function AccountForm({
+  currencies,
+  accountTypes,
+  account,
+  onSuccess,
+  trigger,
+}: AccountFormProps) {
+  const isEditing = !!account;
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [name, setName] = useState(account?.name || "");
+  const [initialBalance, setInitialBalance] = useState(
+    account ? String(account.initialBalance) : "0"
+  );
+  const [currencyId, setCurrencyId] = useState(account?.currency.id || "");
+  const [accountTypeId, setAccountTypeId] = useState(
+    account?.accountType.id || ""
+  );
+
+  function resetForm() {
+    if (account) {
+      setName(account.name);
+      setInitialBalance(String(account.initialBalance));
+      setCurrencyId(account.currency.id);
+      setAccountTypeId(account.accountType.id);
+    } else {
+      setName("");
+      setInitialBalance("0");
+      setCurrencyId("");
+      setAccountTypeId("");
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const url = isEditing
+        ? `/api/accounts/${account.id}`
+        : "/api/accounts";
+      const response = await fetch(url, {
+        method: isEditing ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          initialBalance: parseFloat(initialBalance) || 0,
+          currencyId,
+          accountTypeId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || "Failed to save");
+      }
+
+      setIsOpen(false);
+      resetForm();
+      onSuccess();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Failed to save");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Sheet
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+        if (open) resetForm();
+      }}
+    >
+      <SheetTrigger asChild>
+        {trigger || (
+          <Button size="sm">
+            <Plus className="mr-1 h-4 w-4" />
+            Add
+          </Button>
+        )}
+      </SheetTrigger>
+      <SheetContent side="bottom" className="rounded-t-xl">
+        <SheetHeader>
+          <SheetTitle>
+            {isEditing ? "Edit Account" : "New Account"}
+          </SheetTitle>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          <div>
+            <Label htmlFor="acc-name">Account Name</Label>
+            <Input
+              id="acc-name"
+              placeholder="e.g., Main Checking"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-2"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="acc-currency">Currency</Label>
+            <Select value={currencyId} onValueChange={setCurrencyId} required>
+              <SelectTrigger id="acc-currency" className="mt-2">
+                <SelectValue placeholder="Select currency" />
+              </SelectTrigger>
+              <SelectContent>
+                {currencies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.code} ({c.symbol})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="acc-type">Account Type</Label>
+            <Select value={accountTypeId} onValueChange={setAccountTypeId} required>
+              <SelectTrigger id="acc-type" className="mt-2">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {accountTypes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="acc-balance">Initial Balance</Label>
+            <Input
+              id="acc-balance"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={initialBalance}
+              onChange={(e) => setInitialBalance(e.target.value)}
+              className="mt-2"
+              inputMode="decimal"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={() => setIsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" className="flex-1" disabled={isSubmitting || !currencyId || !accountTypeId}>
+              {isSubmitting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {isEditing ? "Update" : "Create"}
+            </Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
   );
 }
