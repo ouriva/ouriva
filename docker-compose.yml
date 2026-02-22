@@ -5,8 +5,8 @@
 # The image is built on your Mac and transferred via deploy.sh.
 #
 # Setup (one-time on the Pi):
-#   1. mkdir ~/budget-tracker && cd ~/budget-tracker
-#   2. Copy this file: scp docker-compose.yml pi:~/budget-tracker/
+#   1. mkdir ~/spendtinel && cd ~/spendtinel
+#   2. Copy this file: scp docker-compose.yml pi:~/spendtinel/
 #   3. Create .env with your real DATABASE_URL:
 #      echo 'DATABASE_URL=postgresql://budget_app:YOUR_PASS@DB_HOST:5432/personal_finance' > .env
 #
@@ -18,7 +18,7 @@
 
 services:
   app:
-    image: budget-tracker:latest
+    image: spendtinel:latest
     ports:
       - "3000:3000"
     environment:

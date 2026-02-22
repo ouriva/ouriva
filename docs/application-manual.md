@@ -1705,7 +1705,7 @@ CMD ["node", "server.js"]
 services:
   db:
     image: postgres:17-alpine
-    container_name: budget-tracker-db
+    container_name: spendtinel-db
     ports:
       - "5432:5432"
     environment:
@@ -1713,19 +1713,19 @@ services:
       POSTGRES_USER: budget_app_dev
       POSTGRES_PASSWORD: dev_password_change_me
     volumes:
-      - budget_tracker_dev_data:/var/lib/postgresql/data
+      - spendtinel_dev_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U budget_app_dev -d personal_finance_dev"]
 ```
 
-**Named volume** (`budget_tracker_dev_data`) — Data persists across container restarts. `docker compose down` keeps the volume; `docker compose down -v` deletes it.
+**Named volume** (`spendtinel_dev_data`) — Data persists across container restarts. `docker compose down` keeps the volume; `docker compose down -v` deletes it.
 
 **`docker-compose.yml`** — Production deployment:
 
 ```yaml
 services:
   app:
-    image: budget-tracker:latest
+    image: spendtinel:latest
     ports:
       - "3000:3000"
     environment:
