@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ============================================================
-# Budget Tracker — Deploy Script
+# Spendtinel — Deploy Script
 # ============================================================
 # Builds the Docker image on your Mac, runs production database
 # migrations, transfers the image to the Raspberry Pi, and
@@ -104,7 +104,7 @@ if [ "${TAG_COMMIT}" != "${HEAD_COMMIT}" ]; then
   fi
 fi
 
-echo "=== Budget Tracker Deploy — ${VERSION} ==="
+echo "=== Spendtinel Deploy — ${VERSION} ==="
 echo ""
 
 # ----------------------------------------------------------

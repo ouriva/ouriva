@@ -1,5 +1,5 @@
 # ============================================================
-# Budget Tracker — Dev Database (Local Docker)
+# Spendtinel — Dev Database (Local Docker)
 # ============================================================
 # Runs a PostgreSQL instance on your Mac for development.
 # No SSH tunnels needed — the database runs locally.

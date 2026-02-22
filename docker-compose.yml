@@ -1,5 +1,5 @@
 # ============================================================
-# Budget Tracker — Docker Compose (Production)
+# Spendtinel — Docker Compose (Production)
 # ============================================================
 # Runs the pre-built app image on the Raspberry Pi.
 # The image is built on your Mac and transferred via deploy.sh.

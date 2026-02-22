@@ -2,7 +2,7 @@
 
 ## Context
 
-This document outlines a monetization strategy for the Budget Tracker app based on a competitive analysis of the personal finance app market as of early 2026. The goal is to identify the most realistic path to sustainable revenue as an indie product, without venture capital or a large team.
+This document outlines a monetization strategy for the Spendtinel app based on a competitive analysis of the personal finance app market as of early 2026. The goal is to identify the most realistic path to sustainable revenue as an indie product, without venture capital or a large team.
 
 ---
 

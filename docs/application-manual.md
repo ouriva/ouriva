@@ -1,4 +1,4 @@
-# Budget Tracker — Application Manual
+# Spendtinel — Application Manual
 
 A comprehensive guide to every part of this application: what each technology does, why it was chosen, how the pieces fit together, and what every file in the codebase does.
 
@@ -33,6 +33,9 @@ This is a **personal finance application** that replaces an Excel spreadsheet. I
 
 - Track multiple bank accounts across different currencies (EUR, USD, BRL, etc.)
 - Record income, expenses, and transfers between accounts
+- Import bank statements from CSV and Excel files with column mapping and duplicate detection
+- Add friendly display names and notes to transactions
+- Search and filter transactions by text, type, account, category, or date range
 - Organize transactions with hierarchical categories (e.g., Food > Groceries)
 - Set annual budgets per category and track spending against them
 - View monthly and annual summaries with charts
@@ -168,7 +171,7 @@ interface PaginatedResponse<T> {
 
 **How it differs from other libraries**: Most component libraries (Material UI, Chakra) ship as npm packages you import. You can't modify their internals. shadcn/ui copies the source code into `src/components/ui/` — you own it and can modify anything.
 
-**Components used**: `Button`, `Card`, `Dialog`, `Input`, `Label`, `Select`, `Separator`, `Sheet`, `Tabs`, `Badge`
+**Components used**: `Button`, `Card`, `Checkbox`, `Dialog`, `Input`, `Label`, `Select`, `Separator`, `Sheet`, `Tabs`, `Badge`, `Textarea`
 
 **Configuration**: `components.json` tells the shadcn CLI where to place files, which style to use (New York), and the base color (Zinc).
 
@@ -270,7 +273,7 @@ import { Plus, Trash2, ChevronLeft } from "lucide-react";
 ## 3. Project Structure
 
 ```
-budget-tracker/
+spendtinel/
 ├── src/                          # All application source code
 │   ├── app/                      # Next.js App Router (pages + API)
 │   │   ├── layout.tsx            # Root layout (HTML shell)
@@ -282,7 +285,7 @@ budget-tracker/
 │   │   ├── (app)/                # Route group (bottom nav layout)
 │   │   │   ├── layout.tsx        # Adds bottom nav + padding
 │   │   │   ├── dashboard/        # Home screen
-│   │   │   ├── transactions/     # Transaction CRUD
+│   │   │   ├── transactions/     # Transaction CRUD + import
 │   │   │   ├── summary/          # Monthly + annual views
 │   │   │   ├── budget/           # Budget management
 │   │   │   └── settings/         # Configuration pages
@@ -293,6 +296,7 @@ budget-tracker/
 │   │   ├── providers/            # Context providers
 │   │   ├── dashboard/            # Dashboard-specific
 │   │   ├── transactions/         # Transaction-specific
+│   │   ├── import/               # Bank statement import wizard
 │   │   ├── summary/              # Summary-specific
 │   │   ├── budget/               # Budget-specific
 │   │   ├── charts/               # Recharts wrappers
@@ -300,7 +304,8 @@ budget-tracker/
 │   ├── lib/                      # Shared utilities
 │   │   ├── prisma.ts             # Database client singleton
 │   │   ├── utils.ts              # cn() class merger
-│   │   └── formatters.ts         # Currency/date formatting
+│   │   ├── formatters.ts         # Currency/date formatting
+│   │   └── import-ref.ts         # Import deduplication hash generation
 │   ├── validators/               # Zod schemas
 │   ├── hooks/                    # Custom React hooks
 │   ├── types/                    # Shared TypeScript types
@@ -384,6 +389,8 @@ This is the project's manifest. It declares the project name, scripts, and every
 - `recharts` — Charts
 - `date-fns` — Date utilities
 - `lucide-react` — Icons
+- `papaparse` — CSV parsing (for bank statement import)
+- `read-excel-file` — Excel (.xlsx/.xls) parsing (for bank statement import)
 - `next-themes` — Dark mode
 - `radix-ui` — Accessible UI primitives (used by shadcn/ui)
 - `class-variance-authority`, `clsx`, `tailwind-merge` — CSS utilities
@@ -620,6 +627,8 @@ model Transaction {
   amount        Decimal         @db.Decimal(12, 2)
   toAmount      Decimal?        @db.Decimal(12, 2) // For cross-currency transfers
   description   String?
+  friendlyName  String?         @db.VarChar(255)   // User-facing display name
+  notes         String?         @db.Text           // Longer user notes
   date          DateTime        @db.Date           // Date only, no time
   importRef     String?         @unique            // Deduplication key
   fromAccountId String
@@ -639,6 +648,10 @@ model Transaction {
 **Amount is always positive** — The `type` determines direction. An expense of €50 is stored as `amount: 50, type: EXPENSE`, not `amount: -50`. This avoids confusion and makes aggregation queries simpler.
 
 **`toAmount` for cross-currency transfers** — When you transfer €200 and receive $218.50, `amount = 200` (from account) and `toAmount = 218.50` (to account). The exchange rate is implicit.
+
+**`friendlyName`** — An optional user-facing display name. Bank statement descriptions are often cryptic (e.g., "POS DEBIT 0042 LIDL"). The friendly name lets you rename it to something readable (e.g., "Groceries at Lidl"). When present, the UI displays `friendlyName` as the primary title and `description` as a secondary subtitle.
+
+**`notes`** — Free-form text for longer annotations. Useful for recording context like "Birthday dinner with friends" or "Annual gym membership renewal".
 
 **`importRef`** — A unique identifier for imported transactions (e.g., from a bank statement CSV). When importing, you can check if `importRef` already exists to avoid duplicates.
 
@@ -754,6 +767,12 @@ api/
 ├── budgets/
 │   ├── route.ts          → GET (list), POST (bulk upsert)
 │   └── [year]/route.ts   → GET (budget vs actual)
+├── import/
+│   ├── check-duplicates/route.ts → POST (check importRefs for duplicates)
+│   ├── execute/route.ts          → POST (bulk create transactions)
+│   └── profiles/
+│       ├── route.ts              → GET (list), POST (create)
+│       └── [id]/route.ts        → DELETE (remove profile)
 └── summary/
     ├── monthly/route.ts  → GET (monthly breakdown)
     └── annual/route.ts   → GET (yearly breakdown)
@@ -943,6 +962,8 @@ The most complex validator uses Zod's **discriminated union** — different rule
 const baseFields = {
   amount: z.number().positive().multipleOf(0.01),
   description: z.string().max(255).optional(),
+  friendlyName: z.string().max(255).optional(),
+  notes: z.string().max(1000).optional(),
   date: z.coerce.date(),
 };
 
@@ -1143,9 +1164,13 @@ A single transaction display. Server component (no interactivity needed for disp
 
 **Color coding**: Income is green, expenses red, transfers blue. Uses a `typeConfig` object to map transaction types to colors and icons — this is cleaner than a chain of if/else statements.
 
+**Display priority chain**: The card title uses `friendlyName?.trim() || description || subtitleText`. When a friendly name exists, the bank description shows as a secondary subtitle below it. The `.trim()` prevents whitespace-only friendly names from hiding the description.
+
 #### `TransactionList` (`src/components/transactions/transaction-list.tsx`)
 
-Groups transactions by date and displays them with pagination.
+Groups transactions by date and displays them with search, filtering, and pagination.
+
+**Filter UI**: A search bar (debounced 300ms), type tabs (All/Income/Expense/Transfer), and a collapsible section with account, category, and date range filters. The component fetches accounts and categories on mount for the filter dropdowns.
 
 **Date grouping logic**: The API returns a flat array. The component groups transactions into `Map<string, Transaction[]>` where the key is the formatted date (e.g., "Jan 15, 2026").
 
@@ -1208,6 +1233,34 @@ const [accountsRes, currenciesRes, typesRes] = await Promise.all([
   fetch("/api/account-types"),
 ]);
 ```
+
+### Import Components
+
+The bank statement import feature lives in `src/components/import/` and uses a multi-step wizard pattern.
+
+#### `ImportWizard` — State Machine
+
+Manages the import flow through 4 steps: Upload → Column Mapping → Review → Confirm. All state is lifted into a single `ImportState` object that's passed down to each step. The wizard doesn't use URL-based state — it's all in React state, so refreshing the page resets the import.
+
+#### `StepUpload` — File Parsing
+
+Accepts CSV and Excel files (`.csv`, `.xlsx`, `.xls`). Uses **PapaParse** for CSV parsing and **read-excel-file** for Excel. Supports saved import profiles that remember column mapping, delimiter, skip rows, and date format settings from previous imports of the same bank format.
+
+#### `StepColumnMapping` — Column Assignment
+
+Presents dropdowns to map CSV/Excel columns to transaction fields (date, description, amount, etc.). Supports two amount modes: single column (positive/negative) or split columns (debit + credit). Includes a data preview table and profile save/load functionality.
+
+#### `StepReview` — Transaction Preview
+
+Shows all parsed transactions with checkboxes, category dropdowns, type toggles (Income/Expense), inline friendly name and notes inputs. On mount, generates `importRef` hashes using Web Crypto API and checks for duplicates via the API. Duplicate rows are auto-unchecked and badged.
+
+#### `StepConfirm` — Final Import
+
+Shows a summary of what will be imported (count, income/expense breakdown) and triggers the bulk import via `/api/import/execute`. Displays success/error state after completion.
+
+#### Import Deduplication (`src/lib/import-ref.ts`)
+
+Each imported row gets a unique hash (`importRef`) based on account ID, date, description, amount, and an occurrence counter. The occurrence counter handles rows that are identical in all fields (e.g., two $5.00 charges at the same store on the same day). The hash uses SHA-256 via the Web Crypto API.
 
 ### Summary Components
 
@@ -1478,8 +1531,8 @@ Three things turn a website into a PWA:
 ```typescript
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Budget Tracker",
-    short_name: "Budget",
+    name: "Spendtinel",
+    short_name: "Spendtinel",
     start_url: "/",
     display: "standalone",    // No browser chrome (address bar, tabs)
     background_color: "#09090b",
@@ -1547,7 +1600,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,                    // Enable standalone mode on iOS
     statusBarStyle: "default",       // Black status bar
-    title: "Budget Tracker",         // Name under the icon
+    title: "Spendtinel",          // Name under the icon
   },
   formatDetection: { telephone: false }, // Don't auto-link phone numbers
   icons: {

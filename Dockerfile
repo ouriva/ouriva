@@ -1,5 +1,5 @@
 # ============================================================
-# Budget Tracker — Multi-stage Docker Build
+# Spendtinel — Multi-stage Docker Build
 # ============================================================
 # This Dockerfile produces a minimal production image using
 # Next.js standalone output mode.

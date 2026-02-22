@@ -1,6 +1,18 @@
-# Budget Tracker
+# Spendtinel
 
 A mobile-first personal finance PWA for tracking multi-currency bank accounts, categorizing transactions, setting annual budgets, and viewing monthly/annual summaries.
+
+## Features
+
+- **Multi-currency accounts** — Track checking, savings, credit cards, and cash across EUR, USD, BRL, and more
+- **Transaction management** — Record income, expenses, and transfers with categories
+- **Bank statement import** — Import CSV and Excel files with column mapping, saved profiles, and automatic duplicate detection
+- **Friendly names & notes** — Add display names and notes to transactions for easier identification
+- **Search & filtering** — Find transactions by text, type, account, category, or date range
+- **Hierarchical categories** — Organize spending with parent/child categories (e.g., Food > Groceries)
+- **Annual budgets** — Set yearly budget targets per category and track spending against them
+- **Monthly & annual summaries** — Charts and breakdowns of income vs expenses
+- **PWA** — Install on your phone's home screen, works offline
 
 ## Tech Stack
 
@@ -83,7 +95,7 @@ src/
 ├── app/
 │   ├── (app)/              # Routes with bottom nav layout
 │   │   ├── dashboard/      # Account balances + overview
-│   │   ├── transactions/   # List, add, edit
+│   │   ├── transactions/   # List, add, edit, import
 │   │   ├── summary/        # Monthly + annual views
 │   │   ├── budget/         # Annual budget management
 │   │   └── settings/       # Accounts, categories, currencies

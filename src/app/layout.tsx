@@ -20,15 +20,15 @@ const geistMono = Geist_Mono({
 // This is the App Router way of setting meta tags (replaces next/head).
 export const metadata: Metadata = {
   title: {
-    default: "Budget Tracker",
-    template: "%s | Budget Tracker", // pages can set their own title: "Transactions" → "Transactions | Budget Tracker"
+    default: "Spendtinel",
+    template: "%s | Spendtinel", // pages can set their own title: "Transactions" → "Transactions | Spendtinel"
   },
   description: "Personal budget tracking with multi-currency support",
   // PWA meta tags — tells iOS Safari to run in standalone mode (no browser chrome)
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Budget Tracker",
+    title: "Spendtinel",
   },
   // Prevents phone numbers from being auto-linked on iOS
   formatDetection: {
