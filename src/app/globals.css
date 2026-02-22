@@ -123,4 +123,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  button,
+  a,
+  [role="button"],
+  [role="tab"],
+  [role="checkbox"],
+  select,
+  summary {
+    cursor: pointer;
+  }
 }
