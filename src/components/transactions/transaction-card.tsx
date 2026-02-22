@@ -75,9 +75,9 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
       {/* Description and category */}
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">
-          {transaction.friendlyName || transaction.description || subtitleText}
+          {transaction.friendlyName?.trim() || transaction.description || subtitleText}
         </p>
-        {transaction.friendlyName && transaction.description && (
+        {transaction.friendlyName?.trim() && transaction.description && (
           <p className="truncate text-xs text-muted-foreground/70">
             {transaction.description}
           </p>
