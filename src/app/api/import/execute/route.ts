@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
           type: t.type,
           amount: t.amount,
           description: t.description || null,
+          friendlyName: t.friendlyName || null,
+          notes: t.notes || null,
           date: new Date(t.date),
           fromAccountId: t.fromAccountId,
           categoryId: t.categoryId || null,

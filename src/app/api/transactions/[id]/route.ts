@@ -90,6 +90,8 @@ export async function PUT(
         type: data.type,
         amount: data.amount,
         description: data.description,
+        friendlyName: data.friendlyName,
+        notes: data.notes,
         date: data.date,
         fromAccountId: data.fromAccountId,
         toAccountId: "toAccountId" in data ? data.toAccountId : undefined,

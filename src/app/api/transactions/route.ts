@@ -53,12 +53,27 @@ export async function GET(request: NextRequest) {
 
     if (type) where.type = type;
     if (categoryId) where.categoryId = categoryId;
+
+    // Search and accountId both use OR conditions. To combine them
+    // correctly (both must match), we wrap each in a separate AND clause.
+    // Without this, two top-level OR arrays would overwrite each other.
+    const andConditions: Prisma.TransactionWhereInput[] = [];
+
     if (search) {
-      where.description = { contains: search, mode: "insensitive" };
+      andConditions.push({
+        OR: [
+          { description: { contains: search, mode: "insensitive" } },
+          { friendlyName: { contains: search, mode: "insensitive" } },
+        ],
+      });
     }
     if (accountId) {
-      // Show transactions where this account is either the source or destination
-      where.OR = [{ fromAccountId: accountId }, { toAccountId: accountId }];
+      andConditions.push({
+        OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
+      });
+    }
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
     if (startDate || endDate) {
       where.date = {};
@@ -130,6 +145,8 @@ export async function POST(request: NextRequest) {
         type: data.type,
         amount: data.amount,
         description: data.description,
+        friendlyName: data.friendlyName,
+        notes: data.notes,
         date: data.date,
         fromAccountId: data.fromAccountId,
         // These fields only exist on TRANSFER type.
