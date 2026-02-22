@@ -54,6 +54,8 @@ export const importTransactionSchema = z.object({
   type: z.enum(["INCOME", "EXPENSE"]),
   amount: z.number().positive(),
   description: z.string().optional(),
+  friendlyName: z.string().max(255).optional(),
+  notes: z.string().max(1000).optional(),
   date: z.string(), // ISO date string, parsed server-side
   fromAccountId: z.string().uuid(),
   categoryId: z.string().uuid().optional(),

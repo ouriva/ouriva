@@ -24,6 +24,8 @@ const baseTransactionFields = {
     .positive("Amount must be positive")
     .multipleOf(0.01, "Amount can have at most 2 decimal places"),
   description: z.string().max(255).optional(),
+  friendlyName: z.string().max(255).optional(),
+  notes: z.string().max(1000).optional(),
   date: z.coerce.date(),
   // z.coerce.date() accepts multiple formats:
   //   - "2026-01-15" (string) → converts to Date
