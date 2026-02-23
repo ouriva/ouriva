@@ -74,6 +74,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const [friendlyNames, setFriendlyNames] = useState<(string | undefined)[]>([]);
   const [notes, setNotes] = useState<(string | undefined)[]>([]);
   const [isChecking, setIsChecking] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Parse rows, generate importRefs, load categories, check duplicates
   useEffect(() => {
@@ -174,7 +175,11 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       setNotes(new Array(parsed.length).fill(undefined));
       setIsChecking(false);
     }
-    init();
+    init().catch((err) => {
+      console.error("Import review init failed:", err);
+      setError(err instanceof Error ? err.message : "Failed to process rows");
+      setIsChecking(false);
+    });
   // Run once when the component mounts — state props are stable references
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -202,6 +207,19 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           Checking for duplicates...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="space-y-4 py-12 text-center">
+          <p className="text-sm text-destructive">{error}</p>
+          <Button variant="outline" onClick={onBack}>
+            Back
+          </Button>
         </CardContent>
       </Card>
     );
