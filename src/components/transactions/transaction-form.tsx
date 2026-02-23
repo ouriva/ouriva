@@ -94,16 +94,21 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<CreateTransactionInput>({
     resolver: zodResolver(createTransactionSchema) as any,
-    defaultValues: initialData || {
-      type: "EXPENSE",
-      amount: undefined,
-      description: "",
-      friendlyName: "",
-      notes: "",
-      date: new Date(),
-      fromAccountId: "",
-      categoryId: "",
-    },
+    // Date is formatted as yyyy-MM-dd string for <input type="date">.
+    // Cast needed because the Zod schema types date as Date, but
+    // z.coerce.date() handles the string→Date conversion on submit.
+    defaultValues: (initialData
+      ? { ...initialData, date: format(initialData.date, "yyyy-MM-dd") }
+      : {
+          type: "EXPENSE" as const,
+          amount: undefined,
+          description: "",
+          friendlyName: "",
+          notes: "",
+          date: format(new Date(), "yyyy-MM-dd"),
+          fromAccountId: "",
+          categoryId: "",
+        }) as any,
   });
 
   // Watch the "type" field to conditionally show/hide fields
@@ -259,7 +264,6 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           id="date"
           type="date"
           {...register("date")}
-          defaultValue={format(initialData?.date || new Date(), "yyyy-MM-dd")}
           className="mt-2"
         />
         {errors.date && (
