@@ -143,7 +143,7 @@ export function StepColumnMapping({
     setIsSaving(true);
 
     try {
-      await fetch("/api/import/profiles", {
+      const res = await fetch("/api/import/profiles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -155,9 +155,12 @@ export function StepColumnMapping({
           skipRows: state.skipRows,
         }),
       });
+      if (!res.ok) {
+        throw new Error("Failed to save profile");
+      }
       setProfileName("");
     } catch {
-      // Silently fail — profile saving is optional
+      alert("Could not save profile. You can still continue with the import.");
     } finally {
       setIsSaving(false);
     }
