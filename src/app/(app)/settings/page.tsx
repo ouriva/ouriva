@@ -8,6 +8,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
+  Settings2,
   Landmark,
   FolderTree,
   Coins,
@@ -19,6 +20,12 @@ export const metadata: Metadata = {
 };
 
 const settingsLinks = [
+  {
+    title: "General",
+    description: "Transfer category and app-wide preferences",
+    href: "/settings/general",
+    icon: Settings2,
+  },
   {
     title: "Accounts",
     description: "Manage bank accounts, credit cards, and wallets",
