@@ -3,7 +3,7 @@
 // Displays transactions grouped by date with filtering and search.
 // Filter controls sit above the list:
 //   1. Search bar — always visible, debounced (300ms)
-//   2. Type tabs — All | Income | Expense | Transfer
+//   2. Type tabs — All | Income | Expense
 //   3. Collapsible "Filters" section — account, category, date range
 //
 // The API already supports all these filters — this component just
@@ -178,11 +178,10 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
           value={type || "ALL"}
           onValueChange={(v) => setType(v === "ALL" ? undefined : v)}
         >
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="ALL">All</TabsTrigger>
             <TabsTrigger value="INCOME">Income</TabsTrigger>
             <TabsTrigger value="EXPENSE">Expense</TabsTrigger>
-            <TabsTrigger value="TRANSFER">Transfer</TabsTrigger>
           </TabsList>
         </Tabs>
 

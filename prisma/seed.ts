@@ -294,9 +294,9 @@ async function main() {
     // --- January 2026 Shopping ---
     { type: TransactionType.EXPENSE, amount: 120, description: "Winter jacket", date: "2026-01-22", fromAccountId: euroCreditCard.id, categoryId: clothes.id },
 
-    // --- January 2026 Transfers ---
-    { type: TransactionType.TRANSFER, amount: 500, description: "To savings", date: "2026-01-06", fromAccountId: mainChecking.id, toAccountId: euroSavings.id },
-    { type: TransactionType.TRANSFER, amount: 200, description: "EUR to USD", date: "2026-01-10", fromAccountId: mainChecking.id, toAccountId: wiseUsd.id, toAmount: 218.50 },
+    // --- January 2026 Transfers (as regular expenses — transfers are handled via categories) ---
+    { type: TransactionType.EXPENSE, amount: 500, description: "To savings", date: "2026-01-06", fromAccountId: mainChecking.id },
+    { type: TransactionType.EXPENSE, amount: 200, description: "EUR to USD", date: "2026-01-10", fromAccountId: mainChecking.id },
 
     // --- February 2026 Income ---
     { type: TransactionType.INCOME, amount: 3500, description: "Monthly Salary", date: "2026-02-05", fromAccountId: mainChecking.id, categoryId: salary.id },
@@ -331,8 +331,8 @@ async function main() {
     // --- February 2026 Shopping ---
     { type: TransactionType.EXPENSE, amount: 249, description: "Wireless headphones", date: "2026-02-03", fromAccountId: euroCreditCard.id, categoryId: electronics.id },
 
-    // --- February 2026 Transfers ---
-    { type: TransactionType.TRANSFER, amount: 500, description: "To savings", date: "2026-02-06", fromAccountId: mainChecking.id, toAccountId: euroSavings.id },
+    // --- February 2026 Transfers (as regular expenses — transfers are handled via categories) ---
+    { type: TransactionType.EXPENSE, amount: 500, description: "To savings", date: "2026-02-06", fromAccountId: mainChecking.id },
   ];
 
   for (const tx of transactions) {
@@ -343,8 +343,6 @@ async function main() {
         description: tx.description,
         date: new Date(tx.date),
         fromAccountId: tx.fromAccountId,
-        toAccountId: tx.toAccountId ?? undefined,
-        toAmount: tx.toAmount ?? undefined,
         categoryId: tx.categoryId ?? undefined,
       },
     });

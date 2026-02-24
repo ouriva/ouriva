@@ -10,7 +10,6 @@
 //   @hookform/resolvers — connects Zod schemas to react-hook-form,
 //     so validation runs through Zod but errors display via the form.
 //   watch() — subscribes to a specific field's value reactively.
-//     Used here to show/hide fields based on transaction type.
 
 "use client";
 
@@ -55,15 +54,13 @@ interface Category {
 // we build it dynamically on the server. Zod validates on submit.
 interface TransactionFormData {
   id: string;
-  type: "INCOME" | "EXPENSE" | "TRANSFER";
+  type: "INCOME" | "EXPENSE";
   amount: number;
   description?: string;
   friendlyName?: string;
   notes?: string;
   date: Date;
   fromAccountId: string;
-  toAccountId?: string;
-  toAmount?: number;
   categoryId?: string;
 }
 
@@ -89,7 +86,6 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     handleSubmit,  // wraps your submit handler with validation
     watch,         // reactively watch a field's value
     setValue,      // programmatically set a field's value
-    reset,         // reset the form to initial values
     formState: { errors }, // validation errors per field
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<CreateTransactionInput>({
@@ -111,7 +107,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         }) as any,
   });
 
-  // Watch the "type" field to conditionally show/hide fields
+  // Watch the "type" field for the type tabs
   const transactionType = watch("type");
 
   // Load accounts and categories from the API on mount
@@ -133,16 +129,6 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     }
     loadData();
   }, []);
-
-  // Reset form when type changes (clear type-specific fields)
-  useEffect(() => {
-    if (transactionType === "TRANSFER") {
-      setValue("categoryId", undefined as unknown as string);
-    } else {
-      setValue("toAccountId" as keyof CreateTransactionInput, undefined as unknown as string);
-      setValue("toAmount" as keyof CreateTransactionInput, undefined as unknown as number);
-    }
-  }, [transactionType, setValue]);
 
   // Form submission handler
   async function onSubmit(data: CreateTransactionInput) {
@@ -192,10 +178,9 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           }
           className="mt-2"
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="EXPENSE">Expense</TabsTrigger>
             <TabsTrigger value="INCOME">Income</TabsTrigger>
-            <TabsTrigger value="TRANSFER">Transfer</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -273,11 +258,9 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         )}
       </div>
 
-      {/* From Account (all types) */}
+      {/* Account */}
       <div>
-        <Label>
-          {transactionType === "TRANSFER" ? "From Account" : "Account"}
-        </Label>
+        <Label>Account</Label>
         <Select
           value={watch("fromAccountId")}
           onValueChange={(value) => setValue("fromAccountId", value)}
@@ -300,89 +283,44 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         )}
       </div>
 
-      {/* To Account (TRANSFER only) */}
-      {transactionType === "TRANSFER" && (
-        <>
-          <div>
-            <Label>To Account</Label>
-            <Select
-              value={watch("toAccountId" as keyof CreateTransactionInput) as string}
-              onValueChange={(value) =>
-                setValue("toAccountId" as keyof CreateTransactionInput, value)
-              }
-            >
-              <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Select destination account" />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts
-                  .filter((a) => a.id !== watch("fromAccountId"))
-                  .map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name} ({account.currency.symbol})
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* To Amount — only shown if source and destination currencies differ */}
-          <div>
-            <Label htmlFor="toAmount">Received Amount (if different currency)</Label>
-            <Input
-              id="toAmount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              inputMode="decimal"
-              placeholder="Leave empty if same currency"
-              {...register("toAmount" as keyof CreateTransactionInput, { valueAsNumber: true })}
-              className="mt-2"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Category (INCOME/EXPENSE required, TRANSFER optional) */}
-      {transactionType !== "TRANSFER" && (
-        <div>
-          <Label>Category</Label>
-          <Select
-            value={watch("categoryId") as string}
-            onValueChange={(value) => setValue("categoryId", value)}
-          >
-            <SelectTrigger className="mt-2">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              {parentCategories.map((parent) => {
-                const children = childCategories.filter(
-                  (c) => c.parentId === parent.id
-                );
-                // If parent has children, show children under a group
-                if (children.length > 0) {
-                  return children.map((child) => (
-                    <SelectItem key={child.id} value={child.id}>
-                      {parent.name} › {child.name}
-                    </SelectItem>
-                  ));
-                }
-                // If no children, show the parent itself
-                return (
-                  <SelectItem key={parent.id} value={parent.id}>
-                    {parent.name}
+      {/* Category */}
+      <div>
+        <Label>Category</Label>
+        <Select
+          value={watch("categoryId") as string}
+          onValueChange={(value) => setValue("categoryId", value)}
+        >
+          <SelectTrigger className="mt-2">
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            {parentCategories.map((parent) => {
+              const children = childCategories.filter(
+                (c) => c.parentId === parent.id
+              );
+              // If parent has children, show children under a group
+              if (children.length > 0) {
+                return children.map((child) => (
+                  <SelectItem key={child.id} value={child.id}>
+                    {parent.name} › {child.name}
                   </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          {errors.categoryId && (
-            <p className="mt-1 text-sm text-destructive">
-              {errors.categoryId.message}
-            </p>
-          )}
-        </div>
-      )}
+                ));
+              }
+              // If no children, show the parent itself
+              return (
+                <SelectItem key={parent.id} value={parent.id}>
+                  {parent.name}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
+        {errors.categoryId && (
+          <p className="mt-1 text-sm text-destructive">
+            {errors.categoryId.message}
+          </p>
+        )}
+      </div>
 
       {/* Submit */}
       <div className="flex gap-3">

@@ -31,7 +31,6 @@ export default async function EditTransactionPage({
     where: { id },
     include: {
       fromAccount: { include: { currency: true } },
-      toAccount: { include: { currency: true } },
       category: true,
     },
   });
@@ -44,17 +43,13 @@ export default async function EditTransactionPage({
   // Transform the Prisma result into the shape the form expects
   const initialData = {
     id: transaction.id,
-    type: transaction.type as "INCOME" | "EXPENSE" | "TRANSFER",
+    type: transaction.type as "INCOME" | "EXPENSE",
     amount: Number(transaction.amount),
     description: transaction.description || "",
     friendlyName: transaction.friendlyName || "",
     notes: transaction.notes || "",
     date: transaction.date,
     fromAccountId: transaction.fromAccountId,
-    ...(transaction.type === "TRANSFER" && {
-      toAccountId: transaction.toAccountId!,
-      toAmount: transaction.toAmount ? Number(transaction.toAmount) : undefined,
-    }),
     ...(transaction.categoryId && { categoryId: transaction.categoryId }),
   };
 

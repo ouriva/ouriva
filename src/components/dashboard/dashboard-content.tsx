@@ -205,14 +205,11 @@ export function DashboardContent() {
           <div className="space-y-2">
             {recentTx.map((tx) => {
               const isIncome = tx.type === "INCOME";
-              const isTransfer = tx.type === "TRANSFER";
               const categoryLabel = tx.category
                 ? tx.category.parent
                   ? `${tx.category.parent.name} › ${tx.category.name}`
                   : tx.category.name
-                : isTransfer
-                  ? "Transfer"
-                  : "";
+                : "";
 
               return (
                 <Card key={tx.id}>
@@ -229,12 +226,10 @@ export function DashboardContent() {
                       className={`ml-3 text-sm font-semibold tabular-nums ${
                         isIncome
                           ? "text-green-600 dark:text-green-400"
-                          : isTransfer
-                            ? "text-blue-600 dark:text-blue-400"
-                            : "text-red-600 dark:text-red-400"
+                          : "text-red-600 dark:text-red-400"
                       }`}
                     >
-                      {isIncome ? "+" : isTransfer ? "" : "-"}
+                      {isIncome ? "+" : "-"}
                       {tx.fromAccount.currency.symbol}
                       {parseFloat(tx.amount).toFixed(2)}
                     </span>
