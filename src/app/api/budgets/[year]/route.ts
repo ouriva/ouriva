@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTransferCategoryId } from "@/lib/settings";
 
 export async function GET(
   _request: NextRequest,
@@ -33,16 +34,23 @@ export async function GET(
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31);
 
+    // Exclude transfer category from budget comparisons (if configured)
+    const transferCategoryId = await getTransferCategoryId();
+
     // Fetch budgets and transactions in parallel
     const [budgets, transactions] = await Promise.all([
       prisma.budget.findMany({
-        where: { year },
+        where: {
+          year,
+          ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
+        },
         include: { category: true },
       }),
       prisma.transaction.findMany({
         where: {
           date: { gte: startDate, lte: endDate },
           type: "EXPENSE",
+          ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
         },
         include: {
           category: { include: { parent: true } },

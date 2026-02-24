@@ -6,8 +6,6 @@
 //   initialBalance
 //   + SUM(amount) where type = INCOME and fromAccountId = account
 //   - SUM(amount) where type = EXPENSE and fromAccountId = account
-//   - SUM(amount) where type = TRANSFER and fromAccountId = account
-//   + SUM(toAmount or amount) where type = TRANSFER and toAccountId = account
 //
 // Why compute instead of store?
 // Storing a "balance" column would require updating it on every
@@ -35,9 +33,7 @@ export async function GET() {
         select: {
           type: true,
           amount: true,
-          toAmount: true,
           fromAccountId: true,
-          toAccountId: true,
         },
       }),
     ]);
@@ -65,21 +61,6 @@ export async function GET() {
         const current = balanceMap.get(tx.fromAccountId);
         if (current !== undefined) {
           balanceMap.set(tx.fromAccountId, current - amount);
-        }
-      } else if (tx.type === "TRANSFER") {
-        // Transfer: money leaves fromAccount, enters toAccount
-        const fromBalance = balanceMap.get(tx.fromAccountId);
-        if (fromBalance !== undefined) {
-          balanceMap.set(tx.fromAccountId, fromBalance - amount);
-        }
-
-        if (tx.toAccountId) {
-          const toBalance = balanceMap.get(tx.toAccountId);
-          if (toBalance !== undefined) {
-            // Use toAmount for cross-currency, otherwise same amount
-            const receivedAmount = tx.toAmount ? Number(tx.toAmount) : amount;
-            balanceMap.set(tx.toAccountId, toBalance + receivedAmount);
-          }
         }
       }
     }

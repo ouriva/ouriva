@@ -68,9 +68,7 @@ export async function GET(request: NextRequest) {
       });
     }
     if (accountId) {
-      andConditions.push({
-        OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
-      });
+      where.fromAccountId = accountId;
     }
     if (andConditions.length > 0) {
       where.AND = andConditions;
@@ -90,7 +88,6 @@ export async function GET(request: NextRequest) {
         where,
         include: {
           fromAccount: { include: { currency: true } },
-          toAccount: { include: { currency: true } },
           category: { include: { parent: true } },
         },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -149,15 +146,10 @@ export async function POST(request: NextRequest) {
         notes: data.notes,
         date: data.date,
         fromAccountId: data.fromAccountId,
-        // These fields only exist on TRANSFER type.
-        // The "in" operator checks if the key exists in the object.
-        toAccountId: "toAccountId" in data ? data.toAccountId : undefined,
-        toAmount: "toAmount" in data ? data.toAmount : undefined,
         categoryId: data.categoryId ?? undefined,
       },
       include: {
         fromAccount: { include: { currency: true } },
-        toAccount: { include: { currency: true } },
         category: { include: { parent: true } },
       },
     });

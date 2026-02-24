@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getTransferCategoryId } from "@/lib/settings";
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,11 +33,13 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0); // day 0 of next month = last day of this month
 
-    // Get all non-transfer transactions for this month
+    // Exclude transfer category from summaries (if configured)
+    const transferCategoryId = await getTransferCategoryId();
+
     const transactions = await prisma.transaction.findMany({
       where: {
         date: { gte: startDate, lte: endDate },
-        type: { not: "TRANSFER" },
+        ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
       },
       include: {
         category: { include: { parent: true } },

@@ -15,7 +15,6 @@ import { updateTransactionSchema } from "@/validators/transaction";
 // consistent response shape.
 const transactionInclude = {
   fromAccount: { include: { currency: true } },
-  toAccount: { include: { currency: true } },
   category: { include: { parent: true } },
 } as const;
 
@@ -94,8 +93,6 @@ export async function PUT(
         notes: data.notes,
         date: data.date,
         fromAccountId: data.fromAccountId,
-        toAccountId: "toAccountId" in data ? data.toAccountId : undefined,
-        toAmount: "toAmount" in data ? data.toAmount : undefined,
         categoryId: data.categoryId ?? undefined,
       },
       include: transactionInclude,
