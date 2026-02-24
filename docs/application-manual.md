@@ -32,7 +32,7 @@ A comprehensive guide to every part of this application: what each technology do
 This is a **personal finance application** that replaces an Excel spreadsheet. It lets you:
 
 - Track multiple bank accounts across different currencies (EUR, USD, BRL, etc.)
-- Record income, expenses, and transfers between accounts
+- Record income and expenses, with a configurable transfer category for inter-account movements
 - Import bank statements from CSV and Excel files with column mapping and duplicate detection
 - Add friendly display names and notes to transactions
 - Search and filter transactions by text, type, account, category, or date range
@@ -303,6 +303,7 @@ spendtinel/
 │   │   └── settings/             # Settings-specific
 │   ├── lib/                      # Shared utilities
 │   │   ├── prisma.ts             # Database client singleton
+│   │   ├── settings.ts           # Transfer category helper (reads AppSettings)
 │   │   ├── utils.ts              # cn() class merger
 │   │   ├── formatters.ts         # Currency/date formatting
 │   │   └── import-ref.ts         # Import deduplication hash generation
@@ -512,7 +513,7 @@ When you run `npx shadcn@latest add button`, it reads this config to know where 
 
 ### Schema Design (`prisma/schema.prisma`)
 
-The database has **6 models** (tables) and **1 enum**:
+The database has **7 models** (tables) and **1 enum**:
 
 ```
 ┌──────────┐     ┌────────────┐
@@ -524,19 +525,16 @@ The database has **6 models** (tables) and **1 enum**:
            │ Account  │
            └────┬────┘
                 │
-     ┌──────────┼──────────┐
-     │          │          │
-     ▼          ▼          ▼
-  ┌─────────────────────┐
-  │    Transaction      │
-  │ (from ← → to)      │
-  └──────────┬──────────┘
-             │
-             ▼
-          ┌──────────┐      ┌────────┐
-          │ Category │◄─────│ Budget │
-          │ (tree)   │      │(yearly)│
-          └──────────┘      └────────┘
+                ▼
+         ┌─────────────┐
+         │ Transaction │
+         └──────┬──────┘
+                │
+                ▼
+          ┌──────────┐      ┌────────┐      ┌─────────────┐
+          │ Category │◄─────│ Budget │      │ AppSettings │
+          │ (tree)   │◄─────────────────────│ (singleton) │
+          └──────────┘      └────────┘      └─────────────┘
 ```
 
 #### Currency
@@ -579,16 +577,13 @@ model Account {
   accountTypeId   String
   currency        Currency     @relation(...)
   accountType     AccountType  @relation(...)
-  transactionsFrom Transaction[] @relation("fromAccount")
-  transactionsTo   Transaction[] @relation("toAccount")
+  transactions    Transaction[] @relation("fromAccount")
 }
 ```
 
 **`Decimal(12, 2)`** — Stores up to 12 digits with 2 decimal places. Decimal is exact, unlike floating-point (`0.1 + 0.2 = 0.30000000000000004` in float, but `0.30` in Decimal). Critical for financial data.
 
 **`isActive` (soft-delete)** — Instead of deleting accounts, we set `isActive: false`. This preserves historical transactions that reference the account. If you hard-delete an account, those transactions would have a broken foreign key.
-
-**Two transaction relations** — An account can be the source (`transactionsFrom`) or destination (`transactionsTo`) of a transaction. The `@relation("fromAccount")` name distinguishes between the two.
 
 **`@@index([currencyId])` and `@@index([accountTypeId])`** — Database indexes that speed up queries filtering by currency or account type. Without indexes, the database scans every row.
 
@@ -623,31 +618,27 @@ Food (parentId: null)
 ```prisma
 model Transaction {
   id            String          @id @default(uuid())
-  type          TransactionType                    // INCOME, EXPENSE, TRANSFER
+  type          TransactionType                    // INCOME, EXPENSE
   amount        Decimal         @db.Decimal(12, 2)
-  toAmount      Decimal?        @db.Decimal(12, 2) // For cross-currency transfers
   description   String?
   friendlyName  String?         @db.VarChar(255)   // User-facing display name
   notes         String?         @db.Text           // Longer user notes
   date          DateTime        @db.Date           // Date only, no time
   importRef     String?         @unique            // Deduplication key
   fromAccountId String
-  toAccountId   String?                            // Only for TRANSFER
-  categoryId    String?                            // Optional for TRANSFER
+  categoryId    String?
   fromAccount   Account  @relation("fromAccount", ...)
-  toAccount     Account? @relation("toAccount", ...)
   category      Category? @relation(...)
 }
 ```
 
 **Transaction types**:
-- **INCOME**: Money comes into an account. `fromAccountId` is where it goes. `categoryId` is required (e.g., Salary).
-- **EXPENSE**: Money leaves an account. `fromAccountId` is where it comes from. `categoryId` is required (e.g., Groceries).
-- **TRANSFER**: Money moves between accounts. Both `fromAccountId` and `toAccountId` are set. `categoryId` is optional.
+- **INCOME**: Money comes into an account (e.g., Salary).
+- **EXPENSE**: Money leaves an account (e.g., Groceries).
+
+There is no TRANSFER type. Transfers between accounts are recorded as regular INCOME/EXPENSE transactions tagged with a configurable "transfer category" (see AppSettings). This matches how bank CSV statements represent transfers and simplifies the data model.
 
 **Amount is always positive** — The `type` determines direction. An expense of €50 is stored as `amount: 50, type: EXPENSE`, not `amount: -50`. This avoids confusion and makes aggregation queries simpler.
-
-**`toAmount` for cross-currency transfers** — When you transfer €200 and receive $218.50, `amount = 200` (from account) and `toAmount = 218.50` (to account). The exchange rate is implicit.
 
 **`friendlyName`** — An optional user-facing display name. Bank statement descriptions are often cryptic (e.g., "POS DEBIT 0042 LIDL"). The friendly name lets you rename it to something readable (e.g., "Groceries at Lidl"). When present, the UI displays `friendlyName` as the primary title and `description` as a secondary subtitle.
 
@@ -657,7 +648,7 @@ model Transaction {
 
 **`@db.Date`** — Stores only the date (2026-01-15), not the full timestamp. Budget tracking doesn't need time precision.
 
-**Indexes** — Transaction has 5 indexes (date, type, fromAccountId, toAccountId, categoryId) because it's the most-queried table. Every summary, balance, and budget comparison queries transactions with filters.
+**Indexes** — Transaction has 4 indexes (date, type, fromAccountId, categoryId) because it's the most-queried table. Every summary, balance, and budget comparison queries transactions with filters.
 
 #### Budget
 
@@ -675,6 +666,24 @@ model Budget {
 ```
 
 **`@@unique([year, categoryId])`** — A compound unique constraint. You can't have two budget entries for "Food" in 2026. This enables the upsert pattern: "create if it doesn't exist, update if it does."
+
+#### AppSettings (Singleton)
+
+```prisma
+model AppSettings {
+  id                 String    @id @default("singleton")
+  transferCategoryId String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  transferCategory   Category? @relation(fields: [transferCategoryId], references: [id], onDelete: SetNull)
+}
+```
+
+**Singleton pattern** — There is only one row, always with `id = "singleton"`. The API uses `upsert` to auto-create it on first access. This avoids having global settings scattered across multiple tables.
+
+**`transferCategoryId`** — Points to the category used for inter-account transfers. Transactions in this category are excluded from summaries and budgets (but still count toward account balances). The Settings > General page lets you select this category and shows a "Transfer Balance" indicator that should be 0 if all transfers are properly matched across accounts.
+
+**`onDelete: SetNull`** — If the referenced category is deleted, the setting is cleared rather than causing a foreign key error.
 
 ### How Prisma Generates Types
 
@@ -773,6 +782,8 @@ api/
 │   └── profiles/
 │       ├── route.ts              → GET (list), POST (create)
 │       └── [id]/route.ts        → DELETE (remove profile)
+├── settings/
+│   └── route.ts          → GET (read), PUT (update transfer category)
 └── summary/
     ├── monthly/route.ts  → GET (monthly breakdown)
     └── annual/route.ts   → GET (yearly breakdown)
@@ -849,13 +860,11 @@ This is the most complex endpoint. Account balances aren't stored — they're co
 
 ```
 balance = initialBalance
-        + SUM(INCOME transactions to this account)
-        - SUM(EXPENSE transactions from this account)
-        + SUM(TRANSFER transactions TO this account, using toAmount)
-        - SUM(TRANSFER transactions FROM this account)
+        + SUM(INCOME transactions for this account)
+        - SUM(EXPENSE transactions for this account)
 ```
 
-The endpoint loops through all active accounts, runs aggregation queries for each, and groups results by currency:
+The endpoint loops through all active accounts, runs aggregation queries for each, and groups results by currency. Note that transfer-categorized transactions are **included** in balances — they represent real money movement and must be counted.
 
 ```json
 {
@@ -871,7 +880,7 @@ The endpoint loops through all active accounts, runs aggregation queries for eac
 
 #### `GET /api/summary/monthly` — Monthly Summary
 
-Groups transactions by category for a given month, separating income and expenses. Transfers are excluded (they don't represent earning or spending).
+Groups transactions by category for a given month, separating income and expenses. If a transfer category is configured in Settings, those transactions are excluded (they don't represent earning or spending).
 
 The query uses Prisma's `groupBy` to aggregate amounts by category:
 
@@ -956,7 +965,7 @@ API route handler → Zod schema (server-side) → Prisma → Database
 
 ### Transaction Validator — Discriminated Union
 
-The most complex validator uses Zod's **discriminated union** — different rules based on the transaction type:
+The transaction validator uses Zod's **discriminated union** — different rules based on the transaction type:
 
 ```typescript
 const baseFields = {
@@ -968,13 +977,12 @@ const baseFields = {
 };
 
 export const createTransactionSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("INCOME"),   ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid() }),
-  z.object({ type: z.literal("EXPENSE"),  ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid() }),
-  z.object({ type: z.literal("TRANSFER"), ...baseFields, fromAccountId: z.string().uuid(), toAccountId: z.string().uuid(), toAmount: z.number().positive().optional(), categoryId: z.string().uuid().optional() }),
+  z.object({ type: z.literal("INCOME"),  ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid() }),
+  z.object({ type: z.literal("EXPENSE"), ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid() }),
 ]);
 ```
 
-**How discriminated unions work**: Zod looks at the `type` field first. If it's `"TRANSFER"`, it validates against the transfer schema (requires `toAccountId`, makes `categoryId` optional). This gives precise error messages — "categoryId is required for EXPENSE" instead of a vague "invalid input."
+**How discriminated unions work**: Zod looks at the `type` field first. Based on the value, it validates against the matching schema. This gives precise error messages — "categoryId is required for EXPENSE" instead of a vague "invalid input."
 
 **`z.coerce.date()`** — Accepts both strings and Date objects and converts to Date. JSON doesn't have a Date type, so dates arrive as strings like `"2026-01-15"` from the API. `coerce` handles the conversion automatically.
 
@@ -984,7 +992,7 @@ export const createTransactionSchema = z.discriminatedUnion("type", [
 export const transactionQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]).optional(),
+  type: z.enum(["INCOME", "EXPENSE"]).optional(),
   startDate: z.coerce.date().optional(),
   // ...
 });
@@ -1130,7 +1138,7 @@ A reusable header with a title, optional description, and optional action button
 
 #### `TransactionForm` (`src/components/transactions/transaction-form.tsx`)
 
-The most complex component in the app. Handles creating and editing all three transaction types.
+Handles creating and editing transactions (INCOME/EXPENSE).
 
 **Key patterns**:
 
@@ -1143,16 +1151,7 @@ const form = useForm<CreateTransactionInput>({
 ```
 The `zodResolver` connects the Zod schema to the form, so validation errors appear on individual fields automatically.
 
-2. **Dynamic fields based on type**:
-```tsx
-{type === "TRANSFER" && (
-  <SelectField name="toAccountId" label="To Account" ... />
-)}
-{type !== "TRANSFER" && (
-  <SelectField name="categoryId" label="Category" ... />
-)}
-```
-Transfer shows `toAccountId` instead of `categoryId`. The form re-renders when the type tab changes.
+2. **Type tabs** — A 2-column tab bar (Expense / Income) lets users switch types. The form fields are the same for both types: amount, description, friendly name, notes, date, account, and category.
 
 3. **`inputMode="decimal"`** — On mobile, this opens the numeric keyboard with a decimal point instead of the full QWERTY keyboard.
 
@@ -1162,7 +1161,7 @@ Transfer shows `toAccountId` instead of `categoryId`. The form re-renders when t
 
 A single transaction display. Server component (no interactivity needed for display).
 
-**Color coding**: Income is green, expenses red, transfers blue. Uses a `typeConfig` object to map transaction types to colors and icons — this is cleaner than a chain of if/else statements.
+**Color coding**: Income is green, expenses red. Uses a `typeConfig` object to map transaction types to colors and icons — this is cleaner than a chain of if/else statements.
 
 **Display priority chain**: The card title uses `friendlyName?.trim() || description || subtitleText`. When a friendly name exists, the bank description shows as a secondary subtitle below it. The `.trim()` prevents whitespace-only friendly names from hiding the description.
 
@@ -1170,7 +1169,7 @@ A single transaction display. Server component (no interactivity needed for disp
 
 Groups transactions by date and displays them with search, filtering, and pagination.
 
-**Filter UI**: A search bar (debounced 300ms), type tabs (All/Income/Expense/Transfer), and a collapsible section with account, category, and date range filters. The component fetches accounts and categories on mount for the filter dropdowns.
+**Filter UI**: A search bar (debounced 300ms), type tabs (All/Income/Expense), and a collapsible section with account, category, and date range filters. The component fetches accounts and categories on mount for the filter dropdowns.
 
 **Date grouping logic**: The API returns a flat array. The component groups transactions into `Map<string, Transaction[]>` where the key is the formatted date (e.g., "Jan 15, 2026").
 
@@ -1181,6 +1180,15 @@ A trash icon that opens a confirmation dialog before deleting.
 **Why a confirmation dialog?** Deleting a transaction is destructive (hard-delete, not soft-delete). The dialog prevents accidental deletions from mistaken taps on mobile.
 
 ### Settings Components
+
+#### `GeneralSettings` (`src/components/settings/general-settings.tsx`)
+
+The app-wide preferences panel, accessible from Settings > General. Currently supports:
+
+- **Transfer Category selector** — A dropdown to pick which category represents inter-account transfers. Transactions in this category are excluded from summaries and budgets. Saves immediately on change via `PUT /api/settings`.
+- **Transfer Balance indicator** — Shows the net sum of all transfer-categorized transactions (INCOME minus EXPENSE). Displayed in green if 0 (all transfers are matched), amber if non-zero (some transfers are missing a counterpart).
+
+This is a client component that fetches categories and settings on mount, then re-fetches settings after each save to update the transfer balance.
 
 #### `SimpleSettingsList` — Generic CRUD Component
 
@@ -1780,12 +1788,13 @@ SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END) AS total_income
 SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END) AS total_expense
 ```
 
-### Transfers Are a Single Record
+### Transfers Are Category-Based, Not a Type
 
-Some apps create two records for a transfer (one debit, one credit). This codebase uses a single record with `fromAccountId` and `toAccountId`. Benefits:
-- **No orphaned records** — If one half is deleted, the other dangles
-- **Cross-currency support** — `amount` (from) and `toAmount` (to) in one record
-- **Easy to exclude from summaries** — `WHERE type != 'TRANSFER'`
+Instead of a dedicated TRANSFER transaction type (with `fromAccountId` / `toAccountId`), transfers are regular INCOME/EXPENSE transactions tagged with a configurable "transfer category" in Settings > General. This approach was chosen because:
+- **Matches bank statement reality** — Bank CSVs show transfers as debits/credits, not as a special type. Import works without special handling.
+- **Simpler data model** — No `toAccountId`, `toAmount`, or type-specific branching in every API and UI component.
+- **Flexible** — Users configure which category represents transfers, matching their existing workflow (e.g., from Excel budgeting).
+- **Transfer Balance indicator** — Settings > General shows the net sum of all transfer-categorized transactions, which should be 0 if all transfers are properly matched across accounts.
 
 ### Soft-Delete for Accounts and Categories
 

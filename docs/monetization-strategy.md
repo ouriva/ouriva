@@ -47,7 +47,7 @@ The annual plan should be the default promoted option. Monthly pricing exists fo
 - Up to 3 budget categories
 - Last 3 months of transaction history
 - Monthly summary (no annual view)
-- Core transaction entry (income, expense, transfer)
+- Core transaction entry (income, expense)
 
 The free tier must be genuinely useful — not crippled. Users need to feel the value before being asked to pay.
 
