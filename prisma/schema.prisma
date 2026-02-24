@@ -36,8 +36,7 @@ model Account {
   updatedAt        DateTime      @updatedAt
   accountType      AccountType   @relation(fields: [accountTypeId], references: [id])
   currency         Currency      @relation(fields: [currencyId], references: [id])
-  transactionsFrom Transaction[] @relation("TransactionFromAccount")
-  transactionsTo   Transaction[] @relation("TransactionToAccount")
+  transactions Transaction[] @relation("TransactionFromAccount")
 
   @@index([currencyId])
   @@index([accountTypeId])
@@ -54,6 +53,7 @@ model Category {
   parent       Category?     @relation("CategoryParent", fields: [parentId], references: [id])
   children     Category[]    @relation("CategoryParent")
   transactions Transaction[]
+  appSettings  AppSettings[]
 
   @@index([parentId])
 }
@@ -68,19 +68,15 @@ model Transaction {
   date          DateTime        @db.Date
   importRef     String?         @unique
   fromAccountId String
-  toAccountId   String?
-  toAmount      Decimal?        @db.Decimal(12, 2)
   categoryId    String?
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   category      Category?       @relation(fields: [categoryId], references: [id])
   fromAccount   Account         @relation("TransactionFromAccount", fields: [fromAccountId], references: [id])
-  toAccount     Account?        @relation("TransactionToAccount", fields: [toAccountId], references: [id])
 
   @@index([date])
   @@index([type])
   @@index([fromAccountId])
-  @@index([toAccountId])
   @@index([categoryId])
 }
 
@@ -109,8 +105,15 @@ model ImportProfile {
   updatedAt DateTime @updatedAt
 }
 
+model AppSettings {
+  id                 String    @id @default("singleton")
+  transferCategoryId String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  transferCategory   Category? @relation(fields: [transferCategoryId], references: [id], onDelete: SetNull)
+}
+
 enum TransactionType {
   INCOME
   EXPENSE
-  TRANSFER
 }
