@@ -59,7 +59,8 @@ interface StepReviewProps {
     importRefs: string[],
     duplicateRefs: Set<string>,
     friendlyNames: (string | undefined)[],
-    notes: (string | undefined)[]
+    notes: (string | undefined)[],
+    needsReview: boolean[]
   ) => void;
   onBack: () => void;
 }
@@ -73,6 +74,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const [duplicateRefs, setDuplicateRefs] = useState<Set<string>>(new Set());
   const [friendlyNames, setFriendlyNames] = useState<(string | undefined)[]>([]);
   const [notes, setNotes] = useState<(string | undefined)[]>([]);
+  const [needsReview, setNeedsReview] = useState<boolean[]>([]);
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -173,6 +175,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       setTransactionTypes(parsed.map((r) => r.type));
       setFriendlyNames(new Array(parsed.length).fill(undefined));
       setNotes(new Array(parsed.length).fill(undefined));
+      setNeedsReview(new Array(parsed.length).fill(false));
       setIsChecking(false);
     }
     init().catch((err) => {
@@ -312,6 +315,20 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
                     className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
                   />
                   <div className="flex items-center gap-2">
+                    <Checkbox
+                      id={`review-${i}`}
+                      checked={needsReview[i] || false}
+                      onCheckedChange={(checked) => {
+                        const next = [...needsReview];
+                        next[i] = !!checked;
+                        setNeedsReview(next);
+                      }}
+                    />
+                    <label htmlFor={`review-${i}`} className="text-xs text-muted-foreground">
+                      Review
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-2">
                     {/* Type toggle */}
                     <Select
                       value={transactionTypes[i]}
@@ -394,7 +411,8 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
                 parsedRows.map((r) => r.importRef),
                 duplicateRefs,
                 friendlyNames,
-                notes
+                notes,
+                needsReview
               )
             }
             disabled={selectedCount === 0}

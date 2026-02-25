@@ -70,6 +70,7 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
           fromAccountId: state.accountId,
           categoryId: state.categoryIds[i],
           importRef: state.importRefs[i],
+          needsReview: state.needsReview[i] || false,
         };
       })
       .filter((t): t is NonNullable<typeof t> => t !== null);
