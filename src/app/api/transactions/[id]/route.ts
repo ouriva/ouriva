@@ -94,6 +94,7 @@ export async function PUT(
         date: data.date,
         fromAccountId: data.fromAccountId,
         categoryId: data.categoryId ?? undefined,
+        needsReview: data.needsReview,
       },
       include: transactionInclude,
     });

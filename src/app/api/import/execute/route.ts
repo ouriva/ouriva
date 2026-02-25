@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
           fromAccountId: t.fromAccountId,
           categoryId: t.categoryId || null,
           importRef: t.importRef,
+          needsReview: t.needsReview ?? false,
         })),
         skipDuplicates: true, // Skip rows with duplicate importRef
       });

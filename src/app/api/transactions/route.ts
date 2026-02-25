@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { page, limit, type, accountId, categoryId, startDate, endDate, search } =
+    const { page, limit, type, accountId, categoryId, startDate, endDate, search, needsReview } =
       parsed.data;
 
     // Build a dynamic Prisma `where` filter.
@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
 
     if (type) where.type = type;
     if (categoryId) where.categoryId = categoryId;
+    if (needsReview !== undefined) where.needsReview = needsReview;
 
     // Search and accountId both use OR conditions. To combine them
     // correctly (both must match), we wrap each in a separate AND clause.
@@ -147,6 +148,7 @@ export async function POST(request: NextRequest) {
         date: data.date,
         fromAccountId: data.fromAccountId,
         categoryId: data.categoryId ?? undefined,
+        needsReview: data.needsReview ?? false,
       },
       include: {
         fromAccount: { include: { currency: true } },
