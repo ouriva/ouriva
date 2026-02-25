@@ -105,7 +105,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           notes: "",
           date: format(new Date(), "yyyy-MM-dd"),
           fromAccountId: "",
-          categoryId: "",
+          categoryId: undefined,
         }) as any,
   });
 
@@ -289,13 +289,14 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
       <div>
         <Label>Category</Label>
         <Select
-          value={watch("categoryId") as string}
-          onValueChange={(value) => setValue("categoryId", value)}
+          value={watch("categoryId") || "none"}
+          onValueChange={(value) => setValue("categoryId", value === "none" ? undefined : value)}
         >
           <SelectTrigger className="mt-2">
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="none">No category</SelectItem>
             {parentCategories.map((parent) => {
               const children = childCategories.filter(
                 (c) => c.parentId === parent.id

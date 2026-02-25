@@ -5,8 +5,8 @@
 //   2. Type inference — generate TypeScript types automatically
 //
 // We use a DISCRIMINATED UNION for transaction types:
-//   - INCOME requires: fromAccountId, categoryId
-//   - EXPENSE requires: fromAccountId, categoryId
+//   - INCOME requires: fromAccountId
+//   - EXPENSE requires: fromAccountId
 
 import { z } from "zod/v4";
 
@@ -32,14 +32,14 @@ const incomeSchema = z.object({
   type: z.literal("INCOME"),
   ...baseTransactionFields,
   fromAccountId: z.string().uuid("Invalid account"),
-  categoryId: z.string().uuid("Invalid category"),
+  categoryId: z.string().uuid("Invalid category").optional(),
 });
 
 const expenseSchema = z.object({
   type: z.literal("EXPENSE"),
   ...baseTransactionFields,
   fromAccountId: z.string().uuid("Invalid account"),
-  categoryId: z.string().uuid("Invalid category"),
+  categoryId: z.string().uuid("Invalid category").optional(),
 });
 
 // --- Exported schemas ---
