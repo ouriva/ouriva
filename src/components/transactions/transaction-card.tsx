@@ -6,7 +6,7 @@
 // This is a Server Component (no "use client") — it receives
 // data as props and renders HTML. No browser JavaScript needed.
 
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, CircleDot } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
@@ -79,6 +79,15 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
             </span>
           ) : (
             subtitleText
+          )}
+          {transaction.needsReview && (
+            <>
+              <span className="mx-1">·</span>
+              <span className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                <CircleDot className="h-3.5 w-3.5" />
+                Review
+              </span>
+            </>
           )}
         </p>
       </div>

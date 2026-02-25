@@ -51,6 +51,7 @@ export default async function EditTransactionPage({
     date: transaction.date,
     fromAccountId: transaction.fromAccountId,
     ...(transaction.categoryId && { categoryId: transaction.categoryId }),
+    needsReview: transaction.needsReview,
   };
 
   return (

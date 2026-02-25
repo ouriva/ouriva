@@ -27,6 +27,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   ChevronLeft,
   ChevronRight,
@@ -65,6 +67,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
   const [categoryId, setCategoryId] = useState<string | undefined>();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [needsReview, setNeedsReview] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
   // --- Reference data for filter dropdowns ---
@@ -103,7 +106,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
   // Reset page to 1 when any filter changes
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, type, accountId, categoryId, startDate, endDate]);
+  }, [debouncedSearch, type, accountId, categoryId, startDate, endDate, needsReview]);
 
   // Build the filter object passed to the hook
   const filters: Partial<TransactionQuery> = {
@@ -115,12 +118,13 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
     ...(categoryId && { categoryId }),
     ...(startDate && { startDate: new Date(startDate) }),
     ...(endDate && { endDate: new Date(endDate) }),
+    ...(needsReview && { needsReview: true }),
   };
 
   const { transactions, pagination, isLoading, error } = useTransactions(filters);
 
   // Count active filters (excluding search and type tabs)
-  const activeFilterCount = [accountId, categoryId, startDate, endDate].filter(Boolean).length;
+  const activeFilterCount = [accountId, categoryId, startDate, endDate, needsReview].filter(Boolean).length;
 
   function clearFilters() {
     setSearch("");
@@ -129,6 +133,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
     setCategoryId(undefined);
     setStartDate("");
     setEndDate("");
+    setNeedsReview(false);
   }
 
   // Category helpers for grouped dropdown
@@ -291,6 +296,18 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
                 onChange={(e) => setEndDate(e.target.value)}
                 className="h-8 text-xs"
               />
+            </div>
+
+            {/* Needs review filter */}
+            <div className="flex items-center gap-2 sm:col-span-2">
+              <Checkbox
+                id="needsReviewFilter"
+                checked={needsReview}
+                onCheckedChange={(checked) => setNeedsReview(checked === true)}
+              />
+              <Label htmlFor="needsReviewFilter" className="cursor-pointer text-xs font-medium text-muted-foreground">
+                Needs review only
+              </Label>
             </div>
           </div>
         )}

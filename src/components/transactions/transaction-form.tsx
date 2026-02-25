@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 
 // Types for the account and category data loaded from the API
@@ -62,6 +63,7 @@ interface TransactionFormData {
   date: Date;
   fromAccountId: string;
   categoryId?: string;
+  needsReview?: boolean;
 }
 
 interface TransactionFormProps {
@@ -320,6 +322,20 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             {errors.categoryId.message}
           </p>
         )}
+      </div>
+
+      {/* Needs Review */}
+      <div className="flex items-center gap-2">
+        <Checkbox
+          id="needsReview"
+          checked={watch("needsReview") || false}
+          onCheckedChange={(checked) =>
+            setValue("needsReview", checked === true)
+          }
+        />
+        <Label htmlFor="needsReview" className="cursor-pointer text-sm font-normal">
+          Mark for review
+        </Label>
       </div>
 
       {/* Submit */}
