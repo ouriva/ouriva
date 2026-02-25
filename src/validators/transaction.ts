@@ -23,6 +23,7 @@ const baseTransactionFields = {
   friendlyName: z.string().max(255).optional(),
   notes: z.string().max(1000).optional(),
   date: z.coerce.date(),
+  needsReview: z.boolean().optional(),
 };
 
 // --- Discriminated union variants ---
@@ -66,6 +67,7 @@ export const transactionQuerySchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   search: z.string().optional(),
+  needsReview: z.coerce.boolean().optional(),
 });
 
 // --- Inferred types ---

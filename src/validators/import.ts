@@ -60,6 +60,7 @@ export const importTransactionSchema = z.object({
   fromAccountId: z.string().uuid(),
   categoryId: z.string().uuid().optional(),
   importRef: z.string(),
+  needsReview: z.boolean().optional(),
 });
 
 export const executeImportSchema = z.object({

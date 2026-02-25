@@ -69,6 +69,7 @@ model Transaction {
   importRef     String?         @unique
   fromAccountId String
   categoryId    String?
+  needsReview   Boolean         @default(false)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   category      Category?       @relation(fields: [categoryId], references: [id])

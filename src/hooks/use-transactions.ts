@@ -39,6 +39,7 @@ export interface TransactionWithRelations {
     name: string;
     parent: { id: string; name: string } | null;
   } | null;
+  needsReview: boolean;
   createdAt: string;
 }
 
