@@ -153,8 +153,14 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
       }
 
       onSuccess?.();
-      router.push("/transactions");
-      router.refresh(); // refresh server components to show new data
+      if (isEditing) {
+        // Go back to wherever the user came from (e.g., filtered list).
+        // The useTransactions hook will refetch fresh data on mount.
+        router.back();
+      } else {
+        router.push("/transactions");
+        router.refresh();
+      }
     } catch (error) {
       console.error("Transaction save error:", error);
       alert(error instanceof Error ? error.message : "Failed to save");

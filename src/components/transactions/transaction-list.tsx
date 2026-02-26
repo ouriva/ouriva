@@ -4,15 +4,16 @@
 // Filter controls sit above the list:
 //   1. Search bar — always visible, debounced (300ms)
 //   2. Type tabs — All | Income | Expense
-//   3. Collapsible "Filters" section — account, category, date range
+//   3. Collapsible "Filters" section — account, category, date range, review
 //
-// The API already supports all these filters — this component just
-// provides the UI and wires filter state to the useTransactions hook.
+// Filter state lives in URL search params (not React state).
+// This means filters survive navigation — when you edit a transaction
+// and come back, your filters are preserved in the URL.
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTransactions } from "@/hooks/use-transactions";
 import { TransactionCard } from "./transaction-card";
 import { formatDate } from "@/lib/formatters";
@@ -51,28 +52,56 @@ interface Category {
   parentId: string | null;
 }
 
-interface TransactionListProps {
-  initialFilters?: Partial<TransactionQuery>;
-}
-
-export function TransactionList({ initialFilters }: TransactionListProps) {
+export function TransactionList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // --- Filter state ---
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [type, setType] = useState<string | undefined>();
-  const [accountId, setAccountId] = useState<string | undefined>();
-  const [categoryId, setCategoryId] = useState<string | undefined>();
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [needsReview, setNeedsReview] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  // --- Read filter state from URL search params ---
+  // The URL is the source of truth for all filters.
+  const page = parseInt(searchParams.get("page") || "1");
+  const type = searchParams.get("type") || undefined;
+  const accountId = searchParams.get("accountId") || undefined;
+  const categoryId = searchParams.get("categoryId") || undefined;
+  const startDate = searchParams.get("startDate") || "";
+  const endDate = searchParams.get("endDate") || "";
+  const needsReview = searchParams.get("needsReview") === "true";
+  const urlSearch = searchParams.get("search") || "";
+
+  // Search input uses local state for responsive typing.
+  // The debounced value syncs to the URL after 300ms.
+  const [search, setSearch] = useState(urlSearch);
+
+  // Auto-open filters panel if any collapsible filter is active
+  const [showFilters, setShowFilters] = useState(
+    Boolean(accountId || categoryId || startDate || endDate || needsReview)
+  );
 
   // --- Reference data for filter dropdowns ---
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+
+  // Helper: update URL search params.
+  // Resets page to 1 by default (most filter changes should reset pagination).
+  const updateParams = useCallback(
+    (updates: Record<string, string | undefined>, resetPage = true) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== undefined && value !== "") {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      });
+
+      if (resetPage) {
+        params.delete("page");
+      }
+
+      router.push(`/transactions?${params.toString()}`);
+    },
+    [searchParams, router]
+  );
 
   // Fetch accounts and categories on mount
   useEffect(() => {
@@ -94,25 +123,31 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
     loadFilterData();
   }, []);
 
-  // Debounce search — wait 300ms after the user stops typing before
-  // hitting the API. This prevents a request on every keystroke.
+  // Debounce search — sync to URL after 300ms of inactivity.
+  // Uses router.replace to avoid cluttering browser history with
+  // a new entry for every keystroke.
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(search);
+      const currentUrlSearch = searchParams.get("search") || "";
+      if (search !== currentUrlSearch) {
+        const params = new URLSearchParams(searchParams.toString());
+        if (search) {
+          params.set("search", search);
+        } else {
+          params.delete("search");
+        }
+        params.delete("page");
+        router.replace(`/transactions?${params.toString()}`);
+      }
     }, 300);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, searchParams, router]);
 
-  // Reset page to 1 when any filter changes
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedSearch, type, accountId, categoryId, startDate, endDate, needsReview]);
-
-  // Build the filter object passed to the hook
+  // Build the filter object passed to the hook.
+  // Uses the URL values (not local search state) as the source of truth.
   const filters: Partial<TransactionQuery> = {
-    ...initialFilters,
     page,
-    ...(debouncedSearch && { search: debouncedSearch }),
+    ...(urlSearch && { search: urlSearch }),
     ...(type && { type: type as TransactionQuery["type"] }),
     ...(accountId && { accountId }),
     ...(categoryId && { categoryId }),
@@ -128,12 +163,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
 
   function clearFilters() {
     setSearch("");
-    setType(undefined);
-    setAccountId(undefined);
-    setCategoryId(undefined);
-    setStartDate("");
-    setEndDate("");
-    setNeedsReview(false);
+    router.push("/transactions");
   }
 
   // Category helpers for grouped dropdown
@@ -181,7 +211,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
         {/* Type tabs */}
         <Tabs
           value={type || "ALL"}
-          onValueChange={(v) => setType(v === "ALL" ? undefined : v)}
+          onValueChange={(v) => updateParams({ type: v === "ALL" ? undefined : v })}
         >
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="ALL">All</TabsTrigger>
@@ -223,7 +253,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
               </label>
               <Select
                 value={accountId || "all"}
-                onValueChange={(v) => setAccountId(v === "all" ? undefined : v)}
+                onValueChange={(v) => updateParams({ accountId: v === "all" ? undefined : v })}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="All accounts" />
@@ -246,7 +276,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
               </label>
               <Select
                 value={categoryId || "all"}
-                onValueChange={(v) => setCategoryId(v === "all" ? undefined : v)}
+                onValueChange={(v) => updateParams({ categoryId: v === "all" ? undefined : v })}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="All categories" />
@@ -282,7 +312,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
               <Input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => updateParams({ startDate: e.target.value || undefined })}
                 className="h-8 text-xs"
               />
             </div>
@@ -293,7 +323,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
               <Input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => updateParams({ endDate: e.target.value || undefined })}
                 className="h-8 text-xs"
               />
             </div>
@@ -303,7 +333,9 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
               <Checkbox
                 id="needsReviewFilter"
                 checked={needsReview}
-                onCheckedChange={(checked) => setNeedsReview(checked === true)}
+                onCheckedChange={(checked) =>
+                  updateParams({ needsReview: checked === true ? "true" : undefined })
+                }
               />
               <Label htmlFor="needsReviewFilter" className="cursor-pointer text-xs font-medium text-muted-foreground">
                 Needs review only
@@ -354,7 +386,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => updateParams({ page: String(Math.max(1, page - 1)) }, false)}
                 disabled={page <= 1}
               >
                 <ChevronLeft className="mr-1 h-4 w-4" />
@@ -366,7 +398,7 @@ export function TransactionList({ initialFilters }: TransactionListProps) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => updateParams({ page: String(page + 1) }, false)}
                 disabled={page >= pagination.totalPages}
               >
                 Next

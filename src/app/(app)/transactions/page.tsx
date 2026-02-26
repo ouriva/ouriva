@@ -8,11 +8,12 @@
 // This is the "donut pattern": Server Component wraps Client Components.
 
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Loader2 } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Transactions",
@@ -30,8 +31,16 @@ export default function TransactionsPage() {
         </Link>
       </PageHeader>
 
-      {/* Transaction list (Client Component) */}
-      <TransactionList />
+      {/* Transaction list (Client Component)
+          Suspense is required because TransactionList uses useSearchParams(),
+          which needs a boundary for static rendering. */}
+      <Suspense fallback={
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }>
+        <TransactionList />
+      </Suspense>
 
       {/* Floating Action Button (FAB)
           Fixed position at bottom-right, above the nav bar.
