@@ -43,18 +43,16 @@ export async function GET(request: NextRequest) {
       expense: 0,
     }));
 
-    // Build category breakdown
-    const categoryMap = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        total: number;
-        // Per-month totals for the category
-        months: number[];
-        children: Map<string, { id: string; name: string; total: number }>;
-      }
-    >();
+    // Build category breakdown — separate maps for expenses and income
+    type CategoryEntry = {
+      id: string;
+      name: string;
+      total: number;
+      months: number[];
+      children: Map<string, { id: string; name: string; total: number }>;
+    };
+    const categoryMap = new Map<string, CategoryEntry>();
+    const incomeCategoryMap = new Map<string, CategoryEntry>();
 
     let totalIncome = 0;
     let totalExpense = 0;
@@ -70,52 +68,54 @@ export async function GET(request: NextRequest) {
       } else {
         months[monthIndex].expense += amount;
         totalExpense += amount;
+      }
 
-        // Category breakdown for expenses
-        if (tx.category) {
-          const parentCategory = tx.category.parent || tx.category;
-          const isChild = !!tx.category.parent;
+      // Category breakdown for both expenses and income
+      const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
 
-          if (!categoryMap.has(parentCategory.id)) {
-            categoryMap.set(parentCategory.id, {
-              id: parentCategory.id,
-              name: parentCategory.name,
-              total: 0,
-              months: new Array(12).fill(0),
-              children: new Map(),
-            });
-          }
+      if (tx.category) {
+        const parentCategory = tx.category.parent || tx.category;
+        const isChild = !!tx.category.parent;
 
-          const parent = categoryMap.get(parentCategory.id)!;
-          parent.total += amount;
-          parent.months[monthIndex] += amount;
-
-          if (isChild) {
-            if (!parent.children.has(tx.category.id)) {
-              parent.children.set(tx.category.id, {
-                id: tx.category.id,
-                name: tx.category.name,
-                total: 0,
-              });
-            }
-            parent.children.get(tx.category.id)!.total += amount;
-          }
-        } else {
-          // Uncategorized expenses — group under a special bucket
-          const uncatKey = "__uncategorized__";
-          if (!categoryMap.has(uncatKey)) {
-            categoryMap.set(uncatKey, {
-              id: uncatKey,
-              name: "Uncategorized",
-              total: 0,
-              months: new Array(12).fill(0),
-              children: new Map(),
-            });
-          }
-          const uncat = categoryMap.get(uncatKey)!;
-          uncat.total += amount;
-          uncat.months[monthIndex] += amount;
+        if (!targetMap.has(parentCategory.id)) {
+          targetMap.set(parentCategory.id, {
+            id: parentCategory.id,
+            name: parentCategory.name,
+            total: 0,
+            months: new Array(12).fill(0),
+            children: new Map(),
+          });
         }
+
+        const parent = targetMap.get(parentCategory.id)!;
+        parent.total += amount;
+        parent.months[monthIndex] += amount;
+
+        if (isChild) {
+          if (!parent.children.has(tx.category.id)) {
+            parent.children.set(tx.category.id, {
+              id: tx.category.id,
+              name: tx.category.name,
+              total: 0,
+            });
+          }
+          parent.children.get(tx.category.id)!.total += amount;
+        }
+      } else {
+        // Uncategorized — group under a special bucket
+        const uncatKey = "__uncategorized__";
+        if (!targetMap.has(uncatKey)) {
+          targetMap.set(uncatKey, {
+            id: uncatKey,
+            name: "Uncategorized",
+            total: 0,
+            months: new Array(12).fill(0),
+            children: new Map(),
+          });
+        }
+        const uncat = targetMap.get(uncatKey)!;
+        uncat.total += amount;
+        uncat.months[monthIndex] += amount;
       }
     }
 
@@ -127,16 +127,18 @@ export async function GET(request: NextRequest) {
       net: Math.round((m.income - m.expense) * 100) / 100,
     }));
 
-    const categories = Array.from(categoryMap.values())
-      .map((cat) => ({
-        ...cat,
-        total: Math.round(cat.total * 100) / 100,
-        months: cat.months.map((m) => Math.round(m * 100) / 100),
-        children: Array.from(cat.children.values())
-          .map((c) => ({ ...c, total: Math.round(c.total * 100) / 100 }))
-          .sort((a, b) => b.total - a.total),
-      }))
-      .sort((a, b) => b.total - a.total);
+    function mapToSortedArray(map: Map<string, CategoryEntry>) {
+      return Array.from(map.values())
+        .map((cat) => ({
+          ...cat,
+          total: Math.round(cat.total * 100) / 100,
+          months: cat.months.map((m) => Math.round(m * 100) / 100),
+          children: Array.from(cat.children.values())
+            .map((c) => ({ ...c, total: Math.round(c.total * 100) / 100 }))
+            .sort((a, b) => b.total - a.total),
+        }))
+        .sort((a, b) => b.total - a.total);
+    }
 
     return NextResponse.json({
       year,
@@ -144,7 +146,8 @@ export async function GET(request: NextRequest) {
       totalExpense: Math.round(totalExpense * 100) / 100,
       net: Math.round((totalIncome - totalExpense) * 100) / 100,
       months: roundedMonths,
-      categories,
+      categories: mapToSortedArray(categoryMap),
+      incomeCategories: mapToSortedArray(incomeCategoryMap),
     });
   } catch (error) {
     console.error("GET /api/summary/annual error:", error);

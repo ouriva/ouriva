@@ -44,27 +44,35 @@ Options:
 
 Features that make the data more useful and the experience smoother.
 
-### 5. Home Currency Net Worth
+### ~~5. Income Category Breakdown~~ (Done — v1.5.0)
+
+Monthly and annual summaries now show income broken down by category, not just as a single total. This enables the "same category" reimbursement workflow — categorize a reimbursement under the same category as the original expense, and the category view shows the net cost.
+
+- "Income Categories" section below expense categories in monthly summary
+- "Income by Category" table in annual summary
+- Reuses the same hierarchical parent/child category display as expenses
+
+### 6. Home Currency Net Worth
 **Priority:** Medium | **Effort:** Low
 
 A single "Net Worth" figure in a configurable home currency on the dashboard. Requires a simple exchange rate table (manually entered, not live API) and a conversion at display time. Gives multi-currency users the one number they actually want.
 
-### 6. Month-over-Month Comparison
+### 7. Month-over-Month Comparison
 **Priority:** Medium | **Effort:** Low
 
 Show deltas next to each category in the monthly summary: "Food: +23% vs last month." No new page — just a number and an arrow/color on the existing summary. Simple query comparing current month totals to previous month.
 
-### 7. Bulk Categorize
+### 8. Bulk Categorize
 **Priority:** Medium | **Effort:** Low
 
 Select multiple transactions in the list and assign a category to all at once. Especially useful after importing a batch of uncategorized transactions. Checkbox selection + a "Set Category" action bar.
 
-### 8. Pinned / Favorite Categories
+### 9. Pinned / Favorite Categories
 **Priority:** Low | **Effort:** Low
 
 Show the 3-4 most-used categories at the top of category dropdowns. Can be computed from usage frequency or manually pinned. Saves scrolling on mobile where the dropdown can be long.
 
-### 9. Transaction Templates
+### 10. Transaction Templates
 **Priority:** Low | **Effort:** Low
 
 Save frequent transactions as templates: "Coffee, 4.50, Food > Coffee." One tap to create from a template. Like recurring but on-demand, for variable-frequency expenses.
@@ -73,7 +81,7 @@ Save frequent transactions as templates: "Coffee, 4.50, Food > Coffee." One tap 
 
 ## Phase 3 — Differentiator
 
-### 10. MCP Server (AI Agent Integration)
+### 11. MCP Server (AI Agent Integration)
 **Priority:** Medium | **Effort:** Medium
 
 Expose the REST API as an MCP (Model Context Protocol) server so AI agents (Claude Desktop, Cursor, etc.) can interact with the app programmatically.

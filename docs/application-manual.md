@@ -911,9 +911,17 @@ It then joins categories with their parents to build a hierarchical breakdown:
       { "name": "Groceries", "total": 318.30 },
       { "name": "Restaurants", "total": 83.50 }
     ]}
+  ],
+  "incomeCategories": [
+    { "name": "Salary", "total": 3000, "children": [] },
+    { "name": "Health", "total": 500, "children": [
+      { "name": "Insurance Reimbursement", "total": 500 }
+    ]}
   ]
 }
 ```
+
+Both `categories` (expenses) and `incomeCategories` use the same hierarchical structure. Income breakdown enables the "same category" reimbursement workflow — categorize a reimbursement under the original expense category, and the summary shows the net impact per category.
 
 #### `GET /api/budgets/[year]` — Budget vs Actual
 
@@ -1291,13 +1299,15 @@ Uses URL search parameters (`?year=2026&month=1`) instead of local state. This m
 
 The component uses `useRouter().push()` with `useSearchParams()` to read and update the URL.
 
-#### `CategoryBreakdown` — Expense Distribution
+#### `CategoryBreakdown` — Category Distribution
 
-Shows each parent category's total and percentage of total expenses. Child categories are nested and indented. Percentages are computed client-side:
+Reusable component for both expense and income category breakdowns. Shows each parent category's total and percentage. Child categories are nested and indented. Percentages are computed client-side:
 
 ```typescript
-const percentage = totalExpense > 0 ? (category.total / totalExpense) * 100 : 0;
+const percentage = total > 0 ? (category.total / total) * 100 : 0;
 ```
+
+Used twice in the monthly summary: once for "Expense Categories" with `total={totalExpense}`, once for "Income Categories" with `total={totalIncome}`.
 
 #### `AnnualCategoryTable` — Scrollable Monthly Grid
 

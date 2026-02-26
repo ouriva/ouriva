@@ -28,13 +28,14 @@ interface Category {
 
 interface AnnualCategoryTableProps {
   categories: Category[];
+  emptyMessage?: string;
 }
 
-export function AnnualCategoryTable({ categories }: AnnualCategoryTableProps) {
+export function AnnualCategoryTable({ categories, emptyMessage = "No data for this year" }: AnnualCategoryTableProps) {
   if (categories.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        No expense data for this year
+        {emptyMessage}
       </div>
     );
   }

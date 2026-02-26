@@ -54,15 +54,15 @@ export async function GET(request: NextRequest) {
     // Group by category for the breakdown.
     // We group by PARENT category — if a transaction has a child
     // category, we roll it up to the parent.
-    const categoryMap = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        total: number;
-        children: Map<string, { id: string; name: string; total: number }>;
-      }
-    >();
+    // Two separate maps: one for expenses, one for income.
+    type CategoryEntry = {
+      id: string;
+      name: string;
+      total: number;
+      children: Map<string, { id: string; name: string; total: number }>;
+    };
+    const categoryMap = new Map<string, CategoryEntry>();
+    const incomeCategoryMap = new Map<string, CategoryEntry>();
 
     for (const tx of transactions) {
       const amount = Number(tx.amount);
@@ -73,59 +73,61 @@ export async function GET(request: NextRequest) {
         totalExpense += amount;
       }
 
-      // Build category breakdown for expenses
-      if (tx.type === "EXPENSE") {
-        if (tx.category) {
-          const parentCategory = tx.category.parent || tx.category;
-          const isChild = !!tx.category.parent;
+      // Build category breakdown for both expenses and income
+      const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
 
-          if (!categoryMap.has(parentCategory.id)) {
-            categoryMap.set(parentCategory.id, {
-              id: parentCategory.id,
-              name: parentCategory.name,
-              total: 0,
-              children: new Map(),
-            });
-          }
+      if (tx.category) {
+        const parentCategory = tx.category.parent || tx.category;
+        const isChild = !!tx.category.parent;
 
-          const parent = categoryMap.get(parentCategory.id)!;
-          parent.total += amount;
-
-          if (isChild) {
-            if (!parent.children.has(tx.category.id)) {
-              parent.children.set(tx.category.id, {
-                id: tx.category.id,
-                name: tx.category.name,
-                total: 0,
-              });
-            }
-            parent.children.get(tx.category.id)!.total += amount;
-          }
-        } else {
-          // Uncategorized expenses — group under a special bucket
-          const uncatKey = "__uncategorized__";
-          if (!categoryMap.has(uncatKey)) {
-            categoryMap.set(uncatKey, {
-              id: uncatKey,
-              name: "Uncategorized",
-              total: 0,
-              children: new Map(),
-            });
-          }
-          categoryMap.get(uncatKey)!.total += amount;
+        if (!targetMap.has(parentCategory.id)) {
+          targetMap.set(parentCategory.id, {
+            id: parentCategory.id,
+            name: parentCategory.name,
+            total: 0,
+            children: new Map(),
+          });
         }
+
+        const parent = targetMap.get(parentCategory.id)!;
+        parent.total += amount;
+
+        if (isChild) {
+          if (!parent.children.has(tx.category.id)) {
+            parent.children.set(tx.category.id, {
+              id: tx.category.id,
+              name: tx.category.name,
+              total: 0,
+            });
+          }
+          parent.children.get(tx.category.id)!.total += amount;
+        }
+      } else {
+        // Uncategorized — group under a special bucket
+        const uncatKey = "__uncategorized__";
+        if (!targetMap.has(uncatKey)) {
+          targetMap.set(uncatKey, {
+            id: uncatKey,
+            name: "Uncategorized",
+            total: 0,
+            children: new Map(),
+          });
+        }
+        targetMap.get(uncatKey)!.total += amount;
       }
     }
 
     // Convert maps to sorted arrays
-    const categories = Array.from(categoryMap.values())
-      .map((cat) => ({
-        ...cat,
-        children: Array.from(cat.children.values()).sort(
-          (a, b) => b.total - a.total
-        ),
-      }))
-      .sort((a, b) => b.total - a.total);
+    function mapToSortedArray(map: Map<string, CategoryEntry>) {
+      return Array.from(map.values())
+        .map((cat) => ({
+          ...cat,
+          children: Array.from(cat.children.values()).sort(
+            (a, b) => b.total - a.total
+          ),
+        }))
+        .sort((a, b) => b.total - a.total);
+    }
 
     return NextResponse.json({
       year,
@@ -133,7 +135,8 @@ export async function GET(request: NextRequest) {
       totalIncome: Math.round(totalIncome * 100) / 100,
       totalExpense: Math.round(totalExpense * 100) / 100,
       net: Math.round((totalIncome - totalExpense) * 100) / 100,
-      categories,
+      categories: mapToSortedArray(categoryMap),
+      incomeCategories: mapToSortedArray(incomeCategoryMap),
     });
   } catch (error) {
     console.error("GET /api/summary/monthly error:", error);

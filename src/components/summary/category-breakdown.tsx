@@ -28,17 +28,19 @@ interface Category {
 
 interface CategoryBreakdownProps {
   categories: Category[];
-  totalExpense: number;
+  total: number;
+  emptyMessage?: string;
 }
 
 export function CategoryBreakdown({
   categories,
-  totalExpense,
+  total,
+  emptyMessage = "No data for this period",
 }: CategoryBreakdownProps) {
   if (categories.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        No expense data for this period
+        {emptyMessage}
       </div>
     );
   }
@@ -48,8 +50,8 @@ export function CategoryBreakdown({
       {categories.map((category) => {
         // Percentage of total expenses this category represents
         const percentage =
-          totalExpense > 0
-            ? ((category.total / totalExpense) * 100).toFixed(1)
+          total > 0
+            ? ((category.total / total) * 100).toFixed(1)
             : "0.0";
 
         return (
@@ -78,8 +80,8 @@ export function CategoryBreakdown({
                 <div className="mt-2 space-y-1 border-t pt-2">
                   {category.children.map((child) => {
                     const childPct =
-                      totalExpense > 0
-                        ? ((child.total / totalExpense) * 100).toFixed(1)
+                      total > 0
+                        ? ((child.total / total) * 100).toFixed(1)
                         : "0.0";
 
                     return (

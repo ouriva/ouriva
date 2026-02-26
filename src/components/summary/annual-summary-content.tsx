@@ -17,6 +17,14 @@ import { MonthYearPicker } from "./month-year-picker";
 import { AnnualBarChart } from "@/components/charts/annual-bar-chart";
 import { AnnualCategoryTable } from "./annual-category-table";
 
+interface AnnualCategoryData {
+  id: string;
+  name: string;
+  total: number;
+  months: number[];
+  children: { id: string; name: string; total: number }[];
+}
+
 interface AnnualSummary {
   year: number;
   totalIncome: number;
@@ -28,13 +36,8 @@ interface AnnualSummary {
     expense: number;
     net: number;
   }[];
-  categories: {
-    id: string;
-    name: string;
-    total: number;
-    months: number[];
-    children: { id: string; name: string; total: number }[];
-  }[];
+  categories: AnnualCategoryData[];
+  incomeCategories: AnnualCategoryData[];
 }
 
 export function AnnualSummaryContent() {
@@ -137,6 +140,16 @@ export function AnnualSummaryContent() {
             </h2>
             <AnnualCategoryTable categories={data.categories} />
           </div>
+
+          {/* Income category breakdown (only if there are income categories) */}
+          {data.incomeCategories && data.incomeCategories.length > 0 && (
+            <div>
+              <h2 className="mb-3 text-base font-semibold">
+                Income by Category
+              </h2>
+              <AnnualCategoryTable categories={data.incomeCategories} />
+            </div>
+          )}
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">

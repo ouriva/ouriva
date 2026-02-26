@@ -20,18 +20,21 @@ import { MonthYearPicker } from "./month-year-picker";
 import { ExpensePieChart } from "@/components/charts/expense-pie-chart";
 import { CategoryBreakdown } from "./category-breakdown";
 
+interface CategoryData {
+  id: string;
+  name: string;
+  total: number;
+  children: { id: string; name: string; total: number }[];
+}
+
 interface MonthlySummary {
   year: number;
   month: number;
   totalIncome: number;
   totalExpense: number;
   net: number;
-  categories: {
-    id: string;
-    name: string;
-    total: number;
-    children: { id: string; name: string; total: number }[];
-  }[];
+  categories: CategoryData[];
+  incomeCategories: CategoryData[];
 }
 
 export function MonthlySummaryContent() {
@@ -135,16 +138,31 @@ export function MonthlySummaryContent() {
             </CardContent>
           </Card>
 
-          {/* Category breakdown table */}
+          {/* Category breakdown — expenses */}
           <div>
             <h2 className="mb-3 text-base font-semibold">
-              Categories
+              Expense Categories
             </h2>
             <CategoryBreakdown
               categories={data.categories}
-              totalExpense={data.totalExpense}
+              total={data.totalExpense}
+              emptyMessage="No expense data for this period"
             />
           </div>
+
+          {/* Category breakdown — income (only if there are income categories) */}
+          {data.incomeCategories && data.incomeCategories.length > 0 && (
+            <div>
+              <h2 className="mb-3 text-base font-semibold">
+                Income Categories
+              </h2>
+              <CategoryBreakdown
+                categories={data.incomeCategories}
+                total={data.totalIncome}
+                emptyMessage="No income data for this period"
+              />
+            </div>
+          )}
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
