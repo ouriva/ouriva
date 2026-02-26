@@ -35,7 +35,8 @@ This is a **personal finance application** that replaces an Excel spreadsheet. I
 - Record income and expenses, with a configurable transfer category for inter-account movements
 - Import bank statements from CSV and Excel files with column mapping and duplicate detection
 - Add friendly display names and notes to transactions
-- Search and filter transactions by text, type, account, category, or date range
+- Flag transactions for review (pending refunds, split bills, suspicious charges)
+- Search and filter transactions by text, type, account, category, date range, or review status
 - Organize transactions with hierarchical categories (e.g., Food > Groceries)
 - Set annual budgets per category and track spending against them
 - View monthly and annual summaries with charts
@@ -627,6 +628,7 @@ model Transaction {
   importRef     String?         @unique            // Deduplication key
   fromAccountId String
   categoryId    String?
+  needsReview   Boolean         @default(false)    // Flag for later review
   fromAccount   Account  @relation("fromAccount", ...)
   category      Category? @relation(...)
 }
@@ -645,6 +647,8 @@ There is no TRANSFER type. Transfers between accounts are recorded as regular IN
 **`notes`** — Free-form text for longer annotations. Useful for recording context like "Birthday dinner with friends" or "Annual gym membership renewal".
 
 **`importRef`** — A unique identifier for imported transactions (e.g., from a bank statement CSV). When importing, you can check if `importRef` already exists to avoid duplicates.
+
+**`needsReview`** — A boolean flag for marking transactions that need attention later (pending refunds, split bills waiting for payback, suspicious charges). Defaults to `false`. Can be set during manual creation, editing, or import. The transaction list has a filter to show only flagged items, and transaction cards show a blue "Review" indicator when flagged.
 
 **`@db.Date`** — Stores only the date (2026-01-15), not the full timestamp. Budget tracking doesn't need time precision.
 
@@ -974,15 +978,16 @@ const baseFields = {
   friendlyName: z.string().max(255).optional(),
   notes: z.string().max(1000).optional(),
   date: z.coerce.date(),
+  needsReview: z.boolean().optional(),
 };
 
 export const createTransactionSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("INCOME"),  ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid() }),
-  z.object({ type: z.literal("EXPENSE"), ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid() }),
+  z.object({ type: z.literal("INCOME"),  ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid().optional() }),
+  z.object({ type: z.literal("EXPENSE"), ...baseFields, fromAccountId: z.string().uuid(), categoryId: z.string().uuid().optional() }),
 ]);
 ```
 
-**How discriminated unions work**: Zod looks at the `type` field first. Based on the value, it validates against the matching schema. This gives precise error messages — "categoryId is required for EXPENSE" instead of a vague "invalid input."
+**How discriminated unions work**: Zod looks at the `type` field first. Based on the value, it validates against the matching schema. This gives precise error messages per type instead of a vague "invalid input."
 
 **`z.coerce.date()`** — Accepts both strings and Date objects and converts to Date. JSON doesn't have a Date type, so dates arrive as strings like `"2026-01-15"` from the API. `coerce` handles the conversion automatically.
 
@@ -994,6 +999,7 @@ export const transactionQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   type: z.enum(["INCOME", "EXPENSE"]).optional(),
   startDate: z.coerce.date().optional(),
+  needsReview: z.coerce.boolean().optional(),
   // ...
 });
 ```
@@ -1151,7 +1157,7 @@ const form = useForm<CreateTransactionInput>({
 ```
 The `zodResolver` connects the Zod schema to the form, so validation errors appear on individual fields automatically.
 
-2. **Type tabs** — A 2-column tab bar (Expense / Income) lets users switch types. The form fields are the same for both types: amount, description, friendly name, notes, date, account, and category.
+2. **Type tabs** — A 2-column tab bar (Expense / Income) lets users switch types. The form fields are the same for both types: amount, description, friendly name, notes, date, account, category, and a "Mark for review" checkbox.
 
 3. **`inputMode="decimal"`** — On mobile, this opens the numeric keyboard with a decimal point instead of the full QWERTY keyboard.
 
@@ -1161,7 +1167,7 @@ The `zodResolver` connects the Zod schema to the form, so validation errors appe
 
 A single transaction display. Server component (no interactivity needed for display).
 
-**Color coding**: Income is green, expenses red. Uses a `typeConfig` object to map transaction types to colors and icons — this is cleaner than a chain of if/else statements.
+**Color coding**: Income is green, expenses red. Uses a `typeConfig` object to map transaction types to colors and icons — this is cleaner than a chain of if/else statements. Transactions flagged for review show a blue "Review" indicator (with a `CircleDot` icon) next to the category name, using the same inline pattern as the amber "Uncategorized" warning.
 
 **Display priority chain**: The card title uses `friendlyName?.trim() || description || subtitleText`. When a friendly name exists, the bank description shows as a secondary subtitle below it. The `.trim()` prevents whitespace-only friendly names from hiding the description.
 
@@ -1169,7 +1175,7 @@ A single transaction display. Server component (no interactivity needed for disp
 
 Groups transactions by date and displays them with search, filtering, and pagination.
 
-**Filter UI**: A search bar (debounced 300ms), type tabs (All/Income/Expense), and a collapsible section with account, category, and date range filters. The component fetches accounts and categories on mount for the filter dropdowns.
+**Filter UI**: A search bar (debounced 300ms), type tabs (All/Income/Expense), and a collapsible section with account, category, date range, and "Needs review only" filters. The component fetches accounts and categories on mount for the filter dropdowns.
 
 **Date grouping logic**: The API returns a flat array. The component groups transactions into `Map<string, Transaction[]>` where the key is the formatted date (e.g., "Jan 15, 2026").
 
@@ -1260,7 +1266,7 @@ Presents dropdowns to map CSV/Excel columns to transaction fields (date, descrip
 
 #### `StepReview` — Transaction Preview
 
-Shows all parsed transactions with checkboxes, category dropdowns, type toggles (Income/Expense), inline friendly name and notes inputs. On mount, generates `importRef` hashes using Web Crypto API and checks for duplicates via the API. Duplicate rows are auto-unchecked and badged.
+Shows all parsed transactions with checkboxes, category dropdowns, type toggles (Income/Expense), inline friendly name and notes inputs, and a per-row "Review" checkbox to flag imported transactions for later review. On mount, generates `importRef` hashes using Web Crypto API and checks for duplicates via the API. Duplicate rows are auto-unchecked and badged.
 
 #### `StepConfirm` — Final Import
 

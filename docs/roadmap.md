@@ -15,15 +15,14 @@ Features that reduce manual work and make the app more pleasant to use every day
 
 A rules engine that auto-assigns categories during import and manual entry. A simple table in the database (`pattern`, `categoryId`, `matchType`) with a settings page to manage rules. Runs during CSV import (step-review) and optionally suggests categories when creating transactions manually.
 
-### 2. Transaction Review Flag
-**Priority:** High | **Effort:** Low
+### ~~2. Transaction Review Flag~~ (Done — v1.4.0)
 
 A boolean `needsReview` flag on transactions for marking items that need attention later — pending refunds, split bills waiting for payback, suspicious charges, etc.
 
-- Toggle via a tap/icon on the transaction card
-- Visual indicator (icon next to category or "Uncategorized" label)
-- Filter option in transaction list to show only flagged items
-- Badge count on the filter or dashboard showing how many need review
+- Blue "Review" indicator on transaction cards (next to category)
+- "Mark for review" checkbox in the transaction edit form
+- "Needs review only" filter toggle in the transaction list
+- Supported during bank statement import (per-row checkbox in step 3)
 
 ### 3. CSV Export
 **Priority:** High | **Effort:** Low
