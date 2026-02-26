@@ -15,6 +15,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { MonthYearPicker } from "./month-year-picker";
 import { ExpensePieChart } from "@/components/charts/expense-pie-chart";
@@ -123,46 +124,59 @@ export function MonthlySummaryContent() {
             </Card>
           </div>
 
-          {/* Pie chart — expense distribution by category */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Expense Distribution</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ExpensePieChart
-                data={data.categories.map((c) => ({
-                  name: c.name,
-                  total: c.total,
-                }))}
-              />
-            </CardContent>
-          </Card>
+          {/* Expenses / Income tabs — controls both chart and category list */}
+          <Tabs defaultValue="expenses">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="expenses">Expenses</TabsTrigger>
+              <TabsTrigger value="income">Income</TabsTrigger>
+            </TabsList>
 
-          {/* Category breakdown — expenses */}
-          <div>
-            <h2 className="mb-3 text-base font-semibold">
-              Expense Categories
-            </h2>
-            <CategoryBreakdown
-              categories={data.categories}
-              total={data.totalExpense}
-              emptyMessage="No expense data for this period"
-            />
-          </div>
+            <TabsContent value="expenses" className="space-y-6 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Expense Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ExpensePieChart
+                    data={data.categories.map((c) => ({
+                      name: c.name,
+                      total: c.total,
+                    }))}
+                    emptyMessage="No expense data"
+                  />
+                </CardContent>
+              </Card>
 
-          {/* Category breakdown — income (only if there are income categories) */}
-          {data.incomeCategories && data.incomeCategories.length > 0 && (
-            <div>
-              <h2 className="mb-3 text-base font-semibold">
-                Income Categories
-              </h2>
               <CategoryBreakdown
-                categories={data.incomeCategories}
+                categories={data.categories}
+                total={data.totalExpense}
+                emptyMessage="No expense data for this period"
+              />
+            </TabsContent>
+
+            <TabsContent value="income" className="space-y-6 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Income Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ExpensePieChart
+                    data={(data.incomeCategories || []).map((c) => ({
+                      name: c.name,
+                      total: c.total,
+                    }))}
+                    emptyMessage="No income data"
+                  />
+                </CardContent>
+              </Card>
+
+              <CategoryBreakdown
+                categories={data.incomeCategories || []}
                 total={data.totalIncome}
                 emptyMessage="No income data for this period"
               />
-            </div>
-          )}
+            </TabsContent>
+          </Tabs>
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">

@@ -55,14 +55,14 @@ export function AnnualBarChart({ data }: AnnualBarChartProps) {
         {/* X axis — month abbreviations */}
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
           tickLine={false}
           axisLine={false}
         />
 
         {/* Y axis — auto-scaled amounts, hidden for cleaner mobile look */}
         <YAxis
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
           tickLine={false}
           axisLine={false}
           width={60}

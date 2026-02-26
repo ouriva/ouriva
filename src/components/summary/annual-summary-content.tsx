@@ -12,6 +12,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 import { MonthYearPicker } from "./month-year-picker";
 import { AnnualBarChart } from "@/components/charts/annual-bar-chart";
@@ -133,23 +134,27 @@ export function AnnualSummaryContent() {
             </CardContent>
           </Card>
 
-          {/* Category breakdown table with monthly columns */}
-          <div>
-            <h2 className="mb-3 text-base font-semibold">
-              Expenses by Category
-            </h2>
-            <AnnualCategoryTable categories={data.categories} />
-          </div>
+          {/* Expenses / Income tabs for category tables */}
+          <Tabs defaultValue="expenses">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="expenses">Expenses</TabsTrigger>
+              <TabsTrigger value="income">Income</TabsTrigger>
+            </TabsList>
 
-          {/* Income category breakdown (only if there are income categories) */}
-          {data.incomeCategories && data.incomeCategories.length > 0 && (
-            <div>
-              <h2 className="mb-3 text-base font-semibold">
-                Income by Category
-              </h2>
-              <AnnualCategoryTable categories={data.incomeCategories} />
-            </div>
-          )}
+            <TabsContent value="expenses" className="mt-4">
+              <AnnualCategoryTable
+                categories={data.categories}
+                emptyMessage="No expense data for this year"
+              />
+            </TabsContent>
+
+            <TabsContent value="income" className="mt-4">
+              <AnnualCategoryTable
+                categories={data.incomeCategories || []}
+                emptyMessage="No income data for this year"
+              />
+            </TabsContent>
+          </Tabs>
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">

@@ -1299,6 +1299,10 @@ Uses URL search parameters (`?year=2026&month=1`) instead of local state. This m
 
 The component uses `useRouter().push()` with `useSearchParams()` to read and update the URL.
 
+#### Expenses / Income Tabs
+
+Both the monthly and annual summaries use a tabbed interface to switch between expense and income views. In the monthly summary, the tabs control both the pie chart and the category breakdown below it. In the annual summary, the tabs control the category table. The bar chart remains always visible since it already shows both income and expense bars side by side.
+
 #### `CategoryBreakdown` — Category Distribution
 
 Reusable component for both expense and income category breakdowns. Shows each parent category's total and percentage. Child categories are nested and indented. Percentages are computed client-side:
@@ -1307,11 +1311,11 @@ Reusable component for both expense and income category breakdowns. Shows each p
 const percentage = total > 0 ? (category.total / total) * 100 : 0;
 ```
 
-Used twice in the monthly summary: once for "Expense Categories" with `total={totalExpense}`, once for "Income Categories" with `total={totalIncome}`.
+Used in both tabs: expense tab passes `total={totalExpense}`, income tab passes `total={totalIncome}`.
 
 #### `AnnualCategoryTable` — Scrollable Monthly Grid
 
-A table with 14 columns: Category (sticky), Total, and 12 months. On mobile, this scrolls horizontally with the category column staying fixed (CSS `sticky`).
+A table with 14 columns: Category (sticky), Total, and 12 months. On mobile, this scrolls horizontally with the category column staying fixed (CSS `sticky`). Used in both the expense and income tabs of the annual summary.
 
 **`sticky` positioning** — The first column has `position: sticky; left: 0`. As you scroll horizontally, it "sticks" to the left edge. This is essential on mobile where the table is wider than the screen.
 
@@ -1525,12 +1529,16 @@ export function formatCurrency(amount: number | string, currencyCode: string): s
 
 **`Cell`** assigns colors from a palette. `COLORS[index % COLORS.length]` cycles through colors if there are more categories than colors.
 
+**`Legend`** renders a color-coded key below the chart. Uses `wrapperStyle` with `hsl(var(--foreground))` so label text is readable in both light and dark mode.
+
+**Dark mode chart colors** — All text elements in charts (axis tick labels, legend text, tooltip text) use `hsl(var(--foreground))` from the theme instead of hardcoded colors. This ensures readability in both light and dark mode.
+
 ### Annual Bar Chart
 
 ```tsx
 <BarChart data={data}>
-  <XAxis dataKey="month" />
-  <YAxis />
+  <XAxis dataKey="month" tick={{ fill: "hsl(var(--foreground))" }} />
+  <YAxis tick={{ fill: "hsl(var(--foreground))" }} />
   <Bar dataKey="income" fill="#22c55e" name="Income" />
   <Bar dataKey="expense" fill="#ef4444" name="Expenses" />
 </BarChart>

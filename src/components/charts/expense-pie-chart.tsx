@@ -20,6 +20,7 @@ import {
   Pie,
   Cell,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -42,19 +43,20 @@ interface CategoryData {
 
 interface ExpensePieChartProps {
   data: CategoryData[];
+  emptyMessage?: string;
 }
 
-export function ExpensePieChart({ data }: ExpensePieChartProps) {
+export function ExpensePieChart({ data, emptyMessage = "No data" }: ExpensePieChartProps) {
   if (data.length === 0) {
     return (
       <div className="flex h-[250px] items-center justify-center text-muted-foreground">
-        No expense data
+        {emptyMessage}
       </div>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={250}>
+    <ResponsiveContainer width="100%" height={300}>
       <PieChart>
         <Pie
           data={data}
@@ -83,6 +85,12 @@ export function ExpensePieChart({ data }: ExpensePieChartProps) {
             border: "1px solid hsl(var(--border))",
             backgroundColor: "hsl(var(--popover))",
             color: "hsl(var(--popover-foreground))",
+          }}
+        />
+        <Legend
+          wrapperStyle={{
+            color: "hsl(var(--foreground))",
+            fontSize: "12px",
           }}
         />
       </PieChart>
