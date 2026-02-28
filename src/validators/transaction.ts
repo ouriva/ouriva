@@ -44,9 +44,11 @@ const baseTransactionFields = {
 // superRefine lets us validate across multiple fields at once.
 // We use integer cent arithmetic to avoid IEEE 754 float drift
 // (e.g. 0.1 + 0.2 === 0.30000000000000004, not 0.3).
+// amount is optional here to support partial update schemas where
+// the user may not be changing the amount.
 
 function validateSplits(
-  data: { amount: number; splits?: { amount: number }[] },
+  data: { amount?: number; splits?: { amount: number }[] },
   ctx: z.RefinementCtx
 ) {
   if (!data.splits || data.splits.length === 0) return;
@@ -60,48 +62,51 @@ function validateSplits(
     return;
   }
 
-  const splitTotal = data.splits.reduce((sum, s) => sum + s.amount, 0);
-  if (Math.round(splitTotal * 100) !== Math.round(data.amount * 100)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["splits"],
-      message: "Split amounts must sum to the total transaction amount",
-    });
+  if (data.amount !== undefined) {
+    const splitTotal = data.splits.reduce((sum, s) => sum + s.amount, 0);
+    if (Math.round(splitTotal * 100) !== Math.round(data.amount * 100)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["splits"],
+        message: "Split amounts must sum to the total transaction amount",
+      });
+    }
   }
 }
 
-// --- Discriminated union variants ---
+// --- Discriminated union variants (base, without refinements) ---
+// We keep the base schemas separate so we can call .partial() on them
+// for the update schema. Zod v4 does not allow .partial() on schemas
+// that already have .superRefine() applied — the refinement is added
+// after .partial() instead.
 
-const incomeSchema = z
-  .object({
-    type: z.literal("INCOME"),
-    ...baseTransactionFields,
-    fromAccountId: z.string().uuid("Invalid account"),
-    categoryId: z.string().uuid("Invalid category").optional(),
-  })
-  .superRefine(validateSplits);
+const incomeBase = z.object({
+  type: z.literal("INCOME"),
+  ...baseTransactionFields,
+  fromAccountId: z.string().uuid("Invalid account"),
+  categoryId: z.string().uuid("Invalid category").optional(),
+});
 
-const expenseSchema = z
-  .object({
-    type: z.literal("EXPENSE"),
-    ...baseTransactionFields,
-    fromAccountId: z.string().uuid("Invalid account"),
-    categoryId: z.string().uuid("Invalid category").optional(),
-  })
-  .superRefine(validateSplits);
+const expenseBase = z.object({
+  type: z.literal("EXPENSE"),
+  ...baseTransactionFields,
+  fromAccountId: z.string().uuid("Invalid account"),
+  categoryId: z.string().uuid("Invalid category").optional(),
+});
 
 // --- Exported schemas ---
 
 export const createTransactionSchema = z.discriminatedUnion("type", [
-  incomeSchema,
-  expenseSchema,
+  incomeBase.superRefine(validateSplits),
+  expenseBase.superRefine(validateSplits),
 ]);
 
 // For updates, all fields are optional (partial update / PATCH semantics).
-// But we still need the type to know which rules apply.
+// .partial() is called on the base (no refinements) then the refinement
+// is re-applied so sum validation still runs when splits are provided.
 export const updateTransactionSchema = z.discriminatedUnion("type", [
-  incomeSchema.partial().extend({ type: z.literal("INCOME") }),
-  expenseSchema.partial().extend({ type: z.literal("EXPENSE") }),
+  incomeBase.partial().extend({ type: z.literal("INCOME") }).superRefine(validateSplits),
+  expenseBase.partial().extend({ type: z.literal("EXPENSE") }).superRefine(validateSplits),
 ]);
 
 // Query parameters for the GET /api/transactions endpoint.

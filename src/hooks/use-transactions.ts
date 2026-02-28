@@ -39,6 +39,17 @@ export interface TransactionWithRelations {
     name: string;
     parent: { id: string; name: string } | null;
   } | null;
+  // Split children — empty array for regular transactions.
+  // When non-empty, this transaction is a split parent.
+  splits: Array<{
+    id: string;
+    amount: string;
+    category: {
+      id: string;
+      name: string;
+      parent: { id: string; name: string } | null;
+    } | null;
+  }>;
   needsReview: boolean;
   createdAt: string;
 }

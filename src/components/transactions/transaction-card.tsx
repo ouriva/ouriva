@@ -6,7 +6,7 @@
 // This is a Server Component (no "use client") — it receives
 // data as props and renders HTML. No browser JavaScript needed.
 
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, CircleDot } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, AlertTriangle, CircleDot, Split } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
@@ -37,14 +37,31 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
   const Icon = config.icon;
   const currency = transaction.fromAccount.currency;
 
-  // Build the subtitle: category name
-  const isUncategorized = !transaction.category;
+  const isSplit = transaction.splits.length > 0;
 
-  const subtitleText = transaction.category
-    ? transaction.category.parent
-      ? `${transaction.category.parent.name} › ${transaction.category.name}`
-      : transaction.category.name
-    : "Uncategorized";
+  // Build the subtitle: split categories joined, or single category
+  let subtitleText: string;
+  if (isSplit) {
+    subtitleText = transaction.splits
+      .map((s) =>
+        s.category
+          ? s.category.parent
+            ? `${s.category.parent.name} › ${s.category.name}`
+            : s.category.name
+          : "Uncategorized"
+      )
+      .join(" · ");
+  } else {
+    subtitleText = transaction.category
+      ? transaction.category.parent
+        ? `${transaction.category.parent.name} › ${transaction.category.name}`
+        : transaction.category.name
+      : "Uncategorized";
+  }
+
+  // A split parent is never "uncategorized" in the meaningful sense —
+  // it has no category itself but its children do.
+  const isUncategorized = !isSplit && !transaction.category;
 
   return (
     <button
@@ -76,6 +93,11 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
             <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="h-3.5 w-3.5" />
               Uncategorized
+            </span>
+          ) : isSplit ? (
+            <span className="inline-flex items-center gap-1">
+              <Split className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{subtitleText}</span>
             </span>
           ) : (
             subtitleText
