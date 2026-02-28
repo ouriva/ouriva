@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback, memo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -347,9 +347,11 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Category helpers
-  const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories = categories.filter((c) => c.parentId);
+  // Category helpers — memoized so their array reference is stable across renders.
+  // Without useMemo, .filter() produces a new array every render, which defeats
+  // React.memo on ReviewRow (shallow prop comparison sees a new reference every time).
+  const parentCategories = useMemo(() => categories.filter((c) => !c.parentId), [categories]);
+  const childCategories = useMemo(() => categories.filter((c) => c.parentId), [categories]);
 
   const selectedCount = selectedRows.filter(Boolean).length;
   const duplicateCount = parsedRows.filter((r) =>
