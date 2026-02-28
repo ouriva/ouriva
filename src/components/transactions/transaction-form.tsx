@@ -10,17 +10,22 @@
 //   @hookform/resolvers — connects Zod schemas to react-hook-form,
 //     so validation runs through Zod but errors display via the form.
 //   watch() — subscribes to a specific field's value reactively.
+//   useFieldArray() — manages an array of form fields (used for splits).
+//     Fields are registered with the form so validation and submission
+//     work automatically for each row.
 
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { Plus, X } from "lucide-react";
 import {
   createTransactionSchema,
   type CreateTransactionInput,
+  type SplitEntry,
 } from "@/validators/transaction";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +41,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Types for the account and category data loaded from the API
 interface Account {
@@ -64,6 +70,7 @@ interface TransactionFormData {
   fromAccountId: string;
   categoryId?: string;
   needsReview?: boolean;
+  splits?: SplitEntry[];
 }
 
 interface TransactionFormProps {
@@ -78,6 +85,12 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Split mode tracks whether the user has toggled the split UI.
+  // It's a local UI state, not a form field.
+  const [isSplitMode, setIsSplitMode] = useState(
+    () => !!initialData?.splits && initialData.splits.length >= 2
+  );
+
   const isEditing = !!initialData;
 
   // Initialize react-hook-form with Zod validation.
@@ -88,6 +101,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     handleSubmit,  // wraps your submit handler with validation
     watch,         // reactively watch a field's value
     setValue,      // programmatically set a field's value
+    control,       // passed to useFieldArray to share form state
     formState: { errors }, // validation errors per field
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } = useForm<CreateTransactionInput>({
@@ -96,7 +110,11 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     // Cast needed because the Zod schema types date as Date, but
     // z.coerce.date() handles the string→Date conversion on submit.
     defaultValues: (initialData
-      ? { ...initialData, date: format(initialData.date, "yyyy-MM-dd") }
+      ? {
+          ...initialData,
+          date: format(initialData.date, "yyyy-MM-dd"),
+          splits: initialData.splits ?? [],
+        }
       : {
           type: "EXPENSE" as const,
           amount: undefined,
@@ -106,11 +124,35 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           date: format(new Date(), "yyyy-MM-dd"),
           fromAccountId: "",
           categoryId: undefined,
+          splits: [],
         }) as any,
+  });
+
+  // useFieldArray manages the dynamic list of split rows.
+  // `fields` is the current array of splits (each has a unique `id` key for React).
+  // `append` adds a new empty split row.
+  // `remove` removes the split at a given index.
+  const { fields: splitFields, append: appendSplit, remove: removeSplit } = useFieldArray({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    control: control as any,
+    name: "splits",
   });
 
   // Watch the "type" field for the type tabs
   const transactionType = watch("type");
+  const totalAmount = watch("amount") || 0;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const splitValues = watch("splits" as any) as { categoryId: string; amount: number }[] | undefined;
+
+  // Compute how much of the total has been allocated across splits.
+  // We use integer cent math to avoid float drift in the display.
+  const allocatedCents = (splitValues ?? []).reduce(
+    (sum, s) => sum + Math.round((Number(s?.amount) || 0) * 100),
+    0
+  );
+  const totalCents = Math.round(totalAmount * 100);
+  const remainingCents = totalCents - allocatedCents;
+  const isFullyAllocated = remainingCents === 0;
 
   // Load accounts and categories from the API on mount
   useEffect(() => {
@@ -141,10 +183,16 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         : "/api/transactions";
       const method = isEditing ? "PUT" : "POST";
 
+      // When not in split mode, clear the splits array so the API
+      // uses the single categoryId instead.
+      const payload = isSplitMode
+        ? data
+        : { ...data, splits: undefined };
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -173,6 +221,62 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   // Parent categories are used as group headers.
   const parentCategories = categories.filter((c) => !c.parentId);
   const childCategories = categories.filter((c) => c.parentId);
+
+  // Reusable category select rendered inside split rows and single-category mode
+  function CategorySelect({
+    value,
+    onChange,
+    placeholder = "Select category",
+  }: {
+    value: string | undefined;
+    onChange: (v: string) => void;
+    placeholder?: string;
+  }) {
+    return (
+      <Select
+        value={value || "none"}
+        onValueChange={(v) => onChange(v === "none" ? "" : v)}
+      >
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">No category</SelectItem>
+          {parentCategories.map((parent) => {
+            const children = childCategories.filter(
+              (c) => c.parentId === parent.id
+            );
+            if (children.length > 0) {
+              return children.map((child) => (
+                <SelectItem key={child.id} value={child.id}>
+                  {parent.name} › {child.name}
+                </SelectItem>
+              ));
+            }
+            return (
+              <SelectItem key={parent.id} value={parent.id}>
+                {parent.name}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  function handleToggleSplitMode() {
+    if (!isSplitMode) {
+      // Entering split mode — seed with 2 empty rows to guide the user
+      setValue("splits" as any, [
+        { categoryId: "", amount: 0 },
+        { categoryId: "", amount: 0 },
+      ] as any);
+    } else {
+      // Leaving split mode — clear the splits array
+      setValue("splits" as any, [] as any);
+    }
+    setIsSplitMode((prev) => !prev);
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -291,43 +395,120 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         )}
       </div>
 
-      {/* Category */}
+      {/* Category / Split section */}
       <div>
-        <Label>Category</Label>
-        <Select
-          value={watch("categoryId") || "none"}
-          onValueChange={(value) => setValue("categoryId", value === "none" ? undefined : value)}
-        >
-          <SelectTrigger className="mt-2">
-            <SelectValue placeholder="Select category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No category</SelectItem>
-            {parentCategories.map((parent) => {
-              const children = childCategories.filter(
-                (c) => c.parentId === parent.id
-              );
-              // If parent has children, show children under a group
-              if (children.length > 0) {
-                return children.map((child) => (
-                  <SelectItem key={child.id} value={child.id}>
-                    {parent.name} › {child.name}
-                  </SelectItem>
-                ));
-              }
-              // If no children, show the parent itself
-              return (
-                <SelectItem key={parent.id} value={parent.id}>
-                  {parent.name}
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-        {errors.categoryId && (
-          <p className="mt-1 text-sm text-destructive">
-            {errors.categoryId.message}
-          </p>
+        <div className="flex items-center justify-between">
+          <Label>{isSplitMode ? "Split categories" : "Category"}</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={handleToggleSplitMode}
+          >
+            {isSplitMode ? "Single category" : "Split transaction"}
+          </Button>
+        </div>
+
+        {isSplitMode ? (
+          // --- Split mode ---
+          <div className="mt-2 space-y-2">
+            {splitFields.map((field, index) => (
+              <div key={field.id} className="flex items-center gap-2">
+                {/* Category dropdown for this split */}
+                <div className="flex-1">
+                  <CategorySelect
+                    value={(splitValues?.[index]?.categoryId) || ""}
+                    onChange={(v) =>
+                      setValue(`splits.${index}.categoryId` as any, v as any)
+                    }
+                    placeholder="Category"
+                  />
+                </div>
+
+                {/* Amount for this split */}
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  {...register(`splits.${index}.amount` as any, {
+                    valueAsNumber: true,
+                  })}
+                  className="w-28 tabular-nums"
+                />
+
+                {/* Remove button — disabled when only 2 rows remain */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => removeSplit(index)}
+                  disabled={splitFields.length <= 2}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            {/* Add another split row */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => appendSplit({ categoryId: "", amount: 0 } as any)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add category
+            </Button>
+
+            {/* Running total indicator */}
+            <div
+              className={cn(
+                "rounded-md border px-3 py-2 text-sm tabular-nums",
+                isFullyAllocated
+                  ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400"
+                  : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
+              )}
+            >
+              {isFullyAllocated ? (
+                <span>All {(totalCents / 100).toFixed(2)} allocated ✓</span>
+              ) : remainingCents > 0 ? (
+                <span>
+                  {(remainingCents / 100).toFixed(2)} remaining to allocate
+                </span>
+              ) : (
+                <span>
+                  {(Math.abs(remainingCents) / 100).toFixed(2)} over-allocated
+                </span>
+              )}
+            </div>
+
+            {/* Zod validation error for splits array */}
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            {(errors as any).splits?.message && (
+              <p className="text-sm text-destructive">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {(errors as any).splits.message}
+              </p>
+            )}
+          </div>
+        ) : (
+          // --- Single category mode ---
+          <div className="mt-2">
+            <CategorySelect
+              value={watch("categoryId")}
+              onChange={(v) => setValue("categoryId", v === "none" ? undefined : v)}
+            />
+            {errors.categoryId && (
+              <p className="mt-1 text-sm text-destructive">
+                {errors.categoryId.message}
+              </p>
+            )}
+          </div>
         )}
       </div>
 
