@@ -17,6 +17,15 @@ import {
 } from "@/validators/transaction";
 import { Prisma } from "@/generated/prisma/client";
 
+// Shared include — used by both findMany and the POST response.
+// Including splits lets the client render the split badge and categories
+// without a second request.
+const transactionInclude = {
+  fromAccount: { include: { currency: true } },
+  category: { include: { parent: true } },
+  splits: { include: { category: { include: { parent: true } } } },
+} as const;
+
 // GET /api/transactions?page=1&limit=20&type=EXPENSE&startDate=2026-01-01
 export async function GET(request: NextRequest) {
   try {
@@ -49,14 +58,17 @@ export async function GET(request: NextRequest) {
 
     // Build a dynamic Prisma `where` filter.
     // Only include conditions for parameters that were provided.
-    const where: Prisma.TransactionWhereInput = {};
+    // parentTransactionId: null ensures we only show top-level transactions —
+    // split children live nested under their parent and are not shown separately.
+    const where: Prisma.TransactionWhereInput = {
+      parentTransactionId: null,
+    };
 
     if (type) where.type = type;
-    if (categoryId) where.categoryId = categoryId;
     if (needsReview !== undefined) where.needsReview = needsReview;
 
-    // Search and accountId both use OR conditions. To combine them
-    // correctly (both must match), we wrap each in a separate AND clause.
+    // Search, accountId, and categoryId all use OR conditions or complex logic.
+    // We wrap each in a separate AND clause so they combine correctly.
     // Without this, two top-level OR arrays would overwrite each other.
     const andConditions: Prisma.TransactionWhereInput[] = [];
 
@@ -70,6 +82,17 @@ export async function GET(request: NextRequest) {
     }
     if (accountId) {
       where.fromAccountId = accountId;
+    }
+    if (categoryId) {
+      // For split transactions the parent has no categoryId, but its children do.
+      // We match if the transaction itself has the category OR if any of its
+      // splits do — so split parents appear when filtering by a split category.
+      andConditions.push({
+        OR: [
+          { categoryId },
+          { splits: { some: { categoryId } } },
+        ],
+      });
     }
     if (andConditions.length > 0) {
       where.AND = andConditions;
@@ -87,10 +110,7 @@ export async function GET(request: NextRequest) {
       prisma.transaction.count({ where }),
       prisma.transaction.findMany({
         where,
-        include: {
-          fromAccount: { include: { currency: true } },
-          category: { include: { parent: true } },
-        },
+        include: transactionInclude,
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
         // Pagination: skip = how many to skip, take = how many to return.
         // Page 1 skips 0, page 2 skips `limit`, page 3 skips `limit * 2`.
@@ -137,24 +157,64 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data;
+    const hasSplits = data.splits && data.splits.length >= 2;
 
-    const transaction = await prisma.transaction.create({
-      data: {
-        type: data.type,
-        amount: data.amount,
-        description: data.description,
-        friendlyName: data.friendlyName,
-        notes: data.notes,
-        date: data.date,
-        fromAccountId: data.fromAccountId,
-        categoryId: data.categoryId ?? undefined,
-        needsReview: data.needsReview ?? false,
-      },
-      include: {
-        fromAccount: { include: { currency: true } },
-        category: { include: { parent: true } },
-      },
-    });
+    let transaction;
+
+    if (hasSplits) {
+      // prisma.$transaction() is a DB transaction — all writes succeed or fail
+      // together. If creating the second split fails, the first is rolled back.
+      transaction = await prisma.$transaction(async (tx) => {
+        // Create the parent — no categoryId (covered by splits)
+        const parent = await tx.transaction.create({
+          data: {
+            type: data.type,
+            amount: data.amount,
+            description: data.description,
+            friendlyName: data.friendlyName,
+            notes: data.notes,
+            date: data.date,
+            fromAccountId: data.fromAccountId,
+            categoryId: null,
+            needsReview: data.needsReview ?? false,
+          },
+        });
+
+        // Create each split child linked to the parent
+        await tx.transaction.createMany({
+          data: data.splits!.map((split) => ({
+            type: data.type,
+            amount: split.amount,
+            date: data.date,
+            fromAccountId: data.fromAccountId,
+            categoryId: split.categoryId,
+            parentTransactionId: parent.id,
+          })),
+        });
+
+        // Re-fetch with full includes for the response
+        return tx.transaction.findUniqueOrThrow({
+          where: { id: parent.id },
+          include: transactionInclude,
+        });
+      });
+    } else {
+      // Simple (non-split) transaction — original path
+      transaction = await prisma.transaction.create({
+        data: {
+          type: data.type,
+          amount: data.amount,
+          description: data.description,
+          friendlyName: data.friendlyName,
+          notes: data.notes,
+          date: data.date,
+          fromAccountId: data.fromAccountId,
+          categoryId: data.categoryId ?? undefined,
+          needsReview: data.needsReview ?? false,
+        },
+        include: transactionInclude,
+      });
+    }
 
     // 201 Created — the standard HTTP status for successful resource creation
     return NextResponse.json(transaction, { status: 201 });
