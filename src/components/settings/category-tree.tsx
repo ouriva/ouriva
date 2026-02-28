@@ -3,6 +3,11 @@
 // Displays categories in a parent/child tree structure.
 // Parents are collapsible — tap to expand and see subcategories.
 // Add buttons let you create new parents or children.
+//
+// Each category has two toggles:
+//   Active (green) — whether the category appears in dropdowns
+//   Non-tracked (purple EyeOff) — whether transactions are excluded
+//     from summaries and budgets (excludeFromStats flag)
 
 "use client";
 
@@ -17,6 +22,8 @@ import {
   Plus,
   ToggleLeft,
   ToggleRight,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
 import { cn } from "@/lib/utils";
@@ -26,6 +33,7 @@ interface Category {
   name: string;
   parentId: string | null;
   isActive: boolean;
+  excludeFromStats: boolean;
   children: Category[];
 }
 
@@ -62,6 +70,15 @@ export function CategoryTree() {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !category.isActive }),
+    });
+    fetchData();
+  }
+
+  async function toggleExcludeFromStats(category: Category) {
+    await fetch(`/api/categories/${category.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ excludeFromStats: !category.excludeFromStats }),
     });
     fetchData();
   }
@@ -119,6 +136,14 @@ export function CategoryTree() {
                   <Badge variant="secondary" className="ml-2">
                     {parent.children.filter((c) => c.isActive).length}
                   </Badge>
+                  {parent.excludeFromStats && (
+                    <Badge
+                      variant="outline"
+                      className="ml-1 border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400"
+                    >
+                      Non-tracked
+                    </Badge>
+                  )}
                 </button>
 
                 <div className="flex items-center gap-1">
@@ -148,6 +173,21 @@ export function CategoryTree() {
                       </Button>
                     }
                   />
+                  {/* Non-tracked toggle — EyeOff = excluded from stats */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    title={parent.excludeFromStats ? "Non-tracked: click to include in stats" : "Tracked: click to exclude from stats"}
+                    onClick={() => toggleExcludeFromStats(parent)}
+                  >
+                    {parent.excludeFromStats ? (
+                      <EyeOff className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                  {/* Active toggle */}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -174,7 +214,17 @@ export function CategoryTree() {
                         !child.isActive && "opacity-50"
                       )}
                     >
-                      <span className="text-sm">{child.name}</span>
+                      <span className="flex items-center gap-2 text-sm">
+                        {child.name}
+                        {child.excludeFromStats && (
+                          <Badge
+                            variant="outline"
+                            className="border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400 text-xs"
+                          >
+                            Non-tracked
+                          </Badge>
+                        )}
+                      </span>
                       <div className="flex items-center gap-1">
                         <SettingsItemForm
                           title="Subcategory"
@@ -189,6 +239,21 @@ export function CategoryTree() {
                             </Button>
                           }
                         />
+                        {/* Non-tracked toggle for child */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title={child.excludeFromStats ? "Non-tracked: click to include in stats" : "Tracked: click to exclude from stats"}
+                          onClick={() => toggleExcludeFromStats(child)}
+                        >
+                          {child.excludeFromStats ? (
+                            <EyeOff className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </Button>
+                        {/* Active toggle for child */}
                         <Button
                           variant="ghost"
                           size="icon"
