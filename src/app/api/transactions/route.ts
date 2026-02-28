@@ -83,7 +83,12 @@ export async function GET(request: NextRequest) {
     if (accountId) {
       where.fromAccountId = accountId;
     }
-    if (categoryId) {
+    if (categoryId === "uncategorized") {
+      // Show only transactions with no category and no splits.
+      // These are simple transactions where categoryId was never set
+      // or was cleared by the leaf-only migration.
+      andConditions.push({ categoryId: null, splits: { none: {} } });
+    } else if (categoryId) {
       // For split transactions the parent has no categoryId, but its children do.
       // We match if the transaction itself has the category OR if any of its
       // splits do — so split parents appear when filtering by a split category.

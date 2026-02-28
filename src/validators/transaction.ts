@@ -116,7 +116,7 @@ export const transactionQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   type: z.enum(["INCOME", "EXPENSE"]).optional(),
   accountId: z.string().uuid().optional(),
-  categoryId: z.string().uuid().optional(),
+  categoryId: z.union([z.string().uuid(), z.literal("uncategorized")]).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   search: z.string().optional(),
