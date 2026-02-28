@@ -43,20 +43,21 @@ model Account {
 }
 
 model Category {
-  id           String        @id @default(uuid())
-  name         String
-  isActive     Boolean       @default(true)
-  parentId     String?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id               String        @id @default(uuid())
+  name             String
+  isActive         Boolean       @default(true)
+  excludeFromStats Boolean       @default(false)
+  parentId         String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   budgets             Budget[]
   parent              Category?     @relation("CategoryParent", fields: [parentId], references: [id])
   children            Category[]    @relation("CategoryParent")
   transactions        Transaction[]
   transferAppSettings AppSettings[] @relation("TransferCategory")
-  proxyAppSettings    AppSettings[] @relation("ProxyCategory")
 
   @@index([parentId])
+  @@index([excludeFromStats])
 }
 
 model Transaction {
@@ -114,11 +115,9 @@ model ImportProfile {
 model AppSettings {
   id                 String    @id @default("singleton")
   transferCategoryId String?
-  proxyCategoryId    String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   transferCategory   Category? @relation("TransferCategory", fields: [transferCategoryId], references: [id], onDelete: SetNull)
-  proxyCategory      Category? @relation("ProxyCategory", fields: [proxyCategoryId], references: [id], onDelete: SetNull)
 }
 
 enum TransactionType {
