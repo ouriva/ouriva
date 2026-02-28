@@ -136,7 +136,7 @@ export function CategoryTree() {
                   <Badge variant="secondary" className="ml-2">
                     {parent.children.filter((c) => c.isActive).length}
                   </Badge>
-                  {parent.excludeFromStats && (
+                  {parent.children.length === 0 && parent.excludeFromStats && (
                     <Badge
                       variant="outline"
                       className="ml-1 border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400"
@@ -173,20 +173,24 @@ export function CategoryTree() {
                       </Button>
                     }
                   />
-                  {/* Non-tracked toggle — EyeOff = excluded from stats */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    title={parent.excludeFromStats ? "Non-tracked: click to include in stats" : "Tracked: click to exclude from stats"}
-                    onClick={() => toggleExcludeFromStats(parent)}
-                  >
-                    {parent.excludeFromStats ? (
-                      <EyeOff className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </Button>
+                  {/* Non-tracked toggle — only shown on standalone parents
+                      (no children). Parents with children can't have transactions
+                      assigned to them, so the flag would have no effect. */}
+                  {parent.children.length === 0 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title={parent.excludeFromStats ? "Non-tracked: click to include in stats" : "Tracked: click to exclude from stats"}
+                      onClick={() => toggleExcludeFromStats(parent)}
+                    >
+                      {parent.excludeFromStats ? (
+                        <EyeOff className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  )}
                   {/* Active toggle */}
                   <Button
                     variant="ghost"
