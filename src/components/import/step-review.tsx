@@ -14,7 +14,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +64,166 @@ interface StepReviewProps {
   ) => void;
   onBack: () => void;
 }
+
+// ── ReviewRow ──────────────────────────────────────────────────────────────
+// Memoized single-row component. React.memo does a shallow prop comparison:
+// if none of this row's props changed, React skips re-rendering it entirely.
+// This means typing in one row's input only re-renders that one row, not
+// all 50–100 rows in the list.
+//
+// For memo to work, the callbacks passed as props must be stable (same
+// reference across parent renders). We achieve that with useCallback +
+// functional state updates (the `prev =>` form) in the parent below.
+
+interface ReviewRowProps {
+  index: number;
+  row: ParsedRow;
+  isDuplicate: boolean;
+  isSelected: boolean;
+  categoryId: string | undefined;
+  transactionType: "INCOME" | "EXPENSE";
+  friendlyName: string | undefined;
+  note: string | undefined;
+  needsReview: boolean;
+  parentCategories: Category[];
+  childCategories: Category[];
+  onSelectChange: (i: number, checked: boolean) => void;
+  onTypeChange: (i: number, type: "INCOME" | "EXPENSE") => void;
+  onCategoryChange: (i: number, id: string | undefined) => void;
+  onFriendlyNameChange: (i: number, value: string) => void;
+  onNoteChange: (i: number, value: string) => void;
+  onNeedsReviewChange: (i: number, checked: boolean) => void;
+}
+
+const ReviewRow = memo(function ReviewRow({
+  index: i,
+  row,
+  isDuplicate,
+  isSelected,
+  categoryId,
+  transactionType,
+  friendlyName,
+  note,
+  needsReview,
+  parentCategories,
+  childCategories,
+  onSelectChange,
+  onTypeChange,
+  onCategoryChange,
+  onFriendlyNameChange,
+  onNoteChange,
+  onNeedsReviewChange,
+}: ReviewRowProps) {
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-lg border p-3 ${
+        isDuplicate ? "opacity-50" : ""
+      } ${isSelected ? "border-primary/30 bg-primary/5" : ""}`}
+    >
+      <Checkbox
+        checked={isSelected}
+        disabled={isDuplicate}
+        onCheckedChange={(checked) => onSelectChange(i, !!checked)}
+        className="mt-1"
+      />
+
+      <div className="min-w-0 flex-1 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{row.date}</span>
+          {isDuplicate && (
+            <Badge variant="destructive" className="text-[10px]">
+              Duplicate
+            </Badge>
+          )}
+        </div>
+        <p className="truncate text-sm font-medium">
+          {row.description || "(no description)"}
+        </p>
+
+        <input
+          type="text"
+          placeholder="Display name (optional)"
+          value={friendlyName ?? ""}
+          onChange={(e) => onFriendlyNameChange(i, e.target.value)}
+          className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
+        />
+        <input
+          type="text"
+          placeholder="Notes (optional)"
+          value={note ?? ""}
+          onChange={(e) => onNoteChange(i, e.target.value)}
+          className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
+        />
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={`review-${i}`}
+            checked={needsReview}
+            onCheckedChange={(checked) => onNeedsReviewChange(i, !!checked)}
+          />
+          <label htmlFor={`review-${i}`} className="text-xs text-muted-foreground">
+            Review
+          </label>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Select
+            value={transactionType}
+            onValueChange={(v) => onTypeChange(i, v as "INCOME" | "EXPENSE")}
+          >
+            <SelectTrigger className="h-7 w-24 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="INCOME">Income</SelectItem>
+              <SelectItem value="EXPENSE">Expense</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={categoryId ?? "none"}
+            onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
+          >
+            <SelectTrigger className="h-7 flex-1 text-xs">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No category</SelectItem>
+              {parentCategories.map((parent) => {
+                const children = childCategories.filter(
+                  (c) => c.parentId === parent.id
+                );
+                if (children.length > 0) {
+                  return children.map((child) => (
+                    <SelectItem key={child.id} value={child.id}>
+                      {parent.name} › {child.name}
+                    </SelectItem>
+                  ));
+                }
+                return (
+                  <SelectItem key={parent.id} value={parent.id}>
+                    {parent.name}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <span
+        className={`whitespace-nowrap text-sm font-semibold ${
+          row.amount >= 0 ? "text-green-600" : "text-red-600"
+        }`}
+      >
+        {row.amount >= 0 ? "+" : ""}
+        {row.amount.toFixed(2)}
+      </span>
+    </div>
+  );
+});
+
+// ── StepReview ─────────────────────────────────────────────────────────────
 
 export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -204,6 +364,35 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
     );
   }
 
+  // Stable callbacks — created once, never change reference.
+  // Using the functional `prev =>` form of each setter means the callback
+  // doesn't need to close over the current array value, so useCallback
+  // can use an empty dependency array and return the same function every render.
+  // ReviewRow's memo comparison then sees the same prop reference → no re-render.
+  const handleSelectChange = useCallback((i: number, checked: boolean) => {
+    setSelectedRows((prev) => { const n = [...prev]; n[i] = checked; return n; });
+  }, []);
+
+  const handleTypeChange = useCallback((i: number, type: "INCOME" | "EXPENSE") => {
+    setTransactionTypes((prev) => { const n = [...prev]; n[i] = type; return n; });
+  }, []);
+
+  const handleCategoryChange = useCallback((i: number, id: string | undefined) => {
+    setCategoryIds((prev) => { const n = [...prev]; n[i] = id; return n; });
+  }, []);
+
+  const handleFriendlyNameChange = useCallback((i: number, value: string) => {
+    setFriendlyNames((prev) => { const n = [...prev]; n[i] = value || undefined; return n; });
+  }, []);
+
+  const handleNoteChange = useCallback((i: number, value: string) => {
+    setNotes((prev) => { const n = [...prev]; n[i] = value || undefined; return n; });
+  }, []);
+
+  const handleNeedsReviewChange = useCallback((i: number, checked: boolean) => {
+    setNeedsReview((prev) => { const n = [...prev]; n[i] = checked; return n; });
+  }, []);
+
   if (isChecking) {
     return (
       <Card>
@@ -254,147 +443,28 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
 
         {/* Transaction rows */}
         <div className="max-h-[60vh] space-y-2 overflow-y-auto">
-          {parsedRows.map((row, i) => {
-            const isDuplicate = duplicateRefs.has(row.importRef);
-
-            return (
-              <div
-                key={i}
-                className={`flex items-start gap-3 rounded-lg border p-3 ${
-                  isDuplicate ? "opacity-50" : ""
-                } ${selectedRows[i] ? "border-primary/30 bg-primary/5" : ""}`}
-              >
-                {/* Checkbox */}
-                <Checkbox
-                  checked={selectedRows[i] || false}
-                  disabled={isDuplicate}
-                  onCheckedChange={(checked) => {
-                    const next = [...selectedRows];
-                    next[i] = !!checked;
-                    setSelectedRows(next);
-                  }}
-                  className="mt-1"
-                />
-
-                {/* Transaction info */}
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {row.date}
-                    </span>
-                    {isDuplicate && (
-                      <Badge variant="destructive" className="text-[10px]">
-                        Duplicate
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="truncate text-sm font-medium">
-                    {row.description || "(no description)"}
-                  </p>
-                  {/* Inline edit: friendly name and notes */}
-                  <input
-                    type="text"
-                    placeholder="Display name (optional)"
-                    value={friendlyNames[i] ?? ""}
-                    onChange={(e) => {
-                      const next = [...friendlyNames];
-                      next[i] = e.target.value || undefined;
-                      setFriendlyNames(next);
-                    }}
-                    className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Notes (optional)"
-                    value={notes[i] ?? ""}
-                    onChange={(e) => {
-                      const next = [...notes];
-                      next[i] = e.target.value || undefined;
-                      setNotes(next);
-                    }}
-                    className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
-                  />
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id={`review-${i}`}
-                      checked={needsReview[i] || false}
-                      onCheckedChange={(checked) => {
-                        const next = [...needsReview];
-                        next[i] = !!checked;
-                        setNeedsReview(next);
-                      }}
-                    />
-                    <label htmlFor={`review-${i}`} className="text-xs text-muted-foreground">
-                      Review
-                    </label>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Type toggle */}
-                    <Select
-                      value={transactionTypes[i]}
-                      onValueChange={(v) => {
-                        const next = [...transactionTypes];
-                        next[i] = v as "INCOME" | "EXPENSE";
-                        setTransactionTypes(next);
-                      }}
-                    >
-                      <SelectTrigger className="h-7 w-24 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="INCOME">Income</SelectItem>
-                        <SelectItem value="EXPENSE">Expense</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    {/* Category */}
-                    <Select
-                      value={categoryIds[i] ?? "none"}
-                      onValueChange={(v) => {
-                        const next = [...categoryIds];
-                        next[i] = v === "none" ? undefined : v;
-                        setCategoryIds(next);
-                      }}
-                    >
-                      <SelectTrigger className="h-7 flex-1 text-xs">
-                        <SelectValue placeholder="Category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No category</SelectItem>
-                        {parentCategories.map((parent) => {
-                          const children = childCategories.filter(
-                            (c) => c.parentId === parent.id
-                          );
-                          if (children.length > 0) {
-                            return children.map((child) => (
-                              <SelectItem key={child.id} value={child.id}>
-                                {parent.name} › {child.name}
-                              </SelectItem>
-                            ));
-                          }
-                          return (
-                            <SelectItem key={parent.id} value={parent.id}>
-                              {parent.name}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Amount */}
-                <span
-                  className={`whitespace-nowrap text-sm font-semibold ${
-                    row.amount >= 0 ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {row.amount >= 0 ? "+" : ""}
-                  {row.amount.toFixed(2)}
-                </span>
-              </div>
-            );
-          })}
+          {parsedRows.map((row, i) => (
+            <ReviewRow
+              key={i}
+              index={i}
+              row={row}
+              isDuplicate={duplicateRefs.has(row.importRef)}
+              isSelected={selectedRows[i] || false}
+              categoryId={categoryIds[i]}
+              transactionType={transactionTypes[i]}
+              friendlyName={friendlyNames[i]}
+              note={notes[i]}
+              needsReview={needsReview[i] || false}
+              parentCategories={parentCategories}
+              childCategories={childCategories}
+              onSelectChange={handleSelectChange}
+              onTypeChange={handleTypeChange}
+              onCategoryChange={handleCategoryChange}
+              onFriendlyNameChange={handleFriendlyNameChange}
+              onNoteChange={handleNoteChange}
+              onNeedsReviewChange={handleNeedsReviewChange}
+            />
+          ))}
         </div>
 
         {/* Navigation */}
