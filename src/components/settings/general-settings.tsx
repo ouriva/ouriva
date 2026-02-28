@@ -3,6 +3,10 @@
 // App-wide preferences. Currently supports selecting a "transfer
 // category" whose transactions are excluded from summaries and budgets.
 // Shows a Transfer Balance indicator (should be 0 if matched).
+//
+// Non-tracked categories are now configured per-category in
+// Settings > Categories (via the excludeFromStats flag). This page
+// shows the combined Non-tracked Balance across all such categories.
 
 "use client";
 
@@ -18,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
+import Link from "next/link";
 
 interface Category {
   id: string;
@@ -29,9 +34,7 @@ interface Settings {
   transferCategoryId: string | null;
   transferCategory: { id: string; name: string } | null;
   transferBalance: number;
-  proxyCategoryId: string | null;
-  proxyCategory: { id: string; name: string } | null;
-  proxyBalance: number;
+  nonTrackedBalance: number;
 }
 
 export function GeneralSettings() {
@@ -62,7 +65,7 @@ export function GeneralSettings() {
     fetchData();
   }, [fetchData]);
 
-  async function handleCategoryChange(field: "transferCategoryId" | "proxyCategoryId", value: string) {
+  async function handleCategoryChange(value: string) {
     const categoryId = value === "none" ? null : value;
     setIsSaving(true);
 
@@ -70,7 +73,7 @@ export function GeneralSettings() {
       const res = await fetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [field]: categoryId }),
+        body: JSON.stringify({ transferCategoryId: categoryId }),
       });
 
       if (res.ok) {
@@ -98,40 +101,6 @@ export function GeneralSettings() {
   // Build category options grouped by parent
   const parentCategories = categories.filter((c) => !c.parentId);
   const childCategories = categories.filter((c) => c.parentId);
-
-  function CategorySelect({
-    value,
-    onChange,
-  }: {
-    value: string | null;
-    onChange: (v: string) => void;
-  }) {
-    return (
-      <Select value={value ?? "none"} onValueChange={onChange} disabled={isSaving}>
-        <SelectTrigger className="mt-2">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="none">None</SelectItem>
-          {parentCategories.map((parent) => {
-            const children = childCategories.filter((c) => c.parentId === parent.id);
-            if (children.length > 0) {
-              return children.map((child) => (
-                <SelectItem key={child.id} value={child.id}>
-                  {parent.name} › {child.name}
-                </SelectItem>
-              ));
-            }
-            return (
-              <SelectItem key={parent.id} value={parent.id}>
-                {parent.name}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
-    );
-  }
 
   function BalanceIndicator({
     balance,
@@ -171,10 +140,33 @@ export function GeneralSettings() {
             <p className="mt-1 text-sm text-muted-foreground">
               Transactions in this category are excluded from summaries and budgets.
             </p>
-            <CategorySelect
-              value={settings?.transferCategoryId ?? null}
-              onChange={(v) => handleCategoryChange("transferCategoryId", v)}
-            />
+            <Select
+              value={settings?.transferCategoryId ?? "none"}
+              onValueChange={handleCategoryChange}
+              disabled={isSaving}
+            >
+              <SelectTrigger className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {parentCategories.map((parent) => {
+                  const children = childCategories.filter((c) => c.parentId === parent.id);
+                  if (children.length > 0) {
+                    return children.map((child) => (
+                      <SelectItem key={child.id} value={child.id}>
+                        {parent.name} › {child.name}
+                      </SelectItem>
+                    ));
+                  }
+                  return (
+                    <SelectItem key={parent.id} value={parent.id}>
+                      {parent.name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
           </div>
           {settings?.transferCategoryId && (
             <BalanceIndicator
@@ -186,26 +178,28 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Proxy Category */}
+      {/* Non-tracked Balance */}
       <Card>
         <CardContent className="space-y-4 pt-6">
           <div>
-            <Label>Proxy Category</Label>
+            <Label>Non-tracked Balance</Label>
             <p className="mt-1 text-sm text-muted-foreground">
-              For transactions where you pay on behalf of others and expect to be reimbursed. Excluded from summaries. Balance should be €0 when all reimbursements are settled.
+              Combined balance of all non-tracked categories. Should be €0 when all
+              on-behalf-of-others transactions are settled.
             </p>
-            <CategorySelect
-              value={settings?.proxyCategoryId ?? null}
-              onChange={(v) => handleCategoryChange("proxyCategoryId", v)}
-            />
+            <p className="mt-2 text-sm">
+              Mark categories as non-tracked in{" "}
+              <Link href="/settings/categories" className="underline underline-offset-2">
+                Settings › Categories
+              </Link>
+              .
+            </p>
           </div>
-          {settings?.proxyCategoryId && (
-            <BalanceIndicator
-              balance={settings.proxyBalance}
-              zeroLabel="All proxy transactions are settled."
-              nonZeroLabel="Outstanding amount still owed to you."
-            />
-          )}
+          <BalanceIndicator
+            balance={settings?.nonTrackedBalance ?? 0}
+            zeroLabel="All non-tracked transactions are settled."
+            nonZeroLabel="Outstanding amount across all non-tracked categories."
+          />
         </CardContent>
       </Card>
     </div>
