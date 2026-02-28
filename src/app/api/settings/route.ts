@@ -9,7 +9,8 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod/v4";
 
 const updateSettingsSchema = z.object({
-  transferCategoryId: z.string().uuid().nullable(),
+  transferCategoryId: z.string().uuid().nullable().optional(),
+  proxyCategoryId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET() {
@@ -18,27 +19,38 @@ export async function GET() {
       where: { id: "singleton" },
       update: {},
       create: { id: "singleton" },
-      include: { transferCategory: true },
+      include: { transferCategory: true, proxyCategory: true },
     });
 
-    // Compute transfer balance: net sum of all transactions in the
-    // transfer category. Should be 0 if all transfers are matched.
-    let transferBalance = 0;
-    if (settings.transferCategoryId) {
-      const transferTxs = await prisma.transaction.findMany({
-        where: { categoryId: settings.transferCategoryId },
+    // Helper: compute net balance (income - expense) for a category.
+    // Should be 0 when all transactions in that category are settled.
+    async function computeBalance(categoryId: string): Promise<number> {
+      const txs = await prisma.transaction.findMany({
+        where: { categoryId },
         select: { type: true, amount: true },
       });
-      for (const tx of transferTxs) {
+      let balance = 0;
+      for (const tx of txs) {
         const amount = Number(tx.amount);
-        transferBalance += tx.type === "INCOME" ? amount : -amount;
+        balance += tx.type === "INCOME" ? amount : -amount;
       }
+      return Math.round(balance * 100) / 100;
     }
+
+    const [transferBalance, proxyBalance] = await Promise.all([
+      settings.transferCategoryId
+        ? computeBalance(settings.transferCategoryId)
+        : Promise.resolve(0),
+      settings.proxyCategoryId
+        ? computeBalance(settings.proxyCategoryId)
+        : Promise.resolve(0),
+    ]);
 
     return NextResponse.json({
       data: {
         ...settings,
-        transferBalance: Math.round(transferBalance * 100) / 100,
+        transferBalance,
+        proxyBalance,
       },
     });
   } catch (error) {
@@ -68,14 +80,19 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const updateData: Record<string, string | null> = {};
+    if (parsed.data.transferCategoryId !== undefined) {
+      updateData.transferCategoryId = parsed.data.transferCategoryId;
+    }
+    if (parsed.data.proxyCategoryId !== undefined) {
+      updateData.proxyCategoryId = parsed.data.proxyCategoryId;
+    }
+
     const settings = await prisma.appSettings.upsert({
       where: { id: "singleton" },
-      update: { transferCategoryId: parsed.data.transferCategoryId },
-      create: {
-        id: "singleton",
-        transferCategoryId: parsed.data.transferCategoryId,
-      },
-      include: { transferCategory: true },
+      update: updateData,
+      create: { id: "singleton", ...updateData },
+      include: { transferCategory: true, proxyCategory: true },
     });
 
     return NextResponse.json({ data: settings });

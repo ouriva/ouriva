@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTransferCategoryId } from "@/lib/settings";
+import { getExcludedCategoryIds } from "@/lib/settings";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,13 +23,15 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, 0, 1);  // Jan 1
     const endDate = new Date(year, 11, 31);  // Dec 31
 
-    // Exclude transfer category from summaries (if configured)
-    const transferCategoryId = await getTransferCategoryId();
+    // Exclude transfer and proxy categories from summaries (if configured)
+    const excludedCategoryIds = await getExcludedCategoryIds();
 
     const transactions = await prisma.transaction.findMany({
       where: {
         date: { gte: startDate, lte: endDate },
-        ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
+        ...(excludedCategoryIds.length > 0 && {
+          categoryId: { notIn: excludedCategoryIds },
+        }),
       },
       include: {
         category: { include: { parent: true } },

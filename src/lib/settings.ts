@@ -11,3 +11,12 @@ export async function getTransferCategoryId(): Promise<string | null> {
   });
   return settings?.transferCategoryId ?? null;
 }
+
+export async function getExcludedCategoryIds(): Promise<string[]> {
+  const settings = await prisma.appSettings.findUnique({
+    where: { id: "singleton" },
+  });
+  return [settings?.transferCategoryId, settings?.proxyCategoryId].filter(
+    (id): id is string => !!id
+  );
+}
