@@ -10,6 +10,17 @@
 
 import { z } from "zod/v4";
 
+// --- Split entry ---
+// Each split assigns a category and amount to a portion of the parent total.
+
+const splitEntrySchema = z.object({
+  categoryId: z.string().uuid("Invalid category"),
+  amount: z
+    .number()
+    .positive("Split amount must be positive")
+    .multipleOf(0.01, "Split amount can have at most 2 decimal places"),
+});
+
 // --- Shared fields ---
 // These are common to all transaction types. We define them once
 // and spread them into each variant to avoid repetition (DRY).
@@ -24,23 +35,60 @@ const baseTransactionFields = {
   notes: z.string().max(1000).optional(),
   date: z.coerce.date(),
   needsReview: z.boolean().optional(),
+  // Optional array of splits. When provided, categoryId on the parent is ignored
+  // and must be null. Splits must have ≥ 2 entries and sum to the parent amount.
+  splits: z.array(splitEntrySchema).optional(),
 };
+
+// --- Cross-field validation helper ---
+// superRefine lets us validate across multiple fields at once.
+// We use integer cent arithmetic to avoid IEEE 754 float drift
+// (e.g. 0.1 + 0.2 === 0.30000000000000004, not 0.3).
+
+function validateSplits(
+  data: { amount: number; splits?: { amount: number }[] },
+  ctx: z.RefinementCtx
+) {
+  if (!data.splits || data.splits.length === 0) return;
+
+  if (data.splits.length < 2) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["splits"],
+      message: "At least 2 splits are required",
+    });
+    return;
+  }
+
+  const splitTotal = data.splits.reduce((sum, s) => sum + s.amount, 0);
+  if (Math.round(splitTotal * 100) !== Math.round(data.amount * 100)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["splits"],
+      message: "Split amounts must sum to the total transaction amount",
+    });
+  }
+}
 
 // --- Discriminated union variants ---
 
-const incomeSchema = z.object({
-  type: z.literal("INCOME"),
-  ...baseTransactionFields,
-  fromAccountId: z.string().uuid("Invalid account"),
-  categoryId: z.string().uuid("Invalid category").optional(),
-});
+const incomeSchema = z
+  .object({
+    type: z.literal("INCOME"),
+    ...baseTransactionFields,
+    fromAccountId: z.string().uuid("Invalid account"),
+    categoryId: z.string().uuid("Invalid category").optional(),
+  })
+  .superRefine(validateSplits);
 
-const expenseSchema = z.object({
-  type: z.literal("EXPENSE"),
-  ...baseTransactionFields,
-  fromAccountId: z.string().uuid("Invalid account"),
-  categoryId: z.string().uuid("Invalid category").optional(),
-});
+const expenseSchema = z
+  .object({
+    type: z.literal("EXPENSE"),
+    ...baseTransactionFields,
+    fromAccountId: z.string().uuid("Invalid account"),
+    categoryId: z.string().uuid("Invalid category").optional(),
+  })
+  .superRefine(validateSplits);
 
 // --- Exported schemas ---
 
@@ -75,3 +123,4 @@ export const transactionQuerySchema = z.object({
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type TransactionQuery = z.infer<typeof transactionQuerySchema>;
+export type SplitEntry = z.infer<typeof splitEntrySchema>;
