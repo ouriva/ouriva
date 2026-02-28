@@ -29,6 +29,10 @@ export async function GET(request: NextRequest) {
     const transactions = await prisma.transaction.findMany({
       where: {
         date: { gte: startDate, lte: endDate },
+        // Exclude split parents — their total is covered by their children.
+        // splits: { none: {} } means "has zero split children", which passes for
+        // regular transactions and split children but excludes split parents.
+        splits: { none: {} },
         ...(excludedCategoryIds.length > 0 && {
           categoryId: { notIn: excludedCategoryIds },
         }),
