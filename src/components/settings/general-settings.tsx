@@ -16,7 +16,9 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -153,11 +155,16 @@ export function GeneralSettings() {
                 {parentCategories.map((parent) => {
                   const children = childCategories.filter((c) => c.parentId === parent.id);
                   if (children.length > 0) {
-                    return children.map((child) => (
-                      <SelectItem key={child.id} value={child.id}>
-                        {parent.name} › {child.name}
-                      </SelectItem>
-                    ));
+                    return (
+                      <SelectGroup key={parent.id}>
+                        <SelectLabel>{parent.name}</SelectLabel>
+                        {children.map((child) => (
+                          <SelectItem key={child.id} value={child.id}>
+                            {child.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
                   }
                   return (
                     <SelectItem key={parent.id} value={parent.id}>

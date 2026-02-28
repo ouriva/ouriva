@@ -34,7 +34,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -217,8 +219,9 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     }
   }
 
-  // Filter categories: only show children (subcategories) for selection.
-  // Parent categories are used as group headers.
+  // Leaf-only assignment: parents with children become non-selectable group
+  // headers (SelectGroup/SelectLabel). Standalone parents (no children) are
+  // selectable directly. This matches the industry standard (YNAB, Mint, etc.).
   const parentCategories = categories.filter((c) => !c.parentId);
   const childCategories = categories.filter((c) => c.parentId);
 
@@ -247,11 +250,18 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
               (c) => c.parentId === parent.id
             );
             if (children.length > 0) {
-              return children.map((child) => (
-                <SelectItem key={child.id} value={child.id}>
-                  {parent.name} › {child.name}
-                </SelectItem>
-              ));
+              // Parent with children — show as a non-selectable group header.
+              // Only the leaf children are selectable (industry-standard pattern).
+              return (
+                <SelectGroup key={parent.id}>
+                  <SelectLabel>{parent.name}</SelectLabel>
+                  {children.map((child) => (
+                    <SelectItem key={child.id} value={child.id}>
+                      {child.name}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              );
             }
             return (
               <SelectItem key={parent.id} value={parent.id}>

@@ -21,7 +21,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -194,14 +196,19 @@ const ReviewRow = memo(function ReviewRow({
                   (c) => c.parentId === parent.id
                 );
                 if (children.length > 0) {
-                  return children.map((child) => (
-                    <SelectItem key={child.id} value={child.id}>
-                      {parent.name} › {child.name}
-                    </SelectItem>
-                  ));
+                  return (
+                    <SelectGroup key={parent.id}>
+                      <SelectLabel className="text-xs">{parent.name}</SelectLabel>
+                      {children.map((child) => (
+                        <SelectItem key={child.id} value={child.id} className="text-xs">
+                          {child.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  );
                 }
                 return (
-                  <SelectItem key={parent.id} value={parent.id}>
+                  <SelectItem key={parent.id} value={parent.id} className="text-xs">
                     {parent.name}
                   </SelectItem>
                 );
