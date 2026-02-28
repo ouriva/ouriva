@@ -161,7 +161,7 @@ async function main() {
   });
 
   const proxy = await prisma.category.create({
-    data: { name: "On Behalf Of Others" },
+    data: { name: "On Behalf Of Others", excludeFromStats: true },
   });
 
   // --- Regular parent categories ---
@@ -213,18 +213,12 @@ async function main() {
 
   await prisma.appSettings.upsert({
     where: { id: "singleton" },
-    update: {
-      transferCategoryId: transfer.id,
-      proxyCategoryId: proxy.id,
-    },
-    create: {
-      id: "singleton",
-      transferCategoryId: transfer.id,
-      proxyCategoryId: proxy.id,
-    },
+    update: { transferCategoryId: transfer.id },
+    create: { id: "singleton", transferCategoryId: transfer.id },
   });
 
-  console.log(`  ✓ AppSettings: Transfer = "${transfer.name}", Proxy = "${proxy.name}"`);
+  console.log(`  ✓ AppSettings: Transfer = "${transfer.name}"`);
+  console.log(`  ✓ Non-tracked: "${proxy.name}" (excludeFromStats = true)`);
 
   // ----------------------------------------------------------
   // 6. Transactions
