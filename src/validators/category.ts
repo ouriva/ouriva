@@ -10,6 +10,7 @@ export const createCategorySchema = z.object({
 
 export const updateCategorySchema = createCategorySchema.partial().extend({
   isActive: z.boolean().optional(),
+  excludeFromStats: z.boolean().optional(),
 });
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;
