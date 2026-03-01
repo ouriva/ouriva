@@ -11,7 +11,7 @@
 // data as props and renders HTML. No browser JavaScript needed.
 
 import { ArrowDownLeft, ArrowUpRight, AlertTriangle, CircleDot, Split } from "lucide-react";
-import { formatCurrency, formatDate } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
 
@@ -115,14 +115,11 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
           </p>
         </div>
 
-        {/* Total amount and date */}
+        {/* Total amount */}
         <div className="text-right">
           <p className={cn("font-semibold tabular-nums", config.color)}>
             {config.sign}
             {formatCurrency(transaction.amount, currency.code)}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formatDate(transaction.date)}
           </p>
         </div>
       </div>
