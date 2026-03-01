@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/layout/page-header";
 import { SimpleSettingsList } from "@/components/settings/simple-settings-list";
 
 export const metadata: Metadata = {
@@ -12,14 +11,13 @@ const accountTypeFields = [
 
 export default function AccountTypesSettingsPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader title="Account Types" description="Define account classifications" />
-      <SimpleSettingsList
-        apiEndpoint="/api/account-types"
-        title="Account Type"
-        fields={accountTypeFields}
-        displayField="name"
-      />
-    </div>
+    <SimpleSettingsList
+      apiEndpoint="/api/account-types"
+      title="Account Type"
+      pageTitle="Account Types"
+      pageDescription="Define account classifications"
+      fields={accountTypeFields}
+      displayField="name"
+    />
   );
 }

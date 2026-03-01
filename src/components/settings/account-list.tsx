@@ -49,7 +49,12 @@ interface AccountType {
   name: string;
 }
 
-export function AccountList() {
+interface AccountListProps {
+  pageTitle: string;
+  pageDescription?: string;
+}
+
+export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [accountTypes, setAccountTypes] = useState<AccountType[]>([]);
@@ -100,14 +105,22 @@ export function AccountList() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
+          {pageDescription && (
+            <p className="text-sm text-muted-foreground">{pageDescription}</p>
+          )}
+        </div>
         <AccountForm
           currencies={currencies}
           accountTypes={accountTypes}
           onSuccess={fetchData}
         />
       </div>
+
+      <div className="space-y-4">
 
       {accounts.map((account) => (
         <Card
@@ -155,6 +168,7 @@ export function AccountList() {
           </CardContent>
         </Card>
       ))}
+      </div>
     </div>
   );
 }
@@ -246,8 +260,8 @@ function AccountForm({
     >
       <SheetTrigger asChild>
         {trigger || (
-          <Button size="sm">
-            <Plus className="mr-1 h-4 w-4" />
+          <Button variant="outline" size="sm">
+            <Plus className="mr-2 h-4 w-4" />
             Add
           </Button>
         )}

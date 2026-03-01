@@ -19,7 +19,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Plus } from "lucide-react";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -149,8 +149,11 @@ export function DashboardContent() {
           <h1 className="text-2xl font-bold tracking-tight">{getGreeting()}</h1>
           <p className="text-sm text-muted-foreground">{getMonthYear()}</p>
         </div>
-        <Button size="sm" asChild>
-          <Link href="/transactions/new">+ Add</Link>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/transactions/new">
+            <Plus className="mr-2 h-4 w-4" />
+            Add
+          </Link>
         </Button>
       </div>
 

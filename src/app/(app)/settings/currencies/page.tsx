@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/layout/page-header";
 import { SimpleSettingsList } from "@/components/settings/simple-settings-list";
 
 export const metadata: Metadata = {
@@ -14,16 +13,15 @@ const currencyFields = [
 
 export default function CurrenciesSettingsPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader title="Currencies" description="Configure available currencies" />
-      <SimpleSettingsList
-        apiEndpoint="/api/currencies"
-        title="Currency"
-        fields={currencyFields}
-        displayField="code"
-        subtitleField="name"
-        badgeField="symbol"
-      />
-    </div>
+    <SimpleSettingsList
+      apiEndpoint="/api/currencies"
+      title="Currency"
+      pageTitle="Currencies"
+      pageDescription="Configure available currencies"
+      fields={currencyFields}
+      displayField="code"
+      subtitleField="name"
+      badgeField="symbol"
+    />
   );
 }

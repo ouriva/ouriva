@@ -84,8 +84,8 @@ export function SettingsItemForm({
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
         {trigger || (
-          <Button size="sm">
-            <Plus className="mr-1 h-4 w-4" />
+          <Button variant="outline" size="sm">
+            <Plus className="mr-2 h-4 w-4" />
             Add
           </Button>
         )}

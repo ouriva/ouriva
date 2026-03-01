@@ -302,7 +302,12 @@ function SmallIconCircle({
 
 // ── CategoryTree ──────────────────────────────────────────────────────────
 
-export function CategoryTree() {
+interface CategoryTreeProps {
+  pageTitle: string;
+  pageDescription?: string;
+}
+
+export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) {
   const [categories,       setCategories]       = useState<Category[]>([]);
   const [isLoading,        setIsLoading]        = useState(true);
   const [expanded,         setExpanded]         = useState<Set<string>>(new Set());
@@ -353,9 +358,15 @@ export function CategoryTree() {
 
   return (
     <>
-      <div className="space-y-4">
-        {/* Add parent category */}
-        <div className="flex justify-end">
+      <div className="space-y-6">
+        {/* Page header with Add button */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
+            {pageDescription && (
+              <p className="text-sm text-muted-foreground">{pageDescription}</p>
+            )}
+          </div>
           <SettingsItemForm
             title="Category"
             fields={nameField}
@@ -363,6 +374,8 @@ export function CategoryTree() {
             onSuccess={fetchData}
           />
         </div>
+
+        <div className="space-y-4">
 
         {parents.map((parent) => {
           const isExpanded    = expanded.has(parent.id);
@@ -472,6 +485,7 @@ export function CategoryTree() {
             </Card>
           );
         })}
+        </div>
       </div>
 
       {/* Edit sheet — rendered outside the list so z-index is never an issue */}

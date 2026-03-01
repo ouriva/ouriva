@@ -4,7 +4,6 @@
 // Uses a Client Component for interactive list management.
 
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/layout/page-header";
 import { AccountList } from "@/components/settings/account-list";
 
 export const metadata: Metadata = {
@@ -13,9 +12,9 @@ export const metadata: Metadata = {
 
 export default function AccountsSettingsPage() {
   return (
-    <div className="space-y-6">
-      <PageHeader title="Accounts" description="Manage your bank accounts and wallets" />
-      <AccountList />
-    </div>
+    <AccountList
+      pageTitle="Accounts"
+      pageDescription="Manage your bank accounts and wallets"
+    />
   );
 }

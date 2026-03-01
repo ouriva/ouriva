@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2, Trash2, Plus } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
 
 interface Field {
@@ -23,6 +23,8 @@ interface Field {
 interface SimpleSettingsListProps {
   apiEndpoint: string;
   title: string;
+  pageTitle: string;
+  pageDescription?: string;
   fields: Field[];
   displayField: string;    // which field to show as the main label
   subtitleField?: string;   // optional secondary text
@@ -32,6 +34,8 @@ interface SimpleSettingsListProps {
 export function SimpleSettingsList({
   apiEndpoint,
   title,
+  pageTitle,
+  pageDescription,
   fields,
   displayField,
   subtitleField,
@@ -76,15 +80,29 @@ export function SimpleSettingsList({
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
+          {pageDescription && (
+            <p className="text-sm text-muted-foreground">{pageDescription}</p>
+          )}
+        </div>
         <SettingsItemForm
           title={title}
           fields={fields}
           apiEndpoint={apiEndpoint}
           onSuccess={fetchData}
+          trigger={
+            <Button variant="outline" size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              Add
+            </Button>
+          }
         />
       </div>
+
+      <div className="space-y-4">
 
       {items.map((item) => {
         // Build initial values from all field names
@@ -142,6 +160,7 @@ export function SimpleSettingsList({
           No {title.toLowerCase()}s yet
         </div>
       )}
+      </div>
     </div>
   );
 }
