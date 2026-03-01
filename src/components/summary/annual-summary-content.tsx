@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 import { MonthYearPicker } from "./month-year-picker";
 import { AnnualBarChart } from "@/components/charts/annual-bar-chart";
 import { AnnualCategoryTable } from "./annual-category-table";
+import { BudgetSplit } from "./budget-split";
 
 interface AnnualCategoryData {
   id: string;
@@ -39,6 +40,12 @@ interface AnnualSummary {
   }[];
   categories: AnnualCategoryData[];
   incomeCategories: AnnualCategoryData[];
+  bucketBreakdown: {
+    NEEDS: number;
+    WANTS: number;
+    SAVINGS: number;
+    unclassified: number;
+  };
 }
 
 export function AnnualSummaryContent() {
@@ -134,11 +141,12 @@ export function AnnualSummaryContent() {
             </CardContent>
           </Card>
 
-          {/* Expenses / Income tabs for category tables */}
+          {/* Expenses / Income / 50·30·20 tabs */}
           <Tabs defaultValue="expenses">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="expenses">Expenses</TabsTrigger>
               <TabsTrigger value="income">Income</TabsTrigger>
+              <TabsTrigger value="budget">50·30·20</TabsTrigger>
             </TabsList>
 
             <TabsContent value="expenses" className="mt-4">
@@ -152,6 +160,13 @@ export function AnnualSummaryContent() {
               <AnnualCategoryTable
                 categories={data.incomeCategories || []}
                 emptyMessage="No income data for this year"
+              />
+            </TabsContent>
+
+            <TabsContent value="budget" className="mt-4">
+              <BudgetSplit
+                breakdown={data.bucketBreakdown}
+                totalIncome={data.totalIncome}
               />
             </TabsContent>
           </Tabs>

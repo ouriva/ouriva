@@ -20,6 +20,7 @@ import { Loader2 } from "lucide-react";
 import { MonthYearPicker } from "./month-year-picker";
 import { ExpensePieChart } from "@/components/charts/expense-pie-chart";
 import { CategoryBreakdown } from "./category-breakdown";
+import { BudgetSplit } from "./budget-split";
 
 interface CategoryData {
   id: string;
@@ -36,6 +37,12 @@ interface MonthlySummary {
   net: number;
   categories: CategoryData[];
   incomeCategories: CategoryData[];
+  bucketBreakdown: {
+    NEEDS: number;
+    WANTS: number;
+    SAVINGS: number;
+    unclassified: number;
+  };
 }
 
 export function MonthlySummaryContent() {
@@ -124,11 +131,12 @@ export function MonthlySummaryContent() {
             </Card>
           </div>
 
-          {/* Expenses / Income tabs — controls both chart and category list */}
+          {/* Expenses / Income / 50·30·20 tabs */}
           <Tabs defaultValue="expenses">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="expenses">Expenses</TabsTrigger>
               <TabsTrigger value="income">Income</TabsTrigger>
+              <TabsTrigger value="budget">50·30·20</TabsTrigger>
             </TabsList>
 
             <TabsContent value="expenses" className="space-y-6 mt-4">
@@ -174,6 +182,13 @@ export function MonthlySummaryContent() {
                 categories={data.incomeCategories || []}
                 total={data.totalIncome}
                 emptyMessage="No income data for this period"
+              />
+            </TabsContent>
+
+            <TabsContent value="budget" className="mt-4">
+              <BudgetSplit
+                breakdown={data.bucketBreakdown}
+                totalIncome={data.totalIncome}
               />
             </TabsContent>
           </Tabs>
