@@ -3,14 +3,14 @@
 // Per-category totals with a 12-month column breakdown. Scrolls
 // horizontally on mobile so all months are accessible via swipe.
 //
-// Heat map: each non-zero month cell gets a blue background tinted
-// proportionally to the row's maximum — darker = higher spending that
-// month. Makes seasonal patterns (holiday spending, annual bills)
-// visible at a glance without reading every number.
+// Rows are clickable: selecting a category highlights the row and
+// updates the chart above (via onSelect) to show that category's
+// monthly breakdown. Clicking the same row again resets to overview.
 
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const MONTH_LABELS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -28,11 +28,15 @@ interface Category {
 interface AnnualCategoryTableProps {
   categories: Category[];
   emptyMessage?: string;
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
 }
 
 export function AnnualCategoryTable({
   categories,
   emptyMessage = "No data for this year",
+  selectedId,
+  onSelect,
 }: AnnualCategoryTableProps) {
   if (categories.length === 0) {
     return (
@@ -66,13 +70,24 @@ export function AnnualCategoryTable({
         </thead>
         <tbody>
           {categories.map((category) => {
-            // Per-row max used as the heat map denominator so each category's
-            // busiest month is always the darkest cell — relative comparison.
-            const maxInRow = Math.max(...category.months);
+            const isSelected = selectedId === category.id;
 
             return (
-              <tr key={category.id} className="border-b">
-                <td className="sticky left-0 bg-background px-3 py-2 font-medium">
+              <tr
+                key={category.id}
+                className={cn(
+                  "border-b transition-colors",
+                  onSelect && "cursor-pointer hover:bg-muted/30",
+                  isSelected && "bg-muted/50"
+                )}
+                onClick={() =>
+                  onSelect?.(isSelected ? null : category.id)
+                }
+              >
+                <td className={cn(
+                  "sticky left-0 px-3 py-2 font-medium transition-colors",
+                  isSelected ? "bg-muted/50" : "bg-background"
+                )}>
                   {category.id === "__uncategorized__" ? (
                     <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-3.5 w-3.5" />
@@ -85,25 +100,14 @@ export function AnnualCategoryTable({
                 <td className="px-3 py-2 text-right tabular-nums font-semibold">
                   {category.total.toFixed(2)}
                 </td>
-                {category.months.map((amount, i) => {
-                  const intensity =
-                    amount > 0 && maxInRow > 0 ? amount / maxInRow : 0;
-                  return (
-                    <td
-                      key={i}
-                      className="px-3 py-2 text-right tabular-nums text-muted-foreground"
-                      style={
-                        intensity > 0
-                          ? {
-                              backgroundColor: `rgba(59,130,246,${(intensity * 0.25).toFixed(2)})`,
-                            }
-                          : undefined
-                      }
-                    >
-                      {amount > 0 ? amount.toFixed(2) : "—"}
-                    </td>
-                  );
-                })}
+                {category.months.map((amount, i) => (
+                  <td
+                    key={i}
+                    className="px-3 py-2 text-right tabular-nums text-muted-foreground"
+                  >
+                    {amount > 0 ? amount.toFixed(2) : "—"}
+                  </td>
+                ))}
               </tr>
             );
           })}

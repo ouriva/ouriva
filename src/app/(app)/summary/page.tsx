@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { PageHeader } from "@/components/layout/page-header";
 import { SummaryNav } from "@/components/summary/summary-nav";
 import { MonthlySummaryContent } from "@/components/summary/monthly-summary-content";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +27,7 @@ function MonthlySummaryFallback() {
 export default function SummaryPage() {
   return (
     <div className="space-y-4">
+      <PageHeader title="Summary" />
       <SummaryNav mode="monthly" />
       <Suspense fallback={<MonthlySummaryFallback />}>
         <MonthlySummaryContent />

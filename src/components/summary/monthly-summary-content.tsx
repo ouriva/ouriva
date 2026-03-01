@@ -132,37 +132,30 @@ export function MonthlySummaryContent() {
         <MonthlySkeleton />
       ) : data ? (
         <>
-          {/* ── Stat cards ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-3 gap-3">
-            {/* Income */}
+          {/* ── Stat cards — 2+1 layout ────────────────────────────────── */}
+          {/* Row 1: Income | Expenses side by side */}
+          <div className="grid grid-cols-2 gap-3">
             <StatCard
               label="Income"
               value={data.totalIncome}
               valueClass="text-emerald-600 dark:text-emerald-400"
               delta={prevData ? computeDelta(data.totalIncome, prevData.totalIncome) : null}
-              // For income: ↑ is good
               deltaPositiveIsGood
-              prevLabel={prevMonthLabel}
             />
-
-            {/* Expenses */}
             <StatCard
               label="Expenses"
               value={data.totalExpense}
               valueClass="text-red-600 dark:text-red-400"
               delta={prevData ? computeDelta(data.totalExpense, prevData.totalExpense) : null}
-              // For expenses: ↑ is bad
               deltaPositiveIsGood={false}
-              prevLabel={prevMonthLabel}
-            />
-
-            {/* Net — show absolute diff instead of % (% is misleading across zero) */}
-            <NetStatCard
-              value={data.net}
-              prevNet={prevData?.net ?? null}
-              prevLabel={prevMonthLabel}
             />
           </div>
+          {/* Row 2: Net full width — more room for context */}
+          <NetStatCard
+            value={data.net}
+            prevNet={prevData?.net ?? null}
+            prevLabel={prevMonthLabel}
+          />
 
           {/* ── Tabs ───────────────────────────────────────────────────── */}
           <Tabs defaultValue="expenses">
@@ -213,33 +206,35 @@ interface StatCardProps {
   valueClass: string;
   delta: { label: string; pct: number } | null;
   deltaPositiveIsGood: boolean;
-  prevLabel: string;
 }
 
-function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood, prevLabel }: StatCardProps) {
+// Half-width card (2-col row). Delta shows as compact "↑5%" on one line.
+function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood }: StatCardProps) {
   let deltaClass = "text-muted-foreground";
   if (delta) {
-    const isPositive = delta.pct > 0;
-    const isGood = deltaPositiveIsGood ? isPositive : !isPositive;
+    const isGood = deltaPositiveIsGood ? delta.pct > 0 : delta.pct < 0;
     deltaClass = isGood
       ? "text-emerald-600 dark:text-emerald-400"
       : "text-red-600 dark:text-red-400";
   }
 
   return (
-    <Card>
-      <CardContent className="pt-3 pb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <p className={cn("mt-0.5 text-base font-bold tabular-nums", valueClass)}>
+    // py-0 overrides Card's built-in py-6 so we control all spacing via CardContent
+    <Card className="py-0">
+      <CardContent className="p-3">
+        <div className="flex items-baseline justify-between gap-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          {delta && (
+            <p className={cn("shrink-0 text-[10px] font-medium", deltaClass)}>
+              {delta.label}
+            </p>
+          )}
+        </div>
+        <p className={cn("mt-1 text-xl font-bold tabular-nums", valueClass)}>
           €{value.toFixed(2)}
         </p>
-        {delta && (
-          <p className={cn("mt-0.5 text-[10px] font-medium", deltaClass)}>
-            {delta.label} vs {prevLabel}
-          </p>
-        )}
       </CardContent>
     </Card>
   );
@@ -251,36 +246,41 @@ interface NetStatCardProps {
   prevLabel: string;
 }
 
+// Full-width card. Has room for the full "↑ €120 vs Jan" delta.
 function NetStatCard({ value, prevNet, prevLabel }: NetStatCardProps) {
   const valueClass =
     value >= 0
       ? "text-emerald-600 dark:text-emerald-400"
       : "text-red-600 dark:text-red-400";
 
-  let deltaEl: React.ReactNode = null;
-  if (prevNet !== null) {
-    const diff = value - prevNet;
-    const isPositive = diff >= 0;
-    const deltaClass = isPositive
-      ? "text-emerald-600 dark:text-emerald-400"
-      : "text-red-600 dark:text-red-400";
-    deltaEl = (
-      <p className={cn("mt-0.5 text-[10px] font-medium", deltaClass)}>
-        {isPositive ? "↑" : "↓"} €{Math.abs(diff).toFixed(0)} vs {prevLabel}
-      </p>
-    );
-  }
+  const delta =
+    prevNet !== null
+      ? { diff: value - prevNet, positive: value - prevNet >= 0 }
+      : null;
 
   return (
-    <Card>
-      <CardContent className="pt-3 pb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Net
-        </p>
-        <p className={cn("mt-0.5 text-base font-bold tabular-nums", valueClass)}>
+    <Card className="py-0">
+      <CardContent className="p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Net saved
+          </p>
+          {delta && (
+            <p
+              className={cn(
+                "text-[10px] font-medium",
+                delta.positive
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-red-600 dark:text-red-400"
+              )}
+            >
+              {delta.positive ? "↑" : "↓"} €{Math.abs(delta.diff).toFixed(2)} vs {prevLabel}
+            </p>
+          )}
+        </div>
+        <p className={cn("mt-1 text-xl font-bold tabular-nums", valueClass)}>
           €{value.toFixed(2)}
         </p>
-        {deltaEl}
       </CardContent>
     </Card>
   );

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { PageHeader } from "@/components/layout/page-header";
 import { SummaryNav } from "@/components/summary/summary-nav";
 import { AnnualSummaryContent } from "@/components/summary/annual-summary-content";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ function AnnualSummaryFallback() {
 export default function AnnualSummaryPage() {
   return (
     <div className="space-y-4">
+      <PageHeader title="Summary" />
       <SummaryNav mode="annual" />
       <Suspense fallback={<AnnualSummaryFallback />}>
         <AnnualSummaryContent />
