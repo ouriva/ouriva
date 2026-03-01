@@ -93,6 +93,7 @@ model Budget {
   year       Int
   type       BudgetType @default(EXPENSE)
   amount     Decimal    @db.Decimal(12, 2)
+  note       String?    @db.Text
   categoryId String
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt

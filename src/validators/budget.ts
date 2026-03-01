@@ -15,6 +15,7 @@ export const upsertBudgetSchema = z.object({
   categoryId: z.string().uuid(),
   amount: z.number().min(0),
   type: z.enum(["EXPENSE", "INCOME"]).default("EXPENSE"),
+  note: z.string().max(500).nullable().optional(),
 });
 
 // For bulk-upserting multiple budget entries at once.
@@ -27,6 +28,7 @@ export const bulkUpsertBudgetSchema = z.object({
       categoryId: z.string().uuid(),
       amount: z.number().min(0),
       type: z.enum(["EXPENSE", "INCOME"]).default("EXPENSE"),
+      note: z.string().max(500).nullable().optional(),
     })
   ),
 });

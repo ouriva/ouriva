@@ -41,12 +41,13 @@ export async function POST(request: NextRequest) {
               type: b.type,
             },
           },
-          update: { amount: b.amount },
+          update: { amount: b.amount, note: b.note ?? null },
           create: {
             year,
             categoryId: b.categoryId,
             type: b.type,
             amount: b.amount,
+            note: b.note ?? null,
           },
         })
       )
