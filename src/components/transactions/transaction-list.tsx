@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTransactions } from "@/hooks/use-transactions";
 import { TransactionCard } from "./transaction-card";
@@ -146,17 +146,24 @@ export function TransactionList() {
   }, [search, searchParams, router]);
 
   // Build the filter object passed to the hook.
-  // Uses the URL values (not local search state) as the source of truth.
-  const filters: Partial<TransactionQuery> = {
-    page,
-    ...(urlSearch && { search: urlSearch }),
-    ...(type && { type: type as TransactionQuery["type"] }),
-    ...(accountId && { accountId }),
-    ...(categoryId && { categoryId }),
-    ...(startDate && { startDate: new Date(startDate) }),
-    ...(endDate && { endDate: new Date(endDate) }),
-    ...(needsReview && { needsReview: true }),
-  };
+  // Wrapped in useMemo so the object reference is stable across renders
+  // when the filter values haven't changed. Without this, new Date(startDate)
+  // creates a new Date object every render — a new object reference fails
+  // React's equality check, causing useCallback/useEffect in the hook to
+  // re-run on every render and produce an infinite fetch loop.
+  const filters = useMemo<Partial<TransactionQuery>>(
+    () => ({
+      page,
+      ...(urlSearch && { search: urlSearch }),
+      ...(type && { type: type as TransactionQuery["type"] }),
+      ...(accountId && { accountId }),
+      ...(categoryId && { categoryId }),
+      ...(startDate && { startDate: new Date(startDate) }),
+      ...(endDate && { endDate: new Date(endDate) }),
+      ...(needsReview && { needsReview: true }),
+    }),
+    [page, urlSearch, type, accountId, categoryId, startDate, endDate, needsReview]
+  );
 
   const { transactions, pagination, isLoading, error } = useTransactions(filters);
 
