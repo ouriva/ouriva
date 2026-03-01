@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 // next/font/google downloads the font at build time and self-hosts it.
@@ -74,7 +75,9 @@ export default function RootLayout({
           enableSystem            // react to OS dark/light mode changes
           disableTransitionOnChange // prevents background color flash when switching themes
         >
-          {children}
+          <TooltipProvider>
+            {children}
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>
