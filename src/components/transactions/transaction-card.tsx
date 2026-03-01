@@ -1,7 +1,7 @@
 // Transaction Card
 // ================
 // Displays a single transaction as a card in the list.
-// Color-coded by type: emerald for income, red for expense.
+// Amount color: emerald for income, default foreground for expenses.
 //
 // For split transactions, each split is shown as its own sub-row
 // below the main row, so the user can see exactly how much was
@@ -21,18 +21,21 @@ interface TransactionCardProps {
   onClick?: () => void;
 }
 
-// Map transaction types to visual properties
+// Map transaction types to visual properties.
+// `color` is the icon arrow color; `amountColor` is the amount text color.
 const typeConfig = {
   INCOME: {
     icon: ArrowDownLeft,
     color: "text-emerald-600 dark:text-emerald-400",
     bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+    amountColor: "text-emerald-600 dark:text-emerald-400",
     sign: "+",
   },
   EXPENSE: {
     icon: ArrowUpRight,
     color: "text-red-600 dark:text-red-400",
     bgColor: "bg-red-100 dark:bg-red-900/30",
+    amountColor: "",
     sign: "-",
   },
 } as const;
@@ -119,7 +122,7 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
 
         {/* Total amount */}
         <div className="text-right">
-          <p className={cn("font-semibold tabular-nums", config.color)}>
+          <p className={cn("font-semibold tabular-nums", config.amountColor)}>
             {config.sign}
             {formatCurrency(transaction.amount, currency.code)}
           </p>
@@ -139,7 +142,7 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
               <span className="truncate text-sm text-muted-foreground">
                 {splitCategoryName(split)}
               </span>
-              <span className={cn("ml-3 shrink-0 text-sm tabular-nums", config.color)}>
+              <span className={cn("ml-3 shrink-0 text-sm tabular-nums", config.amountColor)}>
                 {config.sign}
                 {formatCurrency(split.amount, currency.code)}
               </span>

@@ -308,8 +308,8 @@ export function DashboardContent() {
               {recentTx.map((tx, i) => {
                 const isIncome = tx.type === "INCOME";
                 const config = isIncome
-                  ? { icon: ArrowDownLeft, color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-100 dark:bg-emerald-900/30", sign: "+" }
-                  : { icon: ArrowUpRight,  color: "text-red-600 dark:text-red-400",     bgColor: "bg-red-100 dark:bg-red-900/30",         sign: "−" };
+                  ? { icon: ArrowDownLeft, color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-100 dark:bg-emerald-900/30", amountColor: "text-emerald-600 dark:text-emerald-400", sign: "+" }
+                  : { icon: ArrowUpRight,  color: "text-red-600 dark:text-red-400",         bgColor: "bg-red-100 dark:bg-red-900/30",         amountColor: "",                                       sign: "−" };
 
                 const categoryLabel = tx.category
                   ? tx.category.parent
@@ -351,7 +351,7 @@ export function DashboardContent() {
                       </div>
 
                       {/* Amount */}
-                      <span className={cn("text-sm font-semibold tabular-nums", config.color)}>
+                      <span className={cn("text-sm font-semibold tabular-nums", config.amountColor)}>
                         {config.sign}
                         {tx.fromAccount.currency.symbol}
                         {parseFloat(tx.amount).toFixed(2)}
