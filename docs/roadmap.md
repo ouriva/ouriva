@@ -86,6 +86,16 @@ Implemented as inline delta indicators on the monthly summary stat cards. The mo
 
 Select multiple transactions in the list and assign a category to all at once. Especially useful after importing a batch of uncategorized transactions. Checkbox selection + a "Set Category" action bar.
 
+### 8b. Drag-to-Reorder Accounts
+**Priority:** Low | **Effort:** Low
+
+Allow users to control the order of account cards on the dashboard by dragging them in Settings → Accounts. Order is persisted via a `displayOrder` field on the Account model and reflected everywhere accounts are listed.
+
+- `displayOrder Int @default(0)` field on Account; API sorts by `displayOrder ASC, name ASC`
+- `POST /api/accounts/reorder` endpoint accepts an ordered array of IDs; assigns `displayOrder = index` in a single transaction
+- `@dnd-kit/core` + `@dnd-kit/sortable` for the drag UI; `GripVertical` handle on each account card in Settings → Accounts
+- Optimistic update (UI reorders instantly on drop, persists in background)
+
 ### 9. Pinned / Favorite Categories
 **Priority:** Low | **Effort:** Low
 
