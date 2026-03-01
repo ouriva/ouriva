@@ -30,6 +30,11 @@ export async function GET() {
         orderBy: { name: "asc" },
       }),
       prisma.transaction.findMany({
+        where: {
+          // Exclude split children — the parent transaction already holds
+          // the full amount, so counting children too would double-count.
+          parentTransactionId: null,
+        },
         select: {
           type: true,
           amount: true,
