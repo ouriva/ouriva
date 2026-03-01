@@ -43,10 +43,11 @@ model Account {
 }
 
 model Category {
-  id               String        @id @default(uuid())
+  id               String          @id @default(uuid())
   name             String
-  isActive         Boolean       @default(true)
-  excludeFromStats Boolean       @default(false)
+  isActive         Boolean         @default(true)
+  excludeFromStats Boolean         @default(false)
+  bucket           CategoryBucket?
   parentId         String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -123,4 +124,10 @@ model AppSettings {
 enum TransactionType {
   INCOME
   EXPENSE
+}
+
+enum CategoryBucket {
+  NEEDS
+  WANTS
+  SAVINGS
 }
