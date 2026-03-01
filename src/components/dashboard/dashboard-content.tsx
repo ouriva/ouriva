@@ -195,13 +195,13 @@ export function DashboardContent() {
               className="flex-none w-36 rounded-xl border bg-card p-3 shadow-sm"
             >
               <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {account.accountType.name}
+                {account.name}
               </p>
               <p className="mt-1.5 truncate text-base font-bold tabular-nums">
                 {account.currency.symbol}{account.balance.toFixed(2)}
               </p>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {account.name}
+                {account.accountType.name}
               </p>
             </div>
           ))}
