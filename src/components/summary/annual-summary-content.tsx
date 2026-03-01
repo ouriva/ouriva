@@ -1,11 +1,8 @@
 // Annual Summary Content
 // ======================
-// Client component that fetches and displays the annual summary.
-// Shows yearly totals, a bar chart comparing monthly income vs
-// expenses, and a category table with per-month breakdown.
-//
-// Same pattern as MonthlySummaryContent — reads year from URL
-// search params, fetches from the annual API, renders the data.
+// Fetches and displays the annual summary: yearly totals, a bar chart
+// (income vs expenses per month with net line overlay), and a
+// category table with per-month heat map coloring.
 
 "use client";
 
@@ -13,11 +10,14 @@ import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MonthYearPicker } from "./month-year-picker";
 import { AnnualBarChart } from "@/components/charts/annual-bar-chart";
 import { AnnualCategoryTable } from "./annual-category-table";
 import { BudgetSplit } from "./budget-split";
+import { cn } from "@/lib/utils";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface AnnualCategoryData {
   id: string;
@@ -48,6 +48,27 @@ interface AnnualSummary {
   };
 }
 
+// ─── Skeleton ────────────────────────────────────────────────────────────────
+
+function AnnualSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* Stat cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[72px] rounded-xl" />)}
+      </div>
+      {/* Bar chart */}
+      <Skeleton className="h-[280px] rounded-xl" />
+      {/* Tabs */}
+      <Skeleton className="h-9 w-full rounded-lg" />
+      {/* Table */}
+      <Skeleton className="h-[200px] rounded-xl" />
+    </div>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function AnnualSummaryContent() {
   const searchParams = useSearchParams();
   const now = new Date();
@@ -60,70 +81,58 @@ export function AnnualSummaryContent() {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/summary/annual?year=${year}`);
-      if (res.ok) {
-        setData(await res.json());
-      }
+      if (res.ok) setData(await res.json());
     } finally {
       setIsLoading(false);
     }
   }, [year]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   return (
     <div className="space-y-6">
-      {/* Year navigator */}
       <MonthYearPicker mode="year" basePath="/summary/annual" />
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </div>
+        <AnnualSkeleton />
       ) : data ? (
         <>
-          {/* Summary stat cards */}
+          {/* ── Stat cards ─────────────────────────────────────────────── */}
           <div className="grid grid-cols-3 gap-3">
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
+              <CardContent className="pt-3 pb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Income
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-bold text-green-600 dark:text-green-400 tabular-nums">
+                </p>
+                <p className="mt-0.5 text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                   €{data.totalIncome.toFixed(2)}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
+              <CardContent className="pt-3 pb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Expenses
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-lg font-bold text-red-600 dark:text-red-400 tabular-nums">
+                </p>
+                <p className="mt-0.5 text-base font-bold tabular-nums text-red-600 dark:text-red-400">
                   €{data.totalExpense.toFixed(2)}
                 </p>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
+              <CardContent className="pt-3 pb-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Net
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                </p>
                 <p
-                  className={`text-lg font-bold tabular-nums ${
+                  className={cn(
+                    "mt-0.5 text-base font-bold tabular-nums",
                     data.net >= 0
-                      ? "text-green-600 dark:text-green-400"
+                      ? "text-emerald-600 dark:text-emerald-400"
                       : "text-red-600 dark:text-red-400"
-                  }`}
+                  )}
                 >
                   €{data.net.toFixed(2)}
                 </p>
@@ -131,7 +140,7 @@ export function AnnualSummaryContent() {
             </Card>
           </div>
 
-          {/* Bar chart — income vs expenses per month */}
+          {/* ── Bar chart ──────────────────────────────────────────────── */}
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Monthly Overview</CardTitle>
@@ -141,7 +150,7 @@ export function AnnualSummaryContent() {
             </CardContent>
           </Card>
 
-          {/* Expenses / Income / 50·30·20 tabs */}
+          {/* ── Tabs ───────────────────────────────────────────────────── */}
           <Tabs defaultValue="expenses">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="expenses">Expenses</TabsTrigger>

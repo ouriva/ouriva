@@ -1,26 +1,21 @@
 // Annual Bar Chart
 // ================
-// Shows income vs expenses for each month of the year.
-// Uses grouped bars — one green bar (income) and one red bar
-// (expense) side by side for each month.
-//
-// Key Recharts concepts:
-//   <BarChart>      — container for bar charts
-//   <XAxis>         — horizontal axis (months)
-//   <YAxis>         — vertical axis (amounts)
-//   <Bar>           — a data series (one per color)
-//   <CartesianGrid> — the background grid lines
+// Shows income vs expenses per month as grouped bars, with a net line
+// overlay that makes the savings trend immediately readable without
+// mental arithmetic. Uses Recharts ComposedChart to mix bars and a line.
 
 "use client";
 
 import {
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 
 const MONTH_LABELS = [
@@ -40,52 +35,65 @@ interface AnnualBarChartProps {
 }
 
 export function AnnualBarChart({ data }: AnnualBarChartProps) {
-  // Add month labels to the data
   const chartData = data.map((d) => ({
     ...d,
     name: MONTH_LABELS[d.month - 1],
   }));
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={chartData}>
-        {/* Grid — dashed lines in the background for readability */}
-        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+    <ResponsiveContainer width="100%" height={280}>
+      <ComposedChart data={chartData} barGap={2}>
+        <CartesianGrid strokeDasharray="3 3" opacity={0.3} vertical={false} />
 
-        {/* X axis — month abbreviations */}
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
+          tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
           tickLine={false}
           axisLine={false}
         />
 
-        {/* Y axis — auto-scaled amounts, hidden for cleaner mobile look */}
         <YAxis
-          tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }}
+          tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }}
           tickLine={false}
           axisLine={false}
-          width={60}
-          tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+          width={55}
+          tickFormatter={(v) =>
+            v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
+          }
         />
 
         <Tooltip
-          formatter={(value: number | undefined, name: string | undefined) => [
-            `€${(value ?? 0).toFixed(2)}`,
-            name ? name.charAt(0).toUpperCase() + name.slice(1) : "",
-          ]}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        formatter={(value: any, name: any) => [
+            `€${Number(value).toFixed(2)}`,
+            typeof name === "string" ? name.charAt(0).toUpperCase() + name.slice(1) : String(name),
+          ] as any}
           contentStyle={{
             borderRadius: "8px",
             border: "1px solid hsl(var(--border))",
             backgroundColor: "hsl(var(--popover))",
             color: "hsl(var(--popover-foreground))",
+            fontSize: "12px",
           }}
         />
 
-        {/* Two bars per month — income (green) and expense (red) */}
-        <Bar dataKey="income" fill="hsl(160, 60%, 45%)" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="expense" fill="hsl(0, 65%, 55%)" radius={[4, 4, 0, 0]} />
-      </BarChart>
+        {/* Zero baseline for net line */}
+        <ReferenceLine y={0} stroke="hsl(var(--border))" strokeDasharray="3 3" />
+
+        {/* Income and expense bars */}
+        <Bar dataKey="income" fill="hsl(160, 60%, 45%)" radius={[3, 3, 0, 0]} maxBarSize={20} />
+        <Bar dataKey="expense" fill="hsl(0, 65%, 55%)" radius={[3, 3, 0, 0]} maxBarSize={20} />
+
+        {/* Net line — amber so it stands out from the green/red bars */}
+        <Line
+          dataKey="net"
+          stroke="hsl(45, 80%, 55%)"
+          strokeWidth={2}
+          dot={false}
+          activeDot={{ r: 4 }}
+          type="monotone"
+        />
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }

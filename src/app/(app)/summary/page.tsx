@@ -1,47 +1,33 @@
-// Monthly Summary Page
-// ====================
-// Shows income/expense totals, a pie chart, and a category breakdown
-// for a selected month.
-//
-// Architecture note — Suspense boundary:
-// The MonthlySummaryContent component uses useSearchParams() to read
-// the selected month from the URL. In Next.js App Router, any
-// component that reads search params must be wrapped in <Suspense>.
-// Without it, Next.js would disable static optimization for the
-// entire page. With Suspense, the page shell renders immediately
-// and the dynamic content streams in once search params are available.
-
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/layout/page-header";
+import { SummaryNav } from "@/components/summary/summary-nav";
 import { MonthlySummaryContent } from "@/components/summary/monthly-summary-content";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const metadata: Metadata = {
   title: "Monthly Summary",
 };
 
-export default function SummaryPage() {
+function MonthlySummaryFallback() {
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Summary"
-        description="Monthly breakdown"
-      >
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/summary/annual">Annual</Link>
-        </Button>
-      </PageHeader>
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <div className="grid grid-cols-3 gap-3">
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-[72px] rounded-xl" />)}
+      </div>
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <div className="space-y-3">
+        {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-16 rounded-xl" />)}
+      </div>
+    </div>
+  );
+}
 
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        }
-      >
+export default function SummaryPage() {
+  return (
+    <div className="space-y-4">
+      <SummaryNav mode="monthly" />
+      <Suspense fallback={<MonthlySummaryFallback />}>
         <MonthlySummaryContent />
       </Suspense>
     </div>
