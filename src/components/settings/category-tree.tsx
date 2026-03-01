@@ -34,6 +34,7 @@ interface Category {
   parentId: string | null;
   isActive: boolean;
   excludeFromStats: boolean;
+  bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
   children: Category[];
 }
 
@@ -74,6 +75,15 @@ export function CategoryTree() {
     fetchData();
   }
 
+  async function setBucket(category: Category, bucket: "NEEDS" | "WANTS" | "SAVINGS" | null) {
+    await fetch(`/api/categories/${category.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bucket }),
+    });
+    fetchData();
+  }
+
   async function toggleExcludeFromStats(category: Category) {
     await fetch(`/api/categories/${category.id}`, {
       method: "PUT",
@@ -95,6 +105,48 @@ export function CategoryTree() {
   const parents = categories.filter((c) => !c.parentId);
 
   const nameField = [{ name: "name", label: "Category Name", placeholder: "e.g., Groceries" }];
+
+  // Compact N/W/S bucket selector used on every category row.
+  // isGroupDefault = true when shown on a parent-with-children (the bucket
+  // acts as the default for subcategories, not a direct assignment).
+  function BucketSelector({
+    bucket,
+    isGroupDefault,
+    onChange,
+  }: {
+    bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
+    isGroupDefault: boolean;
+    onChange: (b: "NEEDS" | "WANTS" | "SAVINGS" | null) => void;
+  }) {
+    const buckets = [
+      { key: "NEEDS" as const, label: "N", title: isGroupDefault ? "Needs — default for subcategories" : "Needs (50%)" },
+      { key: "WANTS" as const, label: "W", title: isGroupDefault ? "Wants — default for subcategories" : "Wants (30%)" },
+      { key: "SAVINGS" as const, label: "S", title: isGroupDefault ? "Savings — default for subcategories" : "Savings (20%)" },
+    ];
+    return (
+      <div className="flex items-center gap-0.5">
+        {buckets.map(({ key, label, title }) => (
+          <button
+            key={key}
+            title={title}
+            onClick={() => onChange(bucket === key ? null : key)}
+            className={cn(
+              "rounded px-1.5 py-0.5 text-[10px] font-semibold transition-colors",
+              bucket === key
+                ? key === "NEEDS"
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+                  : key === "WANTS"
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
+                  : "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                : "text-muted-foreground hover:bg-muted"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -173,6 +225,14 @@ export function CategoryTree() {
                       </Button>
                     }
                   />
+                  {/* Bucket selector — N/W/S for 50/30/20 rule.
+                      On parent-with-children: acts as default for subcategories.
+                      On standalone parents: direct assignment. */}
+                  <BucketSelector
+                    bucket={parent.bucket}
+                    isGroupDefault={parent.children.length > 0}
+                    onChange={(b) => setBucket(parent, b)}
+                  />
                   {/* Non-tracked toggle — only shown on standalone parents
                       (no children). Parents with children can't have transactions
                       assigned to them, so the flag would have no effect. */}
@@ -242,6 +302,12 @@ export function CategoryTree() {
                               Edit
                             </Button>
                           }
+                        />
+                        {/* Bucket selector for child — overrides parent's bucket */}
+                        <BucketSelector
+                          bucket={child.bucket}
+                          isGroupDefault={false}
+                          onChange={(b) => setBucket(child, b)}
                         />
                         {/* Non-tracked toggle for child */}
                         <Button
