@@ -160,7 +160,7 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
   // Confirm state
   return (
     <Card>
-      <CardContent className="space-y-6 pt-6">
+      <CardContent className="space-y-6 p-4">
         <h3 className="text-lg font-semibold">Import Summary</h3>
 
         {/* Stats grid */}

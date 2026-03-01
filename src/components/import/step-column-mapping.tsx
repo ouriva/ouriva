@@ -168,7 +168,7 @@ export function StepColumnMapping({
 
   return (
     <Card>
-      <CardContent className="space-y-6 pt-6">
+      <CardContent className="space-y-6 p-4">
         {/* File preview */}
         <div>
           <Label className="mb-2 block">Data Preview</Label>

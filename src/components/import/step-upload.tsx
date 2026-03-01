@@ -138,7 +138,7 @@ export function StepUpload({ onComplete }: StepUploadProps) {
 
   return (
     <Card>
-      <CardContent className="space-y-6 pt-6">
+      <CardContent className="space-y-6 p-4">
         {/* File upload */}
         <div>
           <Label className="mb-2 block">Bank Statement File</Label>

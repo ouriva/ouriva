@@ -428,7 +428,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
 
   return (
     <Card>
-      <CardContent className="space-y-4 pt-6">
+      <CardContent className="space-y-4 p-4">
         {/* Summary bar */}
         <div className="flex flex-wrap gap-2 text-sm">
           <Badge variant="outline">{parsedRows.length} total rows</Badge>

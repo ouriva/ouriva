@@ -136,7 +136,7 @@ export function GeneralSettings() {
     <div className="space-y-6">
       {/* Transfer Category */}
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4 p-4">
           <div>
             <Label>Transfer Category</Label>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -187,7 +187,7 @@ export function GeneralSettings() {
 
       {/* Non-tracked Balance */}
       <Card>
-        <CardContent className="space-y-4 pt-6">
+        <CardContent className="space-y-4 p-4">
           <div>
             <Label>Non-tracked Balance</Label>
             <p className="mt-1 text-sm text-muted-foreground">

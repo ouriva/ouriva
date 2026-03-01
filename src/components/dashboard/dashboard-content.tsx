@@ -232,7 +232,7 @@ export function DashboardContent() {
             </Button>
           </div>
           <Card>
-            <CardContent className="space-y-3 pt-4 pb-4">
+            <CardContent className="space-y-3 p-4">
               {/* Income / Expense row */}
               <div className="flex justify-between">
                 <div>
