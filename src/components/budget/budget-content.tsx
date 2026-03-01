@@ -7,12 +7,11 @@
 //   2. Stat cards  — Budgeted Income | Budgeted Expenses (2-col)
 //                    Budget Balance (full width — is the plan viable?)
 //   3. Tabs: Expenses | Income
-//      Each tab shows a compact list of categories with editable budget
-//      inputs and progress bars comparing budget vs actual YTD.
-//   4. 50/30/20 panel — are your planned expenses in line with the rule?
-//      Uses the same BudgetSplit component as the summary page,
-//      but fed with *planned* budget amounts instead of actual spending.
-//      Always visible; shows guidance when no income budget is set.
+//      Categories are grouped by parent:
+//        • Parent row  — read-only summary (sum of children)
+//        • Child rows  — editable budget inputs, indented under the parent
+//        • Standalone  — root categories with no children, fully editable
+//   4. 50/30/20 panel — always visible; shows guidance when no income budget set
 //
 // Editing pattern — "optimistic local state":
 //   Changes are tracked in a local `edits` map keyed by "TYPE:categoryId".
@@ -46,18 +45,24 @@ interface BudgetCategory {
   isIncome: boolean;
 }
 
+// A group is either a parent category (with children[]) or a standalone leaf
+// (children: []). The groupId/groupName fields identify the group itself.
+interface BudgetGroup extends BudgetCategory {
+  groupId: string;
+  groupName: string;
+  children: BudgetCategory[];
+}
+
+interface BudgetSide {
+  totalBudgeted: number;
+  totalActual: number;
+  groups: BudgetGroup[];
+}
+
 interface BudgetData {
   year: number;
-  expense: {
-    totalBudgeted: number;
-    totalActual: number;
-    categories: BudgetCategory[];
-  };
-  income: {
-    totalBudgeted: number;
-    totalActual: number;
-    categories: BudgetCategory[];
-  };
+  expense: BudgetSide;
+  income: BudgetSide;
   budgetBalance: number;
   plannedBucketBreakdown: {
     NEEDS: number;
@@ -84,15 +89,62 @@ function BudgetSkeleton() {
   );
 }
 
+// ─── Group header ─────────────────────────────────────────────────────────────
+// Read-only row shown for parent categories. Displays the aggregate of all
+// child budgets and actuals so the user sees the group total at a glance.
+
+interface GroupHeaderProps {
+  group: BudgetGroup;
+}
+
+function GroupHeader({ group }: GroupHeaderProps) {
+  const remainingClass = group.isIncome
+    ? group.actual >= group.budgeted
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-muted-foreground"
+    : group.remaining >= 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-red-600 dark:text-red-400";
+
+  const remainingLabel = group.isIncome
+    ? group.remaining > 0
+      ? `€${group.remaining.toFixed(2)} to go`
+      : `€${Math.abs(group.remaining).toFixed(2)} over`
+    : group.remaining >= 0
+      ? `€${group.remaining.toFixed(2)} left`
+      : `€${Math.abs(group.remaining).toFixed(2)} over`;
+
+  return (
+    <div className="flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5">
+      <span className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
+        {group.groupName}
+      </span>
+      <div className="flex shrink-0 items-center gap-3">
+        <span className="text-xs tabular-nums text-muted-foreground">
+          €{group.actual.toFixed(2)} / €{group.budgeted.toFixed(2)}
+        </span>
+        {group.budgeted > 0 && (
+          <span className={cn("text-xs font-medium tabular-nums", remainingClass)}>
+            {remainingLabel}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Category row ─────────────────────────────────────────────────────────────
+// Editable row for leaf categories (child or standalone).
+// isChild=true adds left indentation to visually connect it to its group header.
 
 interface CategoryRowProps {
   category: BudgetCategory;
   editedBudget: number;
   onChange: (value: string) => void;
+  isChild?: boolean;
 }
 
-function CategoryRow({ category, editedBudget, onChange }: CategoryRowProps) {
+function CategoryRow({ category, editedBudget, onChange, isChild }: CategoryRowProps) {
   const remaining = Math.round((editedBudget - category.actual) * 100) / 100;
   const percentage =
     editedBudget > 0
@@ -117,7 +169,7 @@ function CategoryRow({ category, editedBudget, onChange }: CategoryRowProps) {
       : `€${Math.abs(remaining).toFixed(2)} over`;
 
   return (
-    <div className="space-y-2 px-4 py-3">
+    <div className={cn("space-y-2 py-3", isChild ? "pl-7 pr-4" : "px-4")}>
       {/* Name + actual */}
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium">{category.categoryName}</span>
@@ -196,17 +248,22 @@ export function BudgetContent() {
     if (!data) return;
     setIsSaving(true);
     try {
+      // Collect leaf-level entries: children of groups, or standalone groups
+      function collectLeaves(groups: BudgetGroup[], type: "EXPENSE" | "INCOME") {
+        return groups.flatMap((g) =>
+          g.children.length > 0
+            ? g.children.map((c) => ({
+                categoryId: c.categoryId,
+                type,
+                amount: edits[editKey(type, c.categoryId)] ?? c.budgeted,
+              }))
+            : [{ categoryId: g.groupId, type, amount: edits[editKey(type, g.groupId)] ?? g.budgeted }]
+        );
+      }
+
       const budgets = [
-        ...data.expense.categories.map((c) => ({
-          categoryId: c.categoryId,
-          type: "EXPENSE" as const,
-          amount: edits[editKey("EXPENSE", c.categoryId)] ?? c.budgeted,
-        })),
-        ...data.income.categories.map((c) => ({
-          categoryId: c.categoryId,
-          type: "INCOME" as const,
-          amount: edits[editKey("INCOME", c.categoryId)] ?? c.budgeted,
-        })),
+        ...collectLeaves(data.expense.groups, "EXPENSE"),
+        ...collectLeaves(data.income.groups,  "INCOME"),
       ];
 
       const res = await fetch("/api/budgets", {
@@ -224,6 +281,36 @@ export function BudgetContent() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  // Render a group: either a parent header + indented children, or a standalone leaf row.
+  function renderGroup(group: BudgetGroup, type: "EXPENSE" | "INCOME") {
+    if (group.children.length > 0) {
+      return (
+        <div key={group.groupId}>
+          <GroupHeader group={group} />
+          {group.children.map((cat) => (
+            <CategoryRow
+              key={cat.categoryId}
+              category={cat}
+              editedBudget={edits[editKey(type, cat.categoryId)] ?? cat.budgeted}
+              onChange={(v) => handleChange(type, cat.categoryId, v)}
+              isChild
+            />
+          ))}
+        </div>
+      );
+    }
+
+    // Standalone leaf — render directly as an editable row
+    return (
+      <CategoryRow
+        key={group.groupId}
+        category={{ ...group, categoryId: group.groupId, categoryName: group.groupName }}
+        editedBudget={edits[editKey(type, group.groupId)] ?? group.budgeted}
+        onChange={(v) => handleChange(type, group.groupId, v)}
+      />
+    );
   }
 
   return (
@@ -311,48 +398,31 @@ export function BudgetContent() {
             </TabsList>
 
             <TabsContent value="expenses" className="mt-4">
-              {data.expense.categories.length === 0 ? (
+              {data.expense.groups.length === 0 ? (
                 <div className="rounded-lg border p-8 text-center text-muted-foreground">
                   No expense categories for {year}
                 </div>
               ) : (
                 <div className="divide-y overflow-hidden rounded-lg border">
-                  {data.expense.categories.map((cat) => (
-                    <CategoryRow
-                      key={cat.categoryId}
-                      category={cat}
-                      editedBudget={
-                        edits[editKey("EXPENSE", cat.categoryId)] ?? cat.budgeted
-                      }
-                      onChange={(v) => handleChange("EXPENSE", cat.categoryId, v)}
-                    />
-                  ))}
+                  {data.expense.groups.map((g) => renderGroup(g, "EXPENSE"))}
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="income" className="mt-4">
-              {data.income.categories.length === 0 ? (
+              {data.income.groups.length === 0 ? (
                 <div className="rounded-lg border p-8 text-center text-muted-foreground">
                   No income categories for {year}.{" "}
                   Add income transactions to see them here.
                 </div>
               ) : (
                 <div className="divide-y overflow-hidden rounded-lg border">
-                  {data.income.categories.map((cat) => (
-                    <CategoryRow
-                      key={cat.categoryId}
-                      category={cat}
-                      editedBudget={
-                        edits[editKey("INCOME", cat.categoryId)] ?? cat.budgeted
-                      }
-                      onChange={(v) => handleChange("INCOME", cat.categoryId, v)}
-                    />
-                  ))}
+                  {data.income.groups.map((g) => renderGroup(g, "INCOME"))}
                 </div>
               )}
             </TabsContent>
           </Tabs>
+
           {/* ── Planned 50/30/20 ────────────────────────────────────── */}
           <Card className="py-0">
             <CardContent className="p-3 pb-4">
