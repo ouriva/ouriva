@@ -514,7 +514,7 @@ When you run `npx shadcn@latest add button`, it reads this config to know where 
 
 ### Schema Design (`prisma/schema.prisma`)
 
-The database has **7 models** (tables) and **1 enum**:
+The database has **7 models** (tables) and **2 enums**:
 
 ```
 ┌──────────┐     ┌────────────┐
@@ -588,16 +588,33 @@ model Account {
 
 **`@@index([currencyId])` and `@@index([accountTypeId])`** — Database indexes that speed up queries filtering by currency or account type. Without indexes, the database scans every row.
 
+#### CategoryBucket Enum
+
+```prisma
+enum CategoryBucket {
+  NEEDS
+  WANTS
+  SAVINGS
+}
+```
+
+This enum powers the **50/30/20 Budget Rule** feature. Each category can be assigned to one of three buckets that map to the personal finance rule-of-thumb: 50% of income on needs (rent, groceries, utilities), 30% on wants (dining out, entertainment), and 20% on savings/debt repayment.
+
+**Bucket inheritance**: A category's effective bucket follows this chain — `category.bucket ?? category.parent?.bucket ?? null`. If a subcategory has no bucket set, it inherits the parent's bucket. This lets you assign a bucket once to a top-level category and have all its children participate automatically.
+
+**`null` is valid** — Categories without a bucket assignment contribute to the `unclassified` total in the `BudgetSplit` component, which shows a warning if unclassified spending is significant.
+
 #### Category (Hierarchical)
 
 ```prisma
 model Category {
-  id          String     @id @default(uuid())
-  name        String                           // "Food", "Groceries"
-  isActive    Boolean    @default(true)
-  parentId    String?                           // null = top-level
-  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryTree")
+  id          String          @id @default(uuid())
+  name        String                               // "Food", "Groceries"
+  isActive    Boolean         @default(true)
+  parentId    String?                              // null = top-level
+  bucket      CategoryBucket?                      // NEEDS, WANTS, SAVINGS, or null
+  parent      Category?       @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[]      @relation("CategoryTree")
   transactions Transaction[]
   budgets     Budget[]
 }
@@ -606,10 +623,10 @@ model Category {
 **Self-referencing relation** — A category can be a child of another category. `parentId` points to another row in the same table. This creates a tree structure:
 
 ```
-Food (parentId: null)
-├── Groceries (parentId: food.id)
-├── Restaurants (parentId: food.id)
-└── Coffee & Snacks (parentId: food.id)
+Food (parentId: null, bucket: NEEDS)
+├── Groceries (parentId: food.id, bucket: null → inherits NEEDS)
+├── Restaurants (parentId: food.id, bucket: WANTS → overrides parent)
+└── Coffee & Snacks (parentId: food.id, bucket: null → inherits NEEDS)
 ```
 
 **Two-level limit** — Enforced in application code, not in the database. The API checks that you can't create a child of a child. This keeps the UI manageable.
@@ -917,11 +934,19 @@ It then joins categories with their parents to build a hierarchical breakdown:
     { "name": "Health", "total": 500, "children": [
       { "name": "Insurance Reimbursement", "total": 500 }
     ]}
-  ]
+  ],
+  "bucketBreakdown": {
+    "NEEDS": 980.00,
+    "WANTS": 430.50,
+    "SAVINGS": 200.00,
+    "unclassified": 240.00
+  }
 }
 ```
 
 Both `categories` (expenses) and `incomeCategories` use the same hierarchical structure. Income breakdown enables the "same category" reimbursement workflow — categorize a reimbursement under the original expense category, and the summary shows the net impact per category.
+
+**`bucketBreakdown`** — Totals broken down by `CategoryBucket` value, plus `unclassified` for expenses in categories that have no bucket assignment (including via parent inheritance). This field drives the `BudgetSplit` component's 50/30/20 view. The annual summary API returns the same `bucketBreakdown` field, but aggregated across the full year.
 
 #### `GET /api/budgets/[year]` — Budget vs Actual
 
@@ -1181,9 +1206,19 @@ A single transaction display. Server component (no interactivity needed for disp
 
 #### `TransactionList` (`src/components/transactions/transaction-list.tsx`)
 
-Groups transactions by date and displays them with search, filtering, and pagination.
+Groups transactions by date and displays them with search, filtering, and load-more pagination.
 
-**Filter UI**: A search bar (debounced 300ms), type tabs (All/Income/Expense), and a collapsible section with account, category, date range, and "Needs review only" filters. The component fetches accounts and categories on mount for the filter dropdowns.
+**Skeleton loading**: Shows placeholder rows on first mount before data arrives, giving immediate visual feedback.
+
+**Sticky filter bar**: The filter bar has `position: sticky; top: 0` with `backdrop-blur-sm` so the frosted-glass bar stays anchored at the top as the user scrolls through a long transaction list.
+
+**Active filter chips**: When a filter is active (e.g., account = "Main Checking"), a dismissable pill appears inline below the search bar. Tapping the `×` on a chip clears that individual filter without opening the filter panel. This gives users a clear visual of what's active and a quick way to remove it.
+
+**Filter persistence**: Active filters are stored in the URL search parameters. Navigating away and returning to the transactions page restores the previous filter state.
+
+**Date group headers**: Transactions are grouped by day. Each group header shows the date and the day's net total (total income minus total expenses for that day). This lets users quickly spot which days had significant net outflows.
+
+**Load-more pagination**: Instead of previous/next page navigation, the list appends results to the existing list as the user taps "Load more". Accumulated results are kept in state. An end-of-list counter shows how many transactions are displayed vs the total matching the current filters.
 
 **Date grouping logic**: The API returns a flat array. The component groups transactions into `Map<string, Transaction[]>` where the key is the formatted date (e.g., "Jan 15, 2026").
 
@@ -1299,34 +1334,106 @@ Uses URL search parameters (`?year=2026&month=1`) instead of local state. This m
 
 The component uses `useRouter().push()` with `useSearchParams()` to read and update the URL.
 
-#### Expenses / Income Tabs
+**"This month" / "This year" shortcut**: When the selected period is not the current one, a small pill button appears next to the navigation arrows letting the user jump back to the current period in one tap. The pill is hidden when already viewing the current period, keeping the UI clean.
 
-Both the monthly and annual summaries use a tabbed interface to switch between expense and income views. In the monthly summary, the tabs control both the pie chart and the category breakdown below it. In the annual summary, the tabs control the category table. The bar chart remains always visible since it already shows both income and expense bars side by side.
+#### `SummaryNav` (`src/components/summary/summary-nav.tsx`)
 
-#### `CategoryBreakdown` — Category Distribution
+A segmented Monthly/Annual toggle rendered at the top of every summary page. It is a **Server Component** — there is no interactivity needed, just two `Link` elements styled as a pill toggle. The active tab is determined by the current pathname.
 
-Reusable component for both expense and income category breakdowns. Shows each parent category's total and percentage. Child categories are nested and indented. Percentages are computed client-side:
+```tsx
+// Server Component — no "use client" needed
+<SummaryNav active="monthly" />
+```
+
+Using a Server Component here means zero JavaScript is shipped to the browser for this navigation element. The styling uses the active variant to highlight the current tab (`bg-background shadow-sm` on the active pill, muted on inactive).
+
+#### Expenses / Income / 50·30·20 Tabs
+
+Both the monthly and annual summaries use a three-tab interface:
+- **Expenses tab** — Category breakdown for expense transactions
+- **Income tab** — Category breakdown for income transactions
+- **50·30·20 tab** — `BudgetSplit` component showing spending against the budget rule
+
+In the annual summary, the active tab also controls the `AnnualCategoryTable` (which category set is shown) and which category is selectable for drill-down in the chart above.
+
+#### `CategoryBreakdown` (`src/components/summary/category-breakdown.tsx`)
+
+A single `Card` containing a list of category rows. Replaces the previous pie chart as the primary expense/income visualization in the monthly summary. Each row shows:
+- A colored left border (from a fixed `PALETTE` array, indexed by position)
+- The category name
+- The absolute total amount
+- A thin horizontal progress bar showing the category's share of the total
+- Percentage text
+
+Child categories are nested and indented under their parent. Percentages are computed client-side:
 
 ```typescript
 const percentage = total > 0 ? (category.total / total) * 100 : 0;
 ```
 
-Used in both tabs: expense tab passes `total={totalExpense}`, income tab passes `total={totalIncome}`.
+Used in both tabs: expense tab passes `total={totalExpense}`, income tab passes `total={totalIncome}`. The colored left border uses the same `PALETTE` index consistently so the same category always gets the same color within the list, making it easy to visually track categories across months.
 
-#### `AnnualCategoryTable` — Scrollable Monthly Grid
+#### `AnnualCategoryTable` (`src/components/summary/annual-category-table.tsx`)
 
 A table with 14 columns: Category (sticky), Total, and 12 months. On mobile, this scrolls horizontally with the category column staying fixed (CSS `sticky`). Used in both the expense and income tabs of the annual summary.
 
 **`sticky` positioning** — The first column has `position: sticky; left: 0`. As you scroll horizontally, it "sticks" to the left edge. This is essential on mobile where the table is wider than the screen.
 
+**Clickable rows for chart drill-down**: Rows are interactive. Clicking a category row highlights it (selected state with a distinct background) and updates the `AnnualBarChart` above to show that category's monthly spending as a single blue line. Clicking the selected row again, or switching tabs, resets the chart back to the overview mode (income vs expense lines). There is no heat map — just row selection driving the chart above.
+
+The selected category name appears in the chart card's title with a "← Overview" reset button alongside it.
+
+#### `MonthlySummaryContent` (`src/components/summary/monthly-summary-content.tsx`)
+
+The client component that owns all monthly summary state and rendering. Fetches the current month and the **previous month in parallel** so it can compute deltas for the stat cards.
+
+**Stat card layout** — A 2+1 grid: Income and Expenses side by side in `grid-cols-2`, then Net full-width below. Cards use `Card className="py-0"` + `CardContent className="p-3"` to override shadcn's default `py-6` padding and keep cards compact on mobile.
+
+**Inline deltas** — Income and Expenses cards show a compact `↑5%` or `↓3%` indicator in the top-right corner, comparing the current month to the previous month. The Net card shows the full absolute delta: "↑ €120.00 vs Jan", providing context for how this month compares to the previous one.
+
+**Three tabs** — Expenses, Income, and 50·30·20. The first two tabs render `CategoryBreakdown` with the appropriate data. The 50·30·20 tab renders `BudgetSplit`.
+
+**Skeleton loading** — Skeleton elements match the actual layout shape (same grid, same card sizes) to minimize layout shift when data loads.
+
+#### `AnnualSummaryContent` (`src/components/summary/annual-summary-content.tsx`)
+
+The client component for the annual summary. Uses the same 2+1 stat card layout as monthly. The bar chart is always visible above the tabs (since it shows aggregate data), while the tabs control which category set is displayed in `AnnualCategoryTable` below.
+
+**Chart card styling** — The chart title uses `text-[10px] font-semibold uppercase tracking-wide text-muted-foreground` — a small uppercase label style consistent with stat card labels. The chart div uses `-mx-3` to allow the `ResponsiveContainer` to fill the full card width while the card still has padding for the title and legend.
+
+**`maxMonth` prop** — For the current year, only months up to the current calendar month are shown (no future zero-value months). For past years, all 12 months are shown.
+
+**Three tabs** — Expenses, Income, and 50·30·20. Selecting a row in `AnnualCategoryTable` (available in Expenses and Income tabs) drives the chart into category detail mode.
+
+#### `BudgetSplit` (`src/components/summary/budget-split.tsx`)
+
+The 50/30/20 Budget Rule visualization, rendered in the third tab of both monthly and annual summaries.
+
+Displays:
+- **Three stat cards** — NEEDS, WANTS, SAVINGS. Each shows the actual amount spent, the actual percentage of total income, and the target percentage (50% / 30% / 20%) with a colored indicator (green if at/under target, red if over).
+- **Stacked bar** — A single horizontal bar divided into three colored segments (one per bucket) proportional to actual spending. Gives a visual gestalt of the overall split at a glance.
+- **Unclassified warning** — If any expenses fall into categories with no bucket assignment, a warning badge shows the unclassified total and prompts the user to assign buckets in Settings > Categories.
+
+```tsx
+<BudgetSplit
+  bucketBreakdown={{ NEEDS: 980, WANTS: 430, SAVINGS: 200, unclassified: 240 }}
+  totalIncome={3500}
+/>
+```
+
 ### Dashboard Component
 
-#### `DashboardContent`
+#### `DashboardContent` (`src/components/dashboard/dashboard-content.tsx`)
 
-The home screen fetches three APIs in parallel and displays:
-1. **Account balances** — Grouped by currency (e.g., "EUR accounts: €12,500")
-2. **Monthly snapshot** — This month's income, expenses, and net
-3. **Recent transactions** — Last 5 transactions
+A fully redesigned home screen that fetches three APIs in parallel (balances, monthly summary, recent transactions) and renders:
+
+1. **Greeting header** — Time-of-day message ("Good morning, Fabio") plus today's date. Replaces the generic `PageHeader`.
+2. **Hero card** — A dark gradient card showing total net worth across all accounts in the primary currency. Gives users the one number they care about at a glance.
+3. **Account strip** — A horizontally scrollable list of account cards, edge-to-edge (`-mx-4 px-4`) with the scrollbar hidden. Each card shows the account name, balance, and currency. On mobile, users swipe to see more accounts without leaving the dashboard.
+4. **Spending meter** — A progress bar showing current month's expenses as a percentage of income. Color shifts from emerald (healthy) → amber (warning at ~75%) → red (over budget) based on the spend percentage.
+5. **Recent transactions** — Last 5 transactions in a compact format: a colored dot (category color), name, amount, and a relative date label ("Today", "Yesterday", "Mar 5"). Tapping navigates to the full transaction list.
+
+Skeleton loading states are shown for all sections while data is fetching, matching the shape of the actual content to reduce layout shift.
 
 ### Budget Components
 
@@ -1531,20 +1638,34 @@ export function formatCurrency(amount: number | string, currencyCode: string): s
 
 **`Legend`** renders a color-coded key below the chart. Uses `wrapperStyle` with `hsl(var(--foreground))` so label text is readable in both light and dark mode.
 
-**Dark mode chart colors** — All text elements in charts (axis tick labels, legend text, tooltip text) use `hsl(var(--foreground))` from the theme instead of hardcoded colors. This ensures readability in both light and dark mode.
+**Dark mode chart colors** — SVG presentation attributes (`fill`, `stroke`) do **not** process CSS custom properties. See the [Theme-Aware Recharts Colors pattern](#theme-aware-recharts-colors) in Section 17 for the correct technique.
 
-### Annual Bar Chart
+### Annual Line Chart (`annual-bar-chart.tsx`)
+
+Despite the filename, this component is now a `LineChart` (rewritten from `BarChart`). It operates in two modes:
+
+**Overview mode** (default): Two lines — income (emerald) and expenses (red) — plotted monthly across the year:
 
 ```tsx
-<BarChart data={data}>
-  <XAxis dataKey="month" tick={{ fill: "hsl(var(--foreground))" }} />
-  <YAxis tick={{ fill: "hsl(var(--foreground))" }} />
-  <Bar dataKey="income" fill="#22c55e" name="Income" />
-  <Bar dataKey="expense" fill="#ef4444" name="Expenses" />
-</BarChart>
+<LineChart data={data}>
+  <XAxis dataKey="month" tick={{ fill: axisColor }} />
+  <YAxis orientation="right" tick={{ fill: axisColor }} />
+  <Line dataKey="income" stroke="#22c55e" />
+  <Line dataKey="expense" stroke="#ef4444" />
+</LineChart>
 ```
 
-A grouped bar chart showing monthly income (green) and expenses (red) side by side for each month.
+**Category detail mode**: A single blue line showing the selected category's monthly spending. Activated when the user clicks a row in `AnnualCategoryTable`. The chart title updates to show the category name with a "← Overview" reset button.
+
+**Y-axis on the right** (`orientation="right"`) — Moving the Y-axis to the right aligns the plot area's left edge flush with the card title text, giving a cleaner visual alignment.
+
+**`maxMonth` prop** — Slices the data array to the current month for the current year, so future months with zero values don't appear as a flat trailing line.
+
+**`margin={{ left: 14 }}`** — Prevents the first X-axis label from being clipped by the SVG boundary.
+
+### Theme-Aware Colors in Recharts
+
+See the dedicated pattern in [Section 17](#theme-aware-recharts-colors).
 
 ---
 
@@ -1925,6 +2046,31 @@ Object.entries(filters).forEach(([key, value]) => {
 });
 const response = await fetch(`/api/transactions?${params}`);
 ```
+
+### Theme-Aware Recharts Colors
+
+SVG presentation attributes (`fill="..."`, `stroke="..."`) do **not** process CSS custom properties. Writing `fill="hsl(var(--foreground))"` will render the literal string, not the resolved color — the result is usually black in both light and dark mode.
+
+**The solution**: use `next-themes`' `useTheme()` hook to read the resolved theme and map it to explicit HSL values:
+
+```typescript
+import { useTheme } from "next-themes";
+
+const { resolvedTheme } = useTheme();
+const isDark = resolvedTheme === "dark";
+
+// Explicit values — not CSS variables
+const axisColor = isDark ? "hsl(240, 5%, 64%)" : "hsl(240, 5%, 34%)";
+const gridColor = isDark ? "hsl(240, 5%, 26%)" : "hsl(240, 5%, 90%)";
+
+// Use in SVG attributes
+<XAxis tick={{ fill: axisColor }} />
+<CartesianGrid stroke={gridColor} />
+```
+
+**Why `resolvedTheme` instead of `theme`?** `theme` can be `"system"`, which doesn't tell you the actual light/dark value. `resolvedTheme` always resolves to `"light"` or `"dark"` based on the system preference when the theme is set to `"system"`.
+
+**HTML elements are fine with CSS variables**: Tooltip containers and `wrapperStyle` props render as regular HTML `<div>` elements, so `hsl(var(--foreground))` works correctly there. Only SVG attributes are affected.
 
 ---
 

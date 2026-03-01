@@ -52,15 +52,24 @@ Monthly and annual summaries now show income broken down by category, not just a
 - "Income by Category" table in annual summary
 - Reuses the same hierarchical parent/child category display as expenses
 
+### ~~5b. 50/30/20 Budget Rule~~ (Done — v1.8.0)
+
+Assigns each category to a budget bucket (NEEDS / WANTS / SAVINGS) and shows how spending aligns with the popular 50/30/20 personal finance rule.
+
+- New `CategoryBucket` enum in the database schema (`NEEDS`, `WANTS`, `SAVINGS`)
+- `bucket` field on the `Category` model (nullable); effective bucket inherits from parent if unset
+- N / W / S compact buttons on every row of the Categories settings page for quick assignment
+- `BudgetSplit` component in the monthly and annual summary third tab: three stat cards (actual % vs target %), a stacked bar, and an unclassified warning
+- `bucketBreakdown` field in monthly and annual summary API responses
+
 ### 6. Home Currency Net Worth
 **Priority:** Medium | **Effort:** Low
 
 A single "Net Worth" figure in a configurable home currency on the dashboard. Requires a simple exchange rate table (manually entered, not live API) and a conversion at display time. Gives multi-currency users the one number they actually want.
 
-### 7. Month-over-Month Comparison
-**Priority:** Medium | **Effort:** Low
+### ~~7. Month-over-Month Comparison~~ (Done — v1.9.0)
 
-Show deltas next to each category in the monthly summary: "Food: +23% vs last month." No new page — just a number and an arrow/color on the existing summary. Simple query comparing current month totals to previous month.
+Implemented as inline delta indicators on the monthly summary stat cards. The monthly summary fetches the current and previous month in parallel and shows compact `↑5%` / `↓3%` indicators on the Income and Expenses cards, plus a full absolute delta ("↑ €120.00 vs Jan") on the Net card.
 
 ### 8. Bulk Categorize
 **Priority:** Medium | **Effort:** Low
