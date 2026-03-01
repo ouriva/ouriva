@@ -63,6 +63,10 @@ export async function GET(request: NextRequest) {
     let totalIncome = 0;
     let totalExpense = 0;
 
+    // 50/30/20 bucket breakdown — expenses only.
+    // Effective bucket = category.bucket ?? parent.bucket ?? null (unclassified).
+    const bucketTotals = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
+
     for (const tx of transactions) {
       const amount = Number(tx.amount);
       // tx.date is a Date object; getMonth() returns 0-11
@@ -74,6 +78,10 @@ export async function GET(request: NextRequest) {
       } else {
         months[monthIndex].expense += amount;
         totalExpense += amount;
+        // Effective bucket: own bucket → parent bucket → unclassified
+        const bucket = (tx.category?.bucket ?? tx.category?.parent?.bucket ?? null) as
+          | "NEEDS" | "WANTS" | "SAVINGS" | null;
+        bucketTotals[bucket ?? "unclassified"] += amount;
       }
 
       // Category breakdown for both expenses and income
@@ -154,6 +162,12 @@ export async function GET(request: NextRequest) {
       months: roundedMonths,
       categories: mapToSortedArray(categoryMap),
       incomeCategories: mapToSortedArray(incomeCategoryMap),
+      bucketBreakdown: {
+        NEEDS: Math.round(bucketTotals.NEEDS * 100) / 100,
+        WANTS: Math.round(bucketTotals.WANTS * 100) / 100,
+        SAVINGS: Math.round(bucketTotals.SAVINGS * 100) / 100,
+        unclassified: Math.round(bucketTotals.unclassified * 100) / 100,
+      },
     });
   } catch (error) {
     console.error("GET /api/summary/annual error:", error);
