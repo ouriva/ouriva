@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
 import { cn } from "@/lib/utils";
+import { CATEGORY_ICONS, CATEGORY_COLORS, ICON_GROUPS } from "@/lib/category-icons";
 
 interface Category {
   id: string;
@@ -35,6 +36,8 @@ interface Category {
   isActive: boolean;
   excludeFromStats: boolean;
   bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
+  icon: string | null;
+  color: string | null;
   children: Category[];
 }
 
@@ -93,6 +96,15 @@ export function CategoryTree() {
     fetchData();
   }
 
+  async function setIconColor(category: Category, icon: string | null, color: string | null) {
+    await fetch(`/api/categories/${category.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ icon, color }),
+    });
+    fetchData();
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -144,6 +156,104 @@ export function CategoryTree() {
             {label}
           </button>
         ))}
+      </div>
+    );
+  }
+
+  // ── IconColorPicker ──────────────────────────────────────────────────────
+  // Small circle button that opens an absolute-positioned panel.
+  // Color selection is "sticky" (panel stays open so the user can pick an icon).
+  // Icon selection applies both icon + current pending color and closes the panel.
+  function IconColorPicker({
+    icon,
+    color,
+    onChange,
+  }: {
+    icon: string | null;
+    color: string | null;
+    onChange: (icon: string | null, color: string | null) => void;
+  }) {
+    const [open, setOpen] = useState(false);
+    // pendingColor tracks color selection before an icon is chosen
+    const [pendingColor, setPendingColor] = useState<string | null>(color);
+
+    const PreviewIcon = icon ? CATEGORY_ICONS[icon] : undefined;
+    const displayColor = pendingColor ?? color;
+    const colorEntry = CATEGORY_COLORS.find((c) => c.key === displayColor);
+
+    return (
+      <div className="relative">
+        {/* Toggle button: filled circle with icon when set, dashed ring when not */}
+        <button
+          onClick={() => {
+            setPendingColor(color); // reset pending to current on open
+            setOpen((prev) => !prev);
+          }}
+          title="Set icon & color"
+          className={cn(
+            "flex h-6 w-6 items-center justify-center rounded-full transition-colors",
+            PreviewIcon
+              ? (colorEntry?.bg ?? "bg-zinc-500")
+              : "border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/60"
+          )}
+        >
+          {PreviewIcon && <PreviewIcon className="h-3 w-3 text-white" />}
+        </button>
+
+        {/* Floating picker panel */}
+        {open && (
+          <div className="absolute right-0 top-8 z-50 w-72 rounded-lg border bg-card p-3 shadow-lg space-y-3">
+            {/* Color swatches — clicking a color updates pendingColor, panel stays open */}
+            <div className="flex flex-wrap gap-1.5">
+              {CATEGORY_COLORS.map(({ key, bg }) => (
+                <button
+                  key={key}
+                  onClick={() => setPendingColor(key)}
+                  className={cn(
+                    "h-5 w-5 rounded-full transition-all",
+                    bg,
+                    pendingColor === key && "ring-2 ring-white ring-offset-1 ring-offset-card"
+                  )}
+                />
+              ))}
+            </div>
+
+            {/* Icon grid — clicking an icon commits icon + pendingColor and closes */}
+            <div className="grid grid-cols-8 gap-1">
+              {ICON_GROUPS.flatMap(({ icons }) => icons).map((iconName) => {
+                const IconComp = CATEGORY_ICONS[iconName];
+                return (
+                  <button
+                    key={iconName}
+                    title={iconName}
+                    onClick={() => {
+                      onChange(iconName, pendingColor);
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      "rounded p-1 transition-colors hover:bg-muted",
+                      icon === iconName && "bg-muted"
+                    )}
+                  >
+                    <IconComp className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Clear — resets icon and color to null */}
+            <button
+              onClick={() => {
+                onChange(null, null);
+                setPendingColor(null);
+                setOpen(false);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -233,6 +343,12 @@ export function CategoryTree() {
                     isGroupDefault={parent.children.length > 0}
                     onChange={(b) => setBucket(parent, b)}
                   />
+                  {/* Icon + color picker */}
+                  <IconColorPicker
+                    icon={parent.icon}
+                    color={parent.color}
+                    onChange={(icon, color) => setIconColor(parent, icon, color)}
+                  />
                   {/* Non-tracked toggle — only shown on standalone parents
                       (no children). Parents with children can't have transactions
                       assigned to them, so the flag would have no effect. */}
@@ -308,6 +424,12 @@ export function CategoryTree() {
                           bucket={child.bucket}
                           isGroupDefault={false}
                           onChange={(b) => setBucket(child, b)}
+                        />
+                        {/* Icon + color picker for child */}
+                        <IconColorPicker
+                          icon={child.icon}
+                          color={child.color}
+                          onChange={(icon, color) => setIconColor(child, icon, color)}
                         />
                         {/* Non-tracked toggle for child */}
                         <Button

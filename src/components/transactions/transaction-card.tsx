@@ -14,6 +14,7 @@ import { ArrowDownLeft, ArrowUpRight, AlertTriangle, CircleDot, Split } from "lu
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
+import { CategoryIcon } from "@/components/ui/category-icon";
 
 interface TransactionCardProps {
   transaction: TransactionWithRelations;
@@ -67,15 +68,16 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
     >
       {/* ── Main row ── */}
       <div className="flex items-center gap-3">
-        {/* Icon circle — w-10 = 40px, gap-3 = 12px → 52px total indent for sub-rows */}
-        <div
-          className={cn(
-            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
-            config.bgColor
-          )}
-        >
-          <Icon className={cn("h-5 w-5", config.color)} />
-        </div>
+        {/* Icon circle — w-10 = 40px, gap-3 = 12px → 52px total indent for sub-rows.
+            Shows the category's custom icon+color when set; falls back to the
+            type arrow (green income / red expense) when not set or for splits. */}
+        <CategoryIcon
+          icon={!isSplit ? transaction.category?.icon : undefined}
+          color={!isSplit ? transaction.category?.color : undefined}
+          fallback={Icon}
+          fallbackBg={config.bgColor}
+          fallbackColor={config.color}
+        />
 
         {/* Description and category/split indicator */}
         <div className="min-w-0 flex-1">

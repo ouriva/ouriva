@@ -1,0 +1,2 @@
+ALTER TABLE "Category" ADD COLUMN "icon" TEXT;
+ALTER TABLE "Category" ADD COLUMN "color" TEXT;

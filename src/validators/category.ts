@@ -12,6 +12,8 @@ export const updateCategorySchema = createCategorySchema.partial().extend({
   isActive: z.boolean().optional(),
   excludeFromStats: z.boolean().optional(),
   bucket: z.enum(["NEEDS", "WANTS", "SAVINGS"]).nullable().optional(),
+  icon: z.string().nullable().optional(),
+  color: z.string().nullable().optional(),
 });
 
 export type CreateCategoryInput = z.infer<typeof createCategorySchema>;

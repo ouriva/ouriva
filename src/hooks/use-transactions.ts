@@ -37,6 +37,8 @@ export interface TransactionWithRelations {
   category: {
     id: string;
     name: string;
+    icon: string | null;
+    color: string | null;
     parent: { id: string; name: string } | null;
   } | null;
   // Split children — empty array for regular transactions.

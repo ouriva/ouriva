@@ -48,6 +48,8 @@ model Category {
   isActive         Boolean         @default(true)
   excludeFromStats Boolean         @default(false)
   bucket           CategoryBucket?
+  icon             String?
+  color            String?
   parentId         String?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
