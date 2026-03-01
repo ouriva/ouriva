@@ -19,7 +19,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight } from "lucide-react";
+import { CategoryIcon } from "@/components/ui/category-icon";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -53,7 +54,12 @@ interface RecentTransaction {
   description: string | null;
   date: string;
   fromAccount: { name: string; currency: { symbol: string } };
-  category: { name: string; parent: { name: string } | null } | null;
+  category: {
+    name: string;
+    icon: string | null;
+    color: string | null;
+    parent: { name: string } | null;
+  } | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -79,25 +85,6 @@ function formatTxDate(dateStr: string): string {
   if (date.toDateString() === today.toDateString()) return "Today";
   if (date.toDateString() === yesterday.toDateString()) return "Yesterday";
   return date.toLocaleDateString("en-US", { day: "numeric", month: "short" });
-}
-
-// Deterministic color from a category name — maps to a Tailwind bg class.
-// Uses a simple hash so the same category always gets the same color.
-const AVATAR_COLORS = [
-  "bg-blue-500",
-  "bg-violet-500",
-  "bg-amber-500",
-  "bg-emerald-500",
-  "bg-rose-500",
-  "bg-cyan-500",
-  "bg-orange-500",
-  "bg-pink-500",
-];
-
-function categoryColor(name: string): string {
-  let hash = 0;
-  for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) & 0xffff;
-  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -317,23 +304,19 @@ export function DashboardContent() {
             <CardContent className="p-0">
               {recentTx.map((tx, i) => {
                 const isIncome = tx.type === "INCOME";
+                const config = isIncome
+                  ? { icon: ArrowDownLeft, color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-100 dark:bg-emerald-900/30", sign: "+" }
+                  : { icon: ArrowUpRight,  color: "text-red-600 dark:text-red-400",     bgColor: "bg-red-100 dark:bg-red-900/30",         sign: "−" };
 
-                // Build a short label for the avatar and the subtext
                 const categoryLabel = tx.category
                   ? tx.category.parent
                     ? tx.category.parent.name
                     : tx.category.name
                   : null;
-                const avatarLabel = categoryLabel ?? (isIncome ? "Income" : "Other");
-                const initial = avatarLabel[0].toUpperCase();
-                const avatarBg = isIncome ? "bg-emerald-500" : categoryColor(avatarLabel);
 
                 const description =
                   tx.description ?? categoryLabel ?? (isIncome ? "Income" : "Transaction");
-                const subtext = [
-                  tx.fromAccount.name,
-                  formatTxDate(tx.date),
-                ]
+                const subtext = [tx.fromAccount.name, formatTxDate(tx.date)]
                   .filter(Boolean)
                   .join(" · ");
 
@@ -349,15 +332,14 @@ export function DashboardContent() {
                         i < recentTx.length - 1 && "border-b"
                       )}
                     >
-                      {/* Colored avatar circle with category initial */}
-                      <div
-                        className={cn(
-                          "flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-bold text-white",
-                          avatarBg
-                        )}
-                      >
-                        {initial}
-                      </div>
+                      <CategoryIcon
+                        icon={tx.category?.icon}
+                        color={tx.category?.color}
+                        fallback={config.icon}
+                        fallbackBg={config.bgColor}
+                        fallbackColor={config.color}
+                        size="sm"
+                      />
 
                       {/* Description + subtext */}
                       <div className="min-w-0 flex-1">
@@ -366,15 +348,8 @@ export function DashboardContent() {
                       </div>
 
                       {/* Amount */}
-                      <span
-                        className={cn(
-                          "text-sm font-semibold tabular-nums",
-                          isIncome
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : "text-foreground"
-                        )}
-                      >
-                        {isIncome ? "+" : "−"}
+                      <span className={cn("text-sm font-semibold tabular-nums", config.color)}>
+                        {config.sign}
                         {tx.fromAccount.currency.symbol}
                         {parseFloat(tx.amount).toFixed(2)}
                       </span>
