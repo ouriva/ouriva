@@ -53,10 +53,10 @@ const BUCKETS = [
     key: "SAVINGS" as const,
     label: "Savings",
     target: 20,
-    color: "bg-green-500",
-    textColor: "text-green-700 dark:text-green-300",
-    bgColor: "bg-green-50 dark:bg-green-950/30",
-    borderColor: "border-green-200 dark:border-green-800",
+    color: "bg-emerald-500",
+    textColor: "text-emerald-700 dark:text-emerald-300",
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
+    borderColor: "border-emerald-200 dark:border-emerald-800",
     // Savings: higher is better — you want to reach at least 20%
     statusFn: (pct: number) =>
       pct >= 20 ? "good" : pct >= 10 ? "warn" : "bad",
@@ -64,7 +64,7 @@ const BUCKETS = [
 ] as const;
 
 const STATUS_CLASSES = {
-  good: "text-green-600 dark:text-green-400",
+  good: "text-emerald-600 dark:text-emerald-400",
   warn: "text-amber-600 dark:text-amber-400",
   bad: "text-red-600 dark:text-red-400",
 };
@@ -120,7 +120,7 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
           )}
           {savingsPct > 0 && (
             <div
-              className="bg-green-500 transition-all"
+              className="bg-emerald-500 transition-all"
               style={{ width: `${savingsPct}%` }}
             />
           )}
