@@ -15,6 +15,16 @@ Features that reduce manual work and make the app more pleasant to use every day
 
 A rules engine that auto-assigns categories during import and manual entry. A simple table in the database (`pattern`, `categoryId`, `matchType`) with a settings page to manage rules. Runs during CSV import (step-review) and optionally suggests categories when creating transactions manually.
 
+### ~~1b. Category Icons & Colors~~ (Done — v1.11.0)
+
+Per-category icon and color shown in both transaction lists (Dashboard and Transactions page). Each category can have a Lucide icon and a color set in Settings → Categories.
+
+- `icon` (Lucide icon name) and `color` (palette key) fields on the Category model
+- ~60 curated icons in 11 groups; 12 predefined colors
+- Settings → Categories redesigned to use an edit sheet pattern (tap the icon circle to open; all settings in one focused bottom sheet)
+- `CategoryIcon` component used consistently in `TransactionCard` and `DashboardContent`
+- Falls back to type arrows (emerald for income, red for expense) when no icon set
+
 ### ~~2. Transaction Review Flag~~ (Done — v1.4.0)
 
 A boolean `needsReview` flag on transactions for marking items that need attention later — pending refunds, split bills waiting for payback, suspicious charges, etc.

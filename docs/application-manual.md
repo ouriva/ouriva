@@ -307,7 +307,8 @@ spendtinel/
 │   │   ├── settings.ts           # Transfer category helper (reads AppSettings)
 │   │   ├── utils.ts              # cn() class merger
 │   │   ├── formatters.ts         # Currency/date formatting
-│   │   └── import-ref.ts         # Import deduplication hash generation
+│   │   ├── import-ref.ts         # Import deduplication hash generation
+│   │   └── category-icons.ts     # CATEGORY_ICONS map + CATEGORY_COLORS + ICON_GROUPS
 │   ├── validators/               # Zod schemas
 │   ├── hooks/                    # Custom React hooks
 │   ├── types/                    # Shared TypeScript types
@@ -613,6 +614,8 @@ model Category {
   isActive    Boolean         @default(true)
   parentId    String?                              // null = top-level
   bucket      CategoryBucket?                      // NEEDS, WANTS, SAVINGS, or null
+  icon        String?                              // Lucide icon name, e.g. "ShoppingCart"
+  color       String?                              // Palette key, e.g. "emerald"
   parent      Category?       @relation("CategoryTree", fields: [parentId], references: [id])
   children    Category[]      @relation("CategoryTree")
   transactions Transaction[]
@@ -665,7 +668,7 @@ There is no TRANSFER type. Transfers between accounts are recorded as regular IN
 
 **`importRef`** — A unique identifier for imported transactions (e.g., from a bank statement CSV). When importing, you can check if `importRef` already exists to avoid duplicates.
 
-**`needsReview`** — A boolean flag for marking transactions that need attention later (pending refunds, split bills waiting for payback, suspicious charges). Defaults to `false`. Can be set during manual creation, editing, or import. The transaction list has a filter to show only flagged items, and transaction cards show a blue "Review" indicator when flagged.
+**`needsReview`** — A boolean flag for marking transactions that need attention later (pending refunds, split bills waiting for payback, suspicious charges). Defaults to `false`. Can be set during manual creation, editing, or import. The transaction list has a filter to show only flagged items, and transaction cards show an orange "Review" indicator when flagged.
 
 **`@db.Date`** — Stores only the date (2026-01-15), not the full timestamp. Budget tracking doesn't need time precision.
 
@@ -1200,7 +1203,11 @@ The `zodResolver` connects the Zod schema to the form, so validation errors appe
 
 A single transaction display. Server component (no interactivity needed for display).
 
-**Color coding**: Income is green, expenses red. Uses a `typeConfig` object to map transaction types to colors and icons — this is cleaner than a chain of if/else statements. Transactions flagged for review show a blue "Review" indicator (with a `CircleDot` icon) next to the category name, using the same inline pattern as the amber "Uncategorized" warning.
+**Icon circle**: Uses the `CategoryIcon` component. If the transaction's category has an `icon` and `color` set, the circle shows that Lucide icon on the category's color background. For split transactions (multiple categories) or categories with no icon, it falls back to a type arrow: `ArrowDownLeft` on an emerald background for income, `ArrowUpRight` on a red background for expenses.
+
+**Amount color**: Income amounts are emerald (`text-emerald-600 dark:text-emerald-400`). Expense amounts use the default foreground color — they are distinguished by the `−` sign and the red icon circle, not by text color. The `typeConfig` object separates `color` (used for the icon arrow color) from `amountColor` (used for the amount text) so both can be controlled independently.
+
+**Needs Review indicator**: Transactions flagged for review show an orange "Review" indicator (with a `CircleDot` icon) next to the category name, using the same inline pattern as the amber "Uncategorized" warning.
 
 **Display priority chain**: The card title uses `friendlyName?.trim() || description || subtitleText`. When a friendly name exists, the bank description shows as a secondary subtitle below it. The `.trim()` prevents whitespace-only friendly names from hiding the description.
 
@@ -1227,6 +1234,25 @@ Groups transactions by date and displays them with search, filtering, and load-m
 A trash icon that opens a confirmation dialog before deleting.
 
 **Why a confirmation dialog?** Deleting a transaction is destructive (hard-delete, not soft-delete). The dialog prevents accidental deletions from mistaken taps on mobile.
+
+#### `CategoryIcon` (`src/components/ui/category-icon.tsx`)
+
+A reusable icon circle component used in both `TransactionCard` and `DashboardContent`. Renders a Lucide icon inside a colored circle, or falls back to a type arrow when no icon/color is set.
+
+```tsx
+<CategoryIcon
+  icon={transaction.category?.icon}    // e.g. "ShoppingCart" or null
+  color={transaction.category?.color}  // e.g. "emerald" or null
+  fallback={ArrowUpRight}              // shown when no icon set
+  fallbackBg="bg-red-100 dark:bg-red-900/30"
+  fallbackColor="text-red-600 dark:text-red-400"
+  size="sm"   // "sm" = 32px circle, "md" (default) = 40px circle
+/>
+```
+
+**Lookup chain**: Looks up `CATEGORY_ICONS[icon]` and `CATEGORY_COLORS.find(c => c.key === color)`. If found, renders the Lucide icon in white on the color background. Otherwise, renders the `fallback` icon with `fallbackBg` and `fallbackColor`.
+
+**Split transactions**: Pass `undefined` for `icon` and `color` so split transactions always show the type arrow — they span multiple categories so no single icon is representative.
 
 ### Settings Components
 
@@ -1260,6 +1286,8 @@ This is a client component that fetches categories and settings on mount, then r
 
 **This is a common pattern called "render through configuration"** — instead of building separate components for similar UIs, you build one configurable component.
 
+**Header integration**: `SimpleSettingsList` accepts `pageTitle` and `pageDescription` props and renders its own page header row (title on left, "Add" button on right) at the top. The pages that use it do not render a separate `PageHeader` component. This keeps the Add button state co-located with the list data it refreshes after creation.
+
 #### `SettingsItemForm` — Reusable Sheet Form
 
 A bottom-sheet (drawer) form that works for both creating and editing items. It determines POST vs PUT based on whether `itemId` is provided:
@@ -1273,11 +1301,31 @@ const url = itemId ? `${apiEndpoint}/${itemId}` : apiEndpoint;
 
 #### `CategoryTree` — Hierarchical Category Management
 
-Displays categories in a collapsible tree with add/edit/toggle operations.
+Displays categories in a collapsible tree. Each row is intentionally minimal — the list stays scannable, and editing happens in a focused bottom sheet.
+
+**Row anatomy**: Parent rows show `[▶/▼ expand] [icon circle] Name (N active children) [+ add child]`. Child rows show `[icon circle] Name [status badges]`. Only the icon circle is a tap target that opens the edit sheet; the expand chevron is a separate button. This avoids the 300ms tap delay that `onClick` on a `<div>` has on mobile — proper `<button>` elements fire immediately.
+
+**Edit sheet (`CategoryEditSheet`)**: A bottom sheet containing all settings for a category in one place:
+- Name text input
+- Color swatches (12 predefined palette colors)
+- Icon grid (≈60 curated Lucide icons, grouped by section: Food, Transport, Home, etc.)
+- Bucket selector (NEEDS / WANTS / SAVINGS) with full label descriptions
+- Active and Exclude from Stats checkboxes
+
+All changes are staged locally; a single "Save" button commits them via `PUT /api/categories/:id`.
+
+**Icon and color system**: Stored as `icon` (Lucide icon name string, e.g. `"ShoppingCart"`) and `color` (palette key, e.g. `"emerald"`). The constants live in `src/lib/category-icons.ts`:
+- `CATEGORY_ICONS` — `Record<string, LucideIcon>` mapping name → component
+- `CATEGORY_COLORS` — Array of `{ key, bg }` with full literal Tailwind class strings (e.g. `bg-emerald-500`). Full literals are required so Tailwind's build-time class detection never purges them.
+- `ICON_GROUPS` — Same icons organized into labeled sections for the picker grid
 
 **State management**: The component tracks which parent categories are expanded using a `Set<string>` of expanded IDs. Clicking the chevron toggles membership in the set.
 
+**Safe child lookup**: When opening the edit sheet for a child category, the component looks up the full category from the flat `categories` array rather than using the nested `parent.children[i]` object. Prisma's nested includes only fetch one level of children — the child objects don't have their own `children` array, so using them directly would crash on `category.children.length`.
+
 **Cascade soft-delete**: When you deactivate a parent category, the API also deactivates all its children. This maintains data consistency — you shouldn't have active children under an inactive parent.
+
+**Header integration**: `CategoryTree` accepts `pageTitle` and `pageDescription` props and renders its own page header row (title on the left, "Add" button on the right) at the top of the component. This keeps the Add button co-located with the data state it depends on, while placing it visually alongside the page title.
 
 #### `AccountList` — Account Management
 
@@ -1290,6 +1338,8 @@ const [accountsRes, currenciesRes, typesRes] = await Promise.all([
   fetch("/api/account-types"),
 ]);
 ```
+
+Like `SimpleSettingsList` and `CategoryTree`, `AccountList` accepts `pageTitle` and `pageDescription` props and renders its own header row with the "Add" button alongside the title.
 
 ### Import Components
 
@@ -1431,7 +1481,7 @@ A fully redesigned home screen that fetches three APIs in parallel (balances, mo
 2. **Hero card** — A dark gradient card showing total net worth across all accounts in the primary currency. Gives users the one number they care about at a glance.
 3. **Account strip** — A horizontally scrollable list of account cards, edge-to-edge (`-mx-4 px-4`) with the scrollbar hidden. Each card shows the account name, balance, and currency. On mobile, users swipe to see more accounts without leaving the dashboard.
 4. **Spending meter** — A progress bar showing current month's expenses as a percentage of income. Color shifts from emerald (healthy) → amber (warning at ~75%) → red (over budget) based on the spend percentage.
-5. **Recent transactions** — Last 5 transactions in a compact format: a colored dot (category color), name, amount, and a relative date label ("Today", "Yesterday", "Mar 5"). Tapping navigates to the full transaction list.
+5. **Recent transactions** — Last 5 transactions in a compact format: a `CategoryIcon` circle (same icon/color system as the Transactions page), description, amount, account name, and a relative date label ("Today", "Yesterday", "Mar 5"). Income amounts are emerald; expense amounts use the default foreground color. Tapping navigates to the full transaction detail page.
 
 Skeleton loading states are shown for all sections while data is fetching, matching the shape of the actual content to reduce layout shift.
 
