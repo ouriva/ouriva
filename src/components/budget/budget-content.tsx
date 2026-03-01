@@ -6,12 +6,13 @@
 //   1. Year picker
 //   2. Stat cards  — Budgeted Income | Budgeted Expenses (2-col)
 //                    Budget Balance (full width — is the plan viable?)
-//   3. 50/30/20 panel — are your planned expenses in line with the rule?
-//      Uses the same BudgetSplit component as the summary page,
-//      but fed with *planned* budget amounts instead of actual spending.
-//   4. Tabs: Expenses | Income
+//   3. Tabs: Expenses | Income
 //      Each tab shows a compact list of categories with editable budget
 //      inputs and progress bars comparing budget vs actual YTD.
+//   4. 50/30/20 panel — are your planned expenses in line with the rule?
+//      Uses the same BudgetSplit component as the summary page,
+//      but fed with *planned* budget amounts instead of actual spending.
+//      Always visible; shows guidance when no income budget is set.
 //
 // Editing pattern — "optimistic local state":
 //   Changes are tracked in a local `edits` map keyed by "TYPE:categoryId".
@@ -76,9 +77,9 @@ function BudgetSkeleton() {
         <Skeleton className="h-[72px] rounded-xl" />
       </div>
       <Skeleton className="h-[72px] rounded-xl" />
-      <Skeleton className="h-[200px] rounded-xl" />
       <Skeleton className="h-9 w-full rounded-lg" />
       <Skeleton className="h-[240px] rounded-xl" />
+      <Skeleton className="h-[200px] rounded-xl" />
     </div>
   );
 }
@@ -302,21 +303,6 @@ export function BudgetContent() {
             </CardContent>
           </Card>
 
-          {/* ── Planned 50/30/20 ────────────────────────────────────── */}
-          {data.income.totalBudgeted > 0 && (
-            <Card className="py-0">
-              <CardContent className="p-3 pb-4">
-                <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Planned 50·30·20 Allocation
-                </p>
-                <BudgetSplit
-                  breakdown={data.plannedBucketBreakdown}
-                  totalIncome={data.income.totalBudgeted}
-                />
-              </CardContent>
-            </Card>
-          )}
-
           {/* ── Category tabs ────────────────────────────────────────── */}
           <Tabs defaultValue="expenses">
             <TabsList className="grid w-full grid-cols-2">
@@ -367,6 +353,25 @@ export function BudgetContent() {
               )}
             </TabsContent>
           </Tabs>
+          {/* ── Planned 50/30/20 ────────────────────────────────────── */}
+          <Card className="py-0">
+            <CardContent className="p-3 pb-4">
+              <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Planned 50·30·20 Allocation
+              </p>
+              {data.income.totalBudgeted === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Set income budgets in the Income tab to see how your planned
+                  expenses align with the 50·30·20 rule.
+                </p>
+              ) : (
+                <BudgetSplit
+                  breakdown={data.plannedBucketBreakdown}
+                  totalIncome={data.income.totalBudgeted}
+                />
+              )}
+            </CardContent>
+          </Card>
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
