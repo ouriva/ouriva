@@ -331,6 +331,15 @@ export function CategoryTree() {
     });
   }
 
+  // Always look up the full category from the flat list before editing.
+  // The nested child objects inside parent.children don't have their own
+  // children array (Prisma only fetches one level of nesting), so using
+  // them directly in CategoryEditSheet would throw on children.length.
+  function openEdit(id: string) {
+    const cat = categories.find((c) => c.id === id);
+    if (cat) setEditingCategory(cat);
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -366,11 +375,13 @@ export function CategoryTree() {
             >
               <CardContent className="p-0">
 
-                {/* ── Parent row ── */}
-                <div className="flex items-center">
+                {/* ── Parent row ──
+                    Only the icon circle is tappable to open edit — this avoids
+                    the 300ms delay that div onClick has on mobile, and keeps
+                    the expand chevron clearly separate from the edit action. */}
+                <div className="flex min-h-[52px] items-center">
 
-                  {/* Expand/collapse — separate tap target so it doesn't
-                      interfere with the "tap to edit" gesture on the row */}
+                  {/* Expand/collapse button */}
                   <button
                     onClick={() => parent.children.length > 0 && toggleExpand(parent.id)}
                     className={cn(
@@ -387,14 +398,17 @@ export function CategoryTree() {
                     )}
                   </button>
 
-                  {/* Icon circle preview */}
-                  <SmallIconCircle icon={parent.icon} color={parent.color} />
-
-                  {/* Name + badges — tap this area to open the edit sheet */}
+                  {/* Icon circle — the tap target that opens edit */}
                   <button
-                    onClick={() => setEditingCategory(parent)}
-                    className="flex min-h-[52px] flex-1 items-center gap-2 px-2 text-left"
+                    onClick={() => openEdit(parent.id)}
+                    className="shrink-0 rounded-full transition-opacity hover:opacity-80 active:opacity-60"
+                    title="Edit category"
                   >
+                    <SmallIconCircle icon={parent.icon} color={parent.color} />
+                  </button>
+
+                  {/* Name + badges — display only */}
+                  <div className="flex flex-1 items-center gap-2 px-2">
                     <span className="font-medium">{parent.name}</span>
                     {parent.children.length > 0 && (
                       <Badge variant="secondary">{activeChildren}</Badge>
@@ -407,24 +421,21 @@ export function CategoryTree() {
                         Non-tracked
                       </Badge>
                     )}
-                  </button>
-
-                  {/* Add subcategory + edit affordance */}
-                  <div className="flex items-center gap-0.5 pr-2">
-                    <SettingsItemForm
-                      title="Subcategory"
-                      fields={nameField}
-                      initialValues={{ parentId: parent.id }}
-                      apiEndpoint="/api/categories"
-                      onSuccess={fetchData}
-                      trigger={
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      }
-                    />
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
+
+                  {/* Add subcategory */}
+                  <SettingsItemForm
+                    title="Subcategory"
+                    fields={nameField}
+                    initialValues={{ parentId: parent.id }}
+                    apiEndpoint="/api/categories"
+                    onSuccess={fetchData}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
                 </div>
 
                 {/* ── Child rows (expanded) ── */}
@@ -433,7 +444,7 @@ export function CategoryTree() {
                     {parent.children.map((child) => (
                       <button
                         key={child.id}
-                        onClick={() => setEditingCategory(child)}
+                        onClick={() => openEdit(child.id)}
                         className={cn(
                           "flex w-full items-center gap-2 py-3 pl-12 pr-4 text-left transition-colors hover:bg-muted/50 active:bg-muted",
                           !child.isActive && "opacity-60"
@@ -467,7 +478,7 @@ export function CategoryTree() {
       {editingCategory && (
         <CategoryEditSheet
           category={editingCategory}
-          isGroupDefault={editingCategory.children.length > 0}
+          isGroupDefault={(editingCategory.children?.length ?? 0) > 0}
           onSave={fetchData}
           onClose={() => setEditingCategory(null)}
         />
