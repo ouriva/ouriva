@@ -89,15 +89,16 @@ model Transaction {
 }
 
 model Budget {
-  id         String   @id @default(uuid())
+  id         String     @id @default(uuid())
   year       Int
-  amount     Decimal  @db.Decimal(12, 2)
+  type       BudgetType @default(EXPENSE)
+  amount     Decimal    @db.Decimal(12, 2)
   categoryId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  category   Category @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  category   Category   @relation(fields: [categoryId], references: [id])
 
-  @@unique([year, categoryId])
+  @@unique([year, categoryId, type])
   @@index([year])
 }
 
@@ -130,4 +131,9 @@ enum CategoryBucket {
   NEEDS
   WANTS
   SAVINGS
+}
+
+enum BudgetType {
+  EXPENSE
+  INCOME
 }

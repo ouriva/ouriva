@@ -1,37 +1,34 @@
-// Budget Page
-// ===========
-// Shows annual budget targets with actual spending comparison.
-// Each category has an editable budget amount, actual YTD total,
-// remaining amount, and a color-coded progress bar.
-//
-// Same Suspense pattern as the summary pages — BudgetContent
-// uses useSearchParams() to read the year from the URL.
-
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 import { BudgetContent } from "@/components/budget/budget-content";
 
 export const metadata: Metadata = {
   title: "Budget",
 };
 
-export default function BudgetPage() {
+function BudgetFallback() {
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Budget"
-        description="Annual budget targets and tracking"
-      />
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <div className="grid grid-cols-2 gap-3">
+        <Skeleton className="h-[72px] rounded-xl" />
+        <Skeleton className="h-[72px] rounded-xl" />
+      </div>
+      <Skeleton className="h-[72px] rounded-xl" />
+      <Skeleton className="h-[200px] rounded-xl" />
+      <Skeleton className="h-9 w-full rounded-lg" />
+      <Skeleton className="h-[240px] rounded-xl" />
+    </div>
+  );
+}
 
-      <Suspense
-        fallback={
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        }
-      >
+export default function BudgetPage() {
+  return (
+    <div className="space-y-4">
+      <PageHeader title="Budget" />
+      <Suspense fallback={<BudgetFallback />}>
         <BudgetContent />
       </Suspense>
     </div>

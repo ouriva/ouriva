@@ -760,7 +760,7 @@ async function main() {
 
   for (const budget of budgets) {
     await prisma.budget.upsert({
-      where: { year_categoryId: { year: budget.year, categoryId: budget.categoryId } },
+      where: { year_categoryId_type: { year: budget.year, categoryId: budget.categoryId, type: "EXPENSE" } },
       update: { amount: budget.amount },
       create: budget,
     });
