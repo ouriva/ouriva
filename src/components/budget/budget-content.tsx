@@ -23,7 +23,7 @@
 
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -142,11 +142,13 @@ function GroupHeader({ group }: GroupHeaderProps) {
 // Editable row for leaf categories (child or standalone).
 // isChild=true adds left indentation to visually connect it to its group header.
 //
-// Note UX:
-//   • MessageSquare icon toggles the inline note input.
-//   • When a note exists the icon is highlighted and the note text is shown
-//     as a small italic subtitle (always visible on mobile).
-//   • On desktop, hovering the icon shows the note in a Tooltip.
+// Note icon behaviour:
+//   • Tap (short press)   → open edit mode (text input)
+//   • Long press (500ms)  → open read-only preview (shows note, tap again to edit)
+//   • On desktop, hovering shows a Tooltip with the note text.
+// The note is fully hidden when closed — the highlighted icon is the only cue.
+
+type NoteState = "closed" | "preview" | "edit";
 
 interface CategoryRowProps {
   category: BudgetCategory;
@@ -158,7 +160,33 @@ interface CategoryRowProps {
 }
 
 function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild }: CategoryRowProps) {
-  const [noteOpen, setNoteOpen] = useState(!!note);
+  const [noteState, setNoteState] = useState<NoteState>("closed");
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress   = useRef(false);
+
+  function startLongPress() {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      // Only show preview if there's something to read; go straight to edit if empty
+      setNoteState(note ? "preview" : "edit");
+    }, 500);
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
+
+  function handleClick() {
+    if (didLongPress.current) {
+      didLongPress.current = false;
+      return; // already handled by long-press timer
+    }
+    setNoteState((s) => (s === "edit" ? "closed" : "edit"));
+  }
 
   const remaining = Math.round((editedBudget - category.actual) * 100) / 100;
   const percentage =
@@ -192,7 +220,10 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setNoteOpen((o) => !o)}
+                onTouchStart={startLongPress}
+                onTouchEnd={cancelLongPress}
+                onTouchCancel={cancelLongPress}
+                onClick={handleClick}
                 className="shrink-0 rounded-sm p-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 <MessageSquare
@@ -205,6 +236,7 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
                 />
               </button>
             </TooltipTrigger>
+            {/* Desktop hover tooltip */}
             {note && (
               <TooltipContent side="top" className="max-w-[200px] text-xs">
                 {note}
@@ -217,19 +249,25 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
         </span>
       </div>
 
-      {/* Inline note text (shown when collapsed and note exists) */}
-      {!noteOpen && note && (
-        <p className="truncate text-[10px] italic text-muted-foreground">{note}</p>
+      {/* Note preview — read-only, shown on long press */}
+      {noteState === "preview" && note && (
+        <button
+          className="w-full rounded-md border bg-muted/50 px-2.5 py-1.5 text-left text-xs italic text-muted-foreground"
+          onClick={() => setNoteState("edit")}
+        >
+          {note}
+        </button>
       )}
 
-      {/* Note input (shown when open) */}
-      {noteOpen && (
+      {/* Note edit input — shown on tap */}
+      {noteState === "edit" && (
         <Input
           autoFocus
           type="text"
           placeholder="Add a note..."
           value={note ?? ""}
           onChange={(e) => onNoteChange(e.target.value)}
+          onBlur={() => setNoteState(note ? "preview" : "closed")}
           className="h-7 text-xs"
         />
       )}
