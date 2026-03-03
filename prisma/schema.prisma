@@ -54,10 +54,11 @@ model Category {
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   budgets             Budget[]
-  parent              Category?     @relation("CategoryParent", fields: [parentId], references: [id])
-  children            Category[]    @relation("CategoryParent")
+  parent              Category?      @relation("CategoryParent", fields: [parentId], references: [id])
+  children            Category[]     @relation("CategoryParent")
   transactions        Transaction[]
-  transferAppSettings AppSettings[] @relation("TransferCategory")
+  rules               CategoryRule[]
+  transferAppSettings AppSettings[]  @relation("TransferCategory")
 
   @@index([parentId])
   @@index([excludeFromStats])
@@ -125,6 +126,21 @@ model AppSettings {
   transferCategory   Category? @relation("TransferCategory", fields: [transferCategoryId], references: [id], onDelete: SetNull)
 }
 
+model CategoryRule {
+  id         String    @id @default(uuid())
+  pattern    String
+  matchType  MatchType @default(CONTAINS)
+  priority   Int       @default(0)
+  isActive   Boolean   @default(true)
+  categoryId String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  category   Category  @relation(fields: [categoryId], references: [id])
+
+  @@index([isActive])
+  @@index([categoryId])
+}
+
 enum TransactionType {
   INCOME
   EXPENSE
@@ -139,4 +155,11 @@ enum CategoryBucket {
 enum BudgetType {
   EXPENSE
   INCOME
+}
+
+enum MatchType {
+  CONTAINS
+  STARTS_WITH
+  EXACT
+  REGEX
 }
