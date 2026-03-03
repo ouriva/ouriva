@@ -127,15 +127,16 @@ model AppSettings {
 }
 
 model CategoryRule {
-  id         String    @id @default(uuid())
-  pattern    String
-  matchType  MatchType @default(CONTAINS)
-  priority   Int       @default(0)
-  isActive   Boolean   @default(true)
-  categoryId String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  category   Category  @relation(fields: [categoryId], references: [id])
+  id           String    @id @default(uuid())
+  pattern      String
+  matchType    MatchType @default(CONTAINS)
+  priority     Int       @default(0)
+  isActive     Boolean   @default(true)
+  categoryId   String
+  friendlyName String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  category     Category  @relation(fields: [categoryId], references: [id])
 
   @@index([isActive])
   @@index([categoryId])

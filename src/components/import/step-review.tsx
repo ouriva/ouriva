@@ -34,7 +34,7 @@ import {
   buildOccurrenceCounters,
   getAmountString,
 } from "@/lib/import-ref";
-import { matchCategory, type CategoryRuleInput } from "@/lib/category-rules";
+import { matchRule, type CategoryRuleInput } from "@/lib/category-rules";
 import { parseDate, parseAmount } from "./step-review-utils";
 import type { ImportState } from "./import-wizard";
 
@@ -362,17 +362,15 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       }
       setDuplicateRefs(dupSet);
 
-      // Step 4: Apply auto-categorization rules to pre-fill categories
-      const matchedIds = parsed.map((r) =>
-        matchCategory(r.description, loadedRules)
-      );
+      // Step 4: Apply auto-categorization rules to pre-fill categories and display names
+      const matches = parsed.map((r) => matchRule(r.description, loadedRules));
 
       // Step 5: Initialize selections
       setSelectedRows(parsed.map((r) => !dupSet.has(r.importRef)));
-      setCategoryIds(matchedIds);
-      setAutoApplied(matchedIds.map((id) => id !== undefined));
+      setCategoryIds(matches.map((m) => m?.categoryId));
+      setAutoApplied(matches.map((m) => m !== undefined));
       setTransactionTypes(parsed.map((r) => r.type));
-      setFriendlyNames(new Array(parsed.length).fill(undefined));
+      setFriendlyNames(matches.map((m) => m?.friendlyName ?? undefined));
       setNotes(new Array(parsed.length).fill(undefined));
       setNeedsReview(new Array(parsed.length).fill(false));
       setIsChecking(false);

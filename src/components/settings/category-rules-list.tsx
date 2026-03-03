@@ -43,6 +43,7 @@ interface CategoryRule {
   priority: number;
   isActive: boolean;
   categoryId: string;
+  friendlyName: string | null;
   category: {
     id: string;
     name: string;
@@ -194,18 +195,20 @@ interface RuleFormProps {
 
 function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
   const isEditing = !!rule;
-  const [isOpen, setIsOpen]           = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pattern, setPattern]         = useState(rule?.pattern ?? "");
-  const [matchType, setMatchType]     = useState<MatchType>(rule?.matchType ?? "CONTAINS");
-  const [categoryId, setCategoryId]   = useState(rule?.categoryId ?? "");
-  const [priority, setPriority]       = useState(String(rule?.priority ?? 0));
-  const [isActive, setIsActive]       = useState(rule?.isActive ?? true);
+  const [isOpen, setIsOpen]               = useState(false);
+  const [isSubmitting, setIsSubmitting]   = useState(false);
+  const [pattern, setPattern]             = useState(rule?.pattern ?? "");
+  const [matchType, setMatchType]         = useState<MatchType>(rule?.matchType ?? "CONTAINS");
+  const [categoryId, setCategoryId]       = useState(rule?.categoryId ?? "");
+  const [friendlyName, setFriendlyName]   = useState(rule?.friendlyName ?? "");
+  const [priority, setPriority]           = useState(String(rule?.priority ?? 0));
+  const [isActive, setIsActive]           = useState(rule?.isActive ?? true);
 
   function resetForm() {
     setPattern(rule?.pattern ?? "");
     setMatchType(rule?.matchType ?? "CONTAINS");
     setCategoryId(rule?.categoryId ?? "");
+    setFriendlyName(rule?.friendlyName ?? "");
     setPriority(String(rule?.priority ?? 0));
     setIsActive(rule?.isActive ?? true);
   }
@@ -223,6 +226,7 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
           pattern,
           matchType,
           categoryId,
+          friendlyName: friendlyName.trim() || null,
           priority: parseInt(priority) || 0,
           isActive,
         }),
@@ -276,6 +280,21 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
               onChange={(e) => setPattern(e.target.value)}
               className="mt-2 font-mono"
               required
+            />
+          </div>
+
+          {/* Display Name */}
+          <div>
+            <Label htmlFor="rule-friendly-name">Display Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Auto-filled in the Display Name field when this rule matches.
+            </p>
+            <Input
+              id="rule-friendly-name"
+              placeholder='e.g. Lidl'
+              value={friendlyName}
+              onChange={(e) => setFriendlyName(e.target.value)}
+              className="mt-2"
             />
           </div>
 
