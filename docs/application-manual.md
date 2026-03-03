@@ -34,6 +34,7 @@ This is a **personal finance application** that replaces an Excel spreadsheet. I
 - Track multiple bank accounts across different currencies (EUR, USD, BRL, etc.)
 - Record income and expenses, with a configurable transfer category for inter-account movements
 - Import bank statements from CSV and Excel files with column mapping and duplicate detection
+- Auto-categorize imported transactions using configurable text-matching rules (contains / starts with / exact / regex)
 - Add friendly display names and notes to transactions
 - Flag transactions for review (pending refunds, split bills, suspicious charges)
 - Search and filter transactions by text, type, account, category, date range, or review status
@@ -308,6 +309,7 @@ spendtinel/
 │   │   ├── utils.ts              # cn() class merger
 │   │   ├── formatters.ts         # Currency/date formatting
 │   │   ├── import-ref.ts         # Import deduplication hash generation
+│   │   ├── category-rules.ts     # Pure rule-matching utility (matchRule)
 │   │   └── category-icons.ts     # CATEGORY_ICONS map + CATEGORY_COLORS + ICON_GROUPS
 │   ├── validators/               # Zod schemas
 │   ├── hooks/                    # Custom React hooks
@@ -709,6 +711,49 @@ model AppSettings {
 
 **`onDelete: SetNull`** — If the referenced category is deleted, the setting is cleared rather than causing a foreign key error.
 
+#### MatchType Enum
+
+```prisma
+enum MatchType {
+  CONTAINS
+  STARTS_WITH
+  EXACT
+  REGEX
+}
+```
+
+Used by `CategoryRule` to describe how the pattern is applied to an imported transaction's description.
+
+#### CategoryRule
+
+```prisma
+model CategoryRule {
+  id           String    @id @default(uuid())
+  pattern      String                          // Text to match, e.g. "LIDL"
+  matchType    MatchType @default(CONTAINS)    // How to match the pattern
+  priority     Int       @default(0)           // Higher = checked first
+  isActive     Boolean   @default(true)        // Inactive rules are skipped
+  categoryId   String
+  friendlyName String?                         // Optional display name to auto-fill
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  category     Category  @relation(...)
+
+  @@index([isActive])
+  @@index([categoryId])
+}
+```
+
+**Purpose** — Auto-categorization during bank statement import. When a transaction's description matches a rule, the import wizard pre-fills the category dropdown and optionally the display name field. The user can override any auto-filled value before confirming.
+
+**Priority + tiebreak** — Rules are evaluated in descending priority order. When two rules have the same priority, the one created earlier wins (`createdAt ASC`). This is the order returned by `GET /api/category-rules`, so the client-side `matchRule()` function receives them pre-sorted and simply takes the first match.
+
+**`friendlyName`** — If set, the rule also pre-fills the transaction's display name field during import. Useful for renaming cryptic bank descriptions (e.g., rule pattern `"LIDL"` with friendly name `"Lidl"` turns `"POS DEBIT 0042 LIDL"` into a readable label).
+
+**Matching** — All match types are case-insensitive. `CONTAINS` / `STARTS_WITH` / `EXACT` lower-case both sides before comparing. `REGEX` uses the `i` flag. Invalid regex patterns fail silently (rule is skipped, no crash).
+
+**Duplicates are skipped** — Rule matching is only applied to non-duplicate rows. Duplicate transactions are auto-unchecked and won't be imported, so matching them wastes computation.
+
 ### How Prisma Generates Types
 
 When you run `npx prisma generate`, Prisma reads `schema.prisma` and creates TypeScript code in `src/generated/prisma/`. This includes:
@@ -806,6 +851,9 @@ api/
 │   └── profiles/
 │       ├── route.ts              → GET (list), POST (create)
 │       └── [id]/route.ts        → DELETE (remove profile)
+├── category-rules/
+│   ├── route.ts          → GET (list, sorted by priority desc), POST (create)
+│   └── [id]/route.ts     → PUT (update), DELETE (hard delete)
 ├── settings/
 │   └── route.ts          → GET (read), PUT (update transfer category)
 └── summary/
@@ -1341,6 +1389,28 @@ const [accountsRes, currenciesRes, typesRes] = await Promise.all([
 
 Like `SimpleSettingsList` and `CategoryTree`, `AccountList` accepts `pageTitle` and `pageDescription` props and renders its own header row with the "Add" button alongside the title.
 
+#### `CategoryRulesList` (`src/components/settings/category-rules-list.tsx`)
+
+The auto-categorization rules management page, accessible from Settings > Auto-Categorization. It is a custom client component (rather than `SimpleSettingsList`) because the category select needs hierarchical grouped options that the generic field system doesn't support.
+
+**Layout**: Each rule is displayed as a card row showing:
+- Pattern in monospace font
+- Match type badge (`Contains`, `Starts with`, `Exact`, `Regex`)
+- Arrow + category name (formatted as "Parent › Child" for subcategories)
+- Priority badge (`P2`, `P5`, …) when priority > 0
+- Edit and Delete action buttons
+- Dimmed (50% opacity) when `isActive = false`
+
+**Add/Edit form**: A bottom sheet (`RuleForm`) with fields in this order:
+1. **Pattern** — the text to match (monospace input)
+2. **Match Type** — select with descriptions for each option
+3. **Category** — hierarchical grouped select (same pattern as the transaction form)
+4. **Display Name** (optional) — pre-filled in the import wizard when this rule matches
+5. **Priority** — number input, default 0; higher number = checked first
+6. **Active** — checkbox toggle; inactive rules are skipped during import
+
+**Delete**: Hard delete via `DELETE /api/category-rules/:id`. Rules have no soft-delete — they're not referenced by transactions, so deletion is safe.
+
 ### Import Components
 
 The bank statement import feature lives in `src/components/import/` and uses a multi-step wizard pattern.
@@ -1359,7 +1429,14 @@ Presents dropdowns to map CSV/Excel columns to transaction fields (date, descrip
 
 #### `StepReview` — Transaction Preview
 
-Shows all parsed transactions with checkboxes, category dropdowns, type toggles (Income/Expense), inline friendly name and notes inputs, and a per-row "Review" checkbox to flag imported transactions for later review. On mount, generates `importRef` hashes using Web Crypto API and checks for duplicates via the API. Duplicate rows are auto-unchecked and badged.
+Shows all parsed transactions with checkboxes, category dropdowns, type toggles (Income/Expense), inline friendly name and notes inputs, and a per-row "Review" checkbox to flag imported transactions for later review. On mount, it runs several async steps in sequence:
+
+1. Parses dates and amounts, generating an `importRef` hash per row (Web Crypto API)
+2. Fetches categories and auto-categorization rules in parallel
+3. Checks for duplicates via the API; duplicate rows are auto-unchecked and badged with "Duplicate"
+4. Applies `matchRule()` to each non-duplicate row; matching rows have their category and display name pre-filled and get an "Auto" badge in the date header line
+
+The "Auto" badge disappears when the user manually changes the category dropdown, signalling the value is no longer from a rule.
 
 #### `StepConfirm` — Final Import
 
