@@ -13,6 +13,7 @@ import {
   FolderTree,
   Coins,
   CreditCard,
+  Wand2,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -49,6 +50,12 @@ const settingsLinks = [
     description: "Define types like Checking, Savings, Credit Card",
     href: "/settings/account-types",
     icon: CreditCard,
+  },
+  {
+    title: "Auto-Categorization",
+    description: "Rules that auto-assign categories during import",
+    href: "/settings/auto-categorization",
+    icon: Wand2,
   },
 ];
 
