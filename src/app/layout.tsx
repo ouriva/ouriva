@@ -49,6 +49,12 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,          // prevents pinch-to-zoom (better for app-like UX)
   userScalable: false,       // same — makes it feel like a native app
+  // "resizes-content" tells iOS Safari to shrink the layout viewport (and dvh
+  // units) when the software keyboard appears, exactly like desktop browsers do.
+  // Without this, position:fixed bottom-sheet elements stay hidden under the
+  // keyboard because iOS only resizes the *visual* viewport by default.
+  // Supported from iOS 15.4+ (released March 2022).
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#09090b" },
