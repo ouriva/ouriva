@@ -140,6 +140,11 @@ const ReviewRow = memo(function ReviewRow({
               Duplicate
             </Badge>
           )}
+          {autoApplied && (
+            <Badge variant="secondary" className="text-[10px]">
+              Auto
+            </Badge>
+          )}
         </div>
         <p className="truncate text-sm font-medium">
           {row.description || "(no description)"}
@@ -185,47 +190,39 @@ const ReviewRow = memo(function ReviewRow({
             </SelectContent>
           </Select>
 
-          <div className="relative flex-1">
-            {autoApplied && (
-              <Badge
-                variant="secondary"
-                className="absolute -top-2 right-0 z-10 text-[9px] px-1 py-0 h-4"
-              >
-                Auto
-              </Badge>
-            )}
+          <div className="flex-1">
             <Select
               value={categoryId ?? "none"}
               onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
             >
-            <SelectTrigger className="h-7 w-full text-xs">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No category</SelectItem>
-              {parentCategories.map((parent) => {
-                const children = childCategories.filter(
-                  (c) => c.parentId === parent.id
-                );
-                if (children.length > 0) {
-                  return (
-                    <SelectGroup key={parent.id}>
-                      <SelectLabel className="text-xs">{parent.name}</SelectLabel>
-                      {children.map((child) => (
-                        <SelectItem key={child.id} value={child.id} className="text-xs">
-                          {child.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
+              <SelectTrigger className="h-7 w-full text-xs">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No category</SelectItem>
+                {parentCategories.map((parent) => {
+                  const children = childCategories.filter(
+                    (c) => c.parentId === parent.id
                   );
-                }
-                return (
-                  <SelectItem key={parent.id} value={parent.id} className="text-xs">
-                    {parent.name}
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
+                  if (children.length > 0) {
+                    return (
+                      <SelectGroup key={parent.id}>
+                        <SelectLabel className="text-xs">{parent.name}</SelectLabel>
+                        {children.map((child) => (
+                          <SelectItem key={child.id} value={child.id} className="text-xs">
+                            {child.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  }
+                  return (
+                    <SelectItem key={parent.id} value={parent.id} className="text-xs">
+                      {parent.name}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
             </Select>
           </div>
         </div>
@@ -362,8 +359,11 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       }
       setDuplicateRefs(dupSet);
 
-      // Step 4: Apply auto-categorization rules to pre-fill categories and display names
-      const matches = parsed.map((r) => matchRule(r.description, loadedRules));
+      // Step 4: Apply auto-categorization rules to pre-fill categories and display names.
+      // Skip duplicates — they'll be unchecked anyway and matching them wastes effort.
+      const matches = parsed.map((r) =>
+        dupSet.has(r.importRef) ? undefined : matchRule(r.description, loadedRules)
+      );
 
       // Step 5: Initialize selections
       setSelectedRows(parsed.map((r) => !dupSet.has(r.importRef)));

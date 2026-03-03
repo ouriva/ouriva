@@ -283,21 +283,6 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
             />
           </div>
 
-          {/* Display Name */}
-          <div>
-            <Label htmlFor="rule-friendly-name">Display Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
-            <p className="text-xs text-muted-foreground mb-2">
-              Auto-filled in the Display Name field when this rule matches.
-            </p>
-            <Input
-              id="rule-friendly-name"
-              placeholder='e.g. Lidl'
-              value={friendlyName}
-              onChange={(e) => setFriendlyName(e.target.value)}
-              className="mt-2"
-            />
-          </div>
-
           {/* Match type */}
           <div>
             <Label htmlFor="rule-match-type">Match Type</Label>
@@ -344,6 +329,21 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
                 })}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Display Name */}
+          <div>
+            <Label htmlFor="rule-friendly-name">Display Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Auto-filled in the Display Name field when this rule matches.
+            </p>
+            <Input
+              id="rule-friendly-name"
+              placeholder='e.g. Lidl'
+              value={friendlyName}
+              onChange={(e) => setFriendlyName(e.target.value)}
+              className="mt-2"
+            />
           </div>
 
           {/* Priority */}
