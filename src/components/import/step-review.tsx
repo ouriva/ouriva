@@ -34,6 +34,7 @@ import {
   buildOccurrenceCounters,
   getAmountString,
 } from "@/lib/import-ref";
+import { matchCategory, type CategoryRuleInput } from "@/lib/category-rules";
 import { parseDate, parseAmount } from "./step-review-utils";
 import type { ImportState } from "./import-wizard";
 
@@ -83,6 +84,7 @@ interface ReviewRowProps {
   isDuplicate: boolean;
   isSelected: boolean;
   categoryId: string | undefined;
+  autoApplied: boolean;
   transactionType: "INCOME" | "EXPENSE";
   friendlyName: string | undefined;
   note: string | undefined;
@@ -103,6 +105,7 @@ const ReviewRow = memo(function ReviewRow({
   isDuplicate,
   isSelected,
   categoryId,
+  autoApplied,
   transactionType,
   friendlyName,
   note,
@@ -182,11 +185,20 @@ const ReviewRow = memo(function ReviewRow({
             </SelectContent>
           </Select>
 
-          <Select
-            value={categoryId ?? "none"}
-            onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
-          >
-            <SelectTrigger className="h-7 flex-1 text-xs">
+          <div className="relative flex-1">
+            {autoApplied && (
+              <Badge
+                variant="secondary"
+                className="absolute -top-2 right-0 z-10 text-[9px] px-1 py-0 h-4"
+              >
+                Auto
+              </Badge>
+            )}
+            <Select
+              value={categoryId ?? "none"}
+              onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
+            >
+            <SelectTrigger className="h-7 w-full text-xs">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -214,7 +226,8 @@ const ReviewRow = memo(function ReviewRow({
                 );
               })}
             </SelectContent>
-          </Select>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -242,6 +255,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const [friendlyNames, setFriendlyNames] = useState<(string | undefined)[]>([]);
   const [notes, setNotes] = useState<(string | undefined)[]>([]);
   const [needsReview, setNeedsReview] = useState<boolean[]>([]);
+  const [autoApplied, setAutoApplied] = useState<boolean[]>([]);
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -311,11 +325,23 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
 
       setParsedRows(parsed);
 
-      // Step 2: Load categories
-      const catRes = await fetch("/api/categories");
+      // Step 2: Load categories and auto-categorization rules in parallel
+      const [catRes, rulesRes] = await Promise.all([
+        fetch("/api/categories"),
+        fetch("/api/category-rules"),
+      ]);
+
+      let loadedCategories: Category[] = [];
+      let loadedRules: CategoryRuleInput[] = [];
+
       if (catRes.ok) {
         const catData = await catRes.json();
-        setCategories(catData.data || catData);
+        loadedCategories = catData.data || catData;
+        setCategories(loadedCategories);
+      }
+      if (rulesRes.ok) {
+        const rulesData = await rulesRes.json();
+        loadedRules = rulesData.data || [];
       }
 
       // Step 3: Check duplicates
@@ -336,9 +362,15 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       }
       setDuplicateRefs(dupSet);
 
-      // Step 4: Initialize selections
+      // Step 4: Apply auto-categorization rules to pre-fill categories
+      const matchedIds = parsed.map((r) =>
+        matchCategory(r.description, loadedRules)
+      );
+
+      // Step 5: Initialize selections
       setSelectedRows(parsed.map((r) => !dupSet.has(r.importRef)));
-      setCategoryIds(new Array(parsed.length).fill(undefined));
+      setCategoryIds(matchedIds);
+      setAutoApplied(matchedIds.map((id) => id !== undefined));
       setTransactionTypes(parsed.map((r) => r.type));
       setFriendlyNames(new Array(parsed.length).fill(undefined));
       setNotes(new Array(parsed.length).fill(undefined));
@@ -388,6 +420,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
 
   const handleCategoryChange = useCallback((i: number, id: string | undefined) => {
     setCategoryIds((prev) => { const n = [...prev]; n[i] = id; return n; });
+    setAutoApplied((prev) => { const n = [...prev]; n[i] = false; return n; });
   }, []);
 
   const handleFriendlyNameChange = useCallback((i: number, value: string) => {
@@ -460,6 +493,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
               isDuplicate={duplicateRefs.has(row.importRef)}
               isSelected={selectedRows[i] || false}
               categoryId={categoryIds[i]}
+              autoApplied={autoApplied[i] || false}
               transactionType={transactionTypes[i]}
               friendlyName={friendlyNames[i]}
               note={notes[i]}
