@@ -98,7 +98,7 @@ function CategoryEditSheet({
 
   return (
     <Sheet open onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto rounded-t-2xl">
+      <SheetContent side="bottom" className="rounded-t-2xl">
         <SheetHeader className="pb-2">
           {/* Large icon preview — updates live as the user picks icon/color */}
           <div className="flex justify-center pb-1">
