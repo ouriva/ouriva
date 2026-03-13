@@ -35,6 +35,10 @@ const baseTransactionFields = {
   notes: z.string().max(1000).optional(),
   date: z.coerce.date(),
   needsReview: z.boolean().optional(),
+  // Exchange rate at transaction time (account currency → default currency).
+  // When omitted and currencies differ, the API auto-fetches from Frankfurter.
+  // Pass null to explicitly clear a stored rate.
+  exchangeRate: z.number().positive().nullable().optional(),
   // Optional array of splits. When provided, categoryId on the parent is ignored
   // and must be null. Splits must have ≥ 2 entries and sum to the parent amount.
   splits: z.array(splitEntrySchema).optional(),

@@ -13,7 +13,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +62,30 @@ export function StepColumnMapping({
   const [dateFormat, setDateFormat] = useState(state.dateFormat);
   const [profileName, setProfileName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  // Show exchange rate column selector when the import account uses a non-default currency
+  const [showExchangeRateColumn, setShowExchangeRateColumn] = useState(false);
+  const [accountCurrencyCode, setAccountCurrencyCode] = useState<string | null>(null);
+  const [defaultCurrencyCode, setDefaultCurrencyCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkCurrencies() {
+      const [accountRes, currenciesRes] = await Promise.all([
+        fetch(`/api/accounts/${state.accountId}`),
+        fetch("/api/currencies"),
+      ]);
+      const accountData = accountRes.ok ? await accountRes.json() : null;
+      const currenciesData = currenciesRes.ok ? await currenciesRes.json() : null;
+
+      const accCode = accountData?.data?.currency?.code ?? accountData?.currency?.code ?? null;
+      const currencies: Array<{ code: string; isDefault: boolean }> = currenciesData?.data ?? [];
+      const defCode = currencies.find((c) => c.isDefault)?.code ?? currencies[0]?.code ?? null;
+
+      setAccountCurrencyCode(accCode);
+      setDefaultCurrencyCode(defCode);
+      setShowExchangeRateColumn(!!accCode && !!defCode && accCode !== defCode);
+    }
+    checkCurrencies();
+  }, [state.accountId]);
 
   // Build column options from headers
   const columnOptions = state.headers.map((header, i) => ({
@@ -121,12 +145,14 @@ export function StepColumnMapping({
 
   // Build the final columnMap to pass on (strip irrelevant fields)
   function getCleanColumnMap(): ColumnMap {
+    const rateField = showExchangeRateColumn ? { exchangeRate: columnMap.exchangeRate } : {};
     if (amountMode === "single") {
       return {
         date: columnMap.date,
         description: columnMap.description,
         amount: columnMap.amount,
         reference: columnMap.reference,
+        ...rateField,
       };
     }
     return {
@@ -135,6 +161,7 @@ export function StepColumnMapping({
       debitAmount: columnMap.debitAmount,
       creditAmount: columnMap.creditAmount,
       reference: columnMap.reference,
+      ...rateField,
     };
   }
 
@@ -334,6 +361,38 @@ export function StepColumnMapping({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Exchange Rate column — only shown when account currency ≠ default */}
+          {showExchangeRateColumn && (
+            <div>
+              <Label>Exchange Rate Column (optional)</Label>
+              <Select
+                value={columnMap.exchangeRate !== undefined ? String(columnMap.exchangeRate) : "none"}
+                onValueChange={(v) =>
+                  setColumnMap((prev) => ({
+                    ...prev,
+                    exchangeRate: v === "none" ? undefined : parseInt(v),
+                  }))
+                }
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not mapped (auto-fetch ECB rate)</SelectItem>
+                  {columnOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                1 {accountCurrencyCode} = ? {defaultCurrencyCode}.
+                If not mapped, the ECB rate for each transaction date is fetched automatically.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Date format */}

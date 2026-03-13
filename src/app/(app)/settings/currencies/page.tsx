@@ -17,11 +17,13 @@ export default function CurrenciesSettingsPage() {
       apiEndpoint="/api/currencies"
       title="Currency"
       pageTitle="Currencies"
-      pageDescription="Configure available currencies"
+      pageDescription="The default currency is used for aggregated totals and summaries. The first currency added is the default — you can change it with the star button."
       fields={currencyFields}
       displayField="code"
       subtitleField="name"
       badgeField="symbol"
+      isDefaultField="isDefault"
+      setDefaultAction="set-default"
     />
   );
 }

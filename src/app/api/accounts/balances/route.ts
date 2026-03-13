@@ -19,11 +19,13 @@
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getDefaultCurrency } from "@/lib/default-currency";
+import { fetchTodayRate } from "@/lib/exchange-rate";
 
 export async function GET() {
   try {
-    // Fetch accounts and all transactions in parallel
-    const [accounts, transactions] = await Promise.all([
+    const [defaultCurrency, accounts, transactions] = await Promise.all([
+      getDefaultCurrency(),
       prisma.account.findMany({
         where: { isActive: true },
         include: { currency: true, accountType: true },
@@ -107,9 +109,37 @@ export async function GET() {
       group.total = Math.round((group.total + account.balance) * 100) / 100;
     }
 
+    // Compute aggregated total in default currency using today's exchange rates.
+    // Each currency group converts its total to the default currency.
+    let aggregatedTotal: number | null = null;
+    if (defaultCurrency) {
+      const groups = Array.from(byCurrency.values());
+      const converted = await Promise.all(
+        groups.map(async (group) => {
+          if (group.code === defaultCurrency.code) return group.total;
+          try {
+            const rate = await fetchTodayRate(group.code, defaultCurrency.code);
+            return Math.round(group.total * rate * 100) / 100;
+          } catch {
+            // If rate fetch fails for a currency, skip it rather than crash
+            return null;
+          }
+        })
+      );
+      aggregatedTotal = converted.reduce<number>(
+        (sum, val) => (val !== null ? sum + val : sum),
+        0
+      );
+      aggregatedTotal = Math.round(aggregatedTotal * 100) / 100;
+    }
+
     return NextResponse.json({
       accounts: accountsWithBalances,
       byCurrency: Array.from(byCurrency.values()),
+      aggregatedTotal,
+      defaultCurrency: defaultCurrency
+        ? { code: defaultCurrency.code, symbol: defaultCurrency.symbol }
+        : null,
     });
   } catch (error) {
     console.error("GET /api/accounts/balances error:", error);

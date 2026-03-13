@@ -38,7 +38,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const currency = await prisma.currency.create({ data: parsed.data });
+    // If this is the first currency ever created, make it the default automatically.
+    // We check inside a transaction so concurrent creates don't both think they're first.
+    const currency = await prisma.$transaction(async (tx) => {
+      const existingCount = await tx.currency.count();
+      return tx.currency.create({
+        data: { ...parsed.data, isDefault: existingCount === 0 },
+      });
+    });
     return NextResponse.json(currency, { status: 201 });
   } catch (error) {
     console.error("POST /api/currencies error:", error);

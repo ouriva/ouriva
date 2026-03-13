@@ -53,6 +53,7 @@ export default async function EditTransactionPage({
     fromAccountId: transaction.fromAccountId,
     ...(transaction.categoryId && { categoryId: transaction.categoryId }),
     needsReview: transaction.needsReview,
+    exchangeRate: transaction.exchangeRate ?? null,
     // Pre-populate split rows so the form can enter split mode on load
     splits: transaction.splits.map((s) => ({
       categoryId: s.categoryId ?? "",

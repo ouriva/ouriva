@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getExcludedCategoryIds } from "@/lib/settings";
+import { getDefaultCurrency } from "@/lib/default-currency";
 
 export async function GET(request: NextRequest) {
   try {
@@ -33,8 +34,10 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0); // day 0 of next month = last day of this month
 
-    // Exclude transfer and proxy categories from summaries (if configured)
-    const excludedCategoryIds = await getExcludedCategoryIds();
+    const [excludedCategoryIds, defaultCurrency] = await Promise.all([
+      getExcludedCategoryIds(),
+      getDefaultCurrency(),
+    ]);
 
     const transactions = await prisma.transaction.findMany({
       where: {
@@ -52,6 +55,15 @@ export async function GET(request: NextRequest) {
         fromAccount: { include: { currency: true } },
       },
     });
+
+    // When a default currency is set, use baseCurrencyAmount for transactions
+    // that have been converted (account currency ≠ default). Fall back to
+    // amount for transactions already in the default currency.
+    function effectiveAmount(tx: { amount: { toString(): string }; baseCurrencyAmount: { toString(): string } | null; fromAccount: { currency: { code: string } } }): number {
+      if (!defaultCurrency) return Number(tx.amount);
+      if (tx.fromAccount.currency.code === defaultCurrency.code) return Number(tx.amount);
+      return tx.baseCurrencyAmount ? Number(tx.baseCurrencyAmount) : Number(tx.amount);
+    }
 
     // Calculate totals
     let totalIncome = 0;
@@ -75,7 +87,7 @@ export async function GET(request: NextRequest) {
     const incomeCategoryMap = new Map<string, CategoryEntry>();
 
     for (const tx of transactions) {
-      const amount = Number(tx.amount);
+      const amount = effectiveAmount(tx);
 
       if (tx.type === "INCOME") {
         totalIncome += amount;
@@ -146,6 +158,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       year,
       month,
+      currencyCode: defaultCurrency?.code ?? null,
+      currencySymbol: defaultCurrency?.symbol ?? null,
       totalIncome: Math.round(totalIncome * 100) / 100,
       totalExpense: Math.round(totalExpense * 100) / 100,
       net: Math.round((totalIncome - totalExpense) * 100) / 100,

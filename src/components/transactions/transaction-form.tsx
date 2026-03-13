@@ -52,6 +52,10 @@ interface Account {
   currency: { code: string; symbol: string };
 }
 
+interface DefaultCurrency {
+  code: string;
+}
+
 interface Category {
   id: string;
   name: string;
@@ -72,6 +76,7 @@ interface TransactionFormData {
   fromAccountId: string;
   categoryId?: string;
   needsReview?: boolean;
+  exchangeRate?: number | null;
   splits?: SplitEntry[];
 }
 
@@ -85,6 +90,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [defaultCurrency, setDefaultCurrency] = useState<DefaultCurrency | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Split mode tracks whether the user has toggled the split UI.
@@ -115,6 +121,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
       ? {
           ...initialData,
           date: format(initialData.date, "yyyy-MM-dd"),
+          exchangeRate: initialData.exchangeRate ?? undefined,
           splits: initialData.splits ?? [],
         }
       : {
@@ -126,6 +133,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           date: format(new Date(), "yyyy-MM-dd"),
           fromAccountId: "",
           categoryId: undefined,
+          exchangeRate: undefined,
           splits: [],
         }) as any,
   });
@@ -143,6 +151,12 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   // Watch the "type" field for the type tabs
   const transactionType = watch("type");
   const totalAmount = watch("amount") || 0;
+  const selectedAccountId = watch("fromAccountId");
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+  const showExchangeRate =
+    !!defaultCurrency &&
+    !!selectedAccount &&
+    selectedAccount.currency.code !== defaultCurrency.code;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const splitValues = watch("splits" as any) as { categoryId: string; amount: number }[] | undefined;
 
@@ -156,21 +170,28 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   const remainingCents = totalCents - allocatedCents;
   const isFullyAllocated = remainingCents === 0;
 
-  // Load accounts and categories from the API on mount
+  // Load accounts, categories, and default currency on mount
   useEffect(() => {
     async function loadData() {
-      const [accountsRes, categoriesRes] = await Promise.all([
+      const [accountsRes, categoriesRes, currenciesRes] = await Promise.all([
         fetch("/api/accounts"),
         fetch("/api/categories"),
+        fetch("/api/currencies"),
       ]);
 
       if (accountsRes.ok) {
-        const accountsData = await accountsRes.json();
-        setAccounts(accountsData.data || accountsData);
+        const data = await accountsRes.json();
+        setAccounts(data.data || data);
       }
       if (categoriesRes.ok) {
-        const categoriesData = await categoriesRes.json();
-        setCategories(categoriesData.data || categoriesData);
+        const data = await categoriesRes.json();
+        setCategories(data.data || data);
+      }
+      if (currenciesRes.ok) {
+        const data = await currenciesRes.json();
+        const currencies: Array<{ code: string; isDefault: boolean }> = data.data || data;
+        const def = currencies.find((c) => c.isDefault) ?? currencies[0] ?? null;
+        setDefaultCurrency(def ? { code: def.code } : null);
       }
     }
     loadData();
@@ -404,6 +425,30 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           </p>
         )}
       </div>
+
+      {/* Exchange Rate — only when account currency ≠ default currency */}
+      {showExchangeRate && (
+        <div>
+          <Label htmlFor="exchangeRate">
+            Exchange Rate ({selectedAccount!.currency.code} → {defaultCurrency!.code})
+          </Label>
+          <Input
+            id="exchangeRate"
+            type="number"
+            step="any"
+            min="0.000001"
+            inputMode="decimal"
+            placeholder="Leave blank to auto-fetch ECB rate"
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            {...register("exchangeRate" as any, { valueAsNumber: true })}
+            className="mt-2 tabular-nums"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            1 {selectedAccount!.currency.code} = ? {defaultCurrency!.code}.
+            Leave blank to use the ECB rate for the transaction date.
+          </p>
+        </div>
+      )}
 
       {/* Category / Split section */}
       <div>

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getExcludedCategoryIds } from "@/lib/settings";
+import { getDefaultCurrency } from "@/lib/default-currency";
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,8 +24,10 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(year, 0, 1);  // Jan 1
     const endDate = new Date(year, 11, 31);  // Dec 31
 
-    // Exclude transfer and proxy categories from summaries (if configured)
-    const excludedCategoryIds = await getExcludedCategoryIds();
+    const [excludedCategoryIds, defaultCurrency] = await Promise.all([
+      getExcludedCategoryIds(),
+      getDefaultCurrency(),
+    ]);
 
     const transactions = await prisma.transaction.findMany({
       where: {
@@ -39,8 +42,15 @@ export async function GET(request: NextRequest) {
       },
       include: {
         category: { include: { parent: true } },
+        fromAccount: { include: { currency: true } },
       },
     });
+
+    function effectiveAmount(tx: { amount: { toString(): string }; baseCurrencyAmount: { toString(): string } | null; fromAccount: { currency: { code: string } } }): number {
+      if (!defaultCurrency) return Number(tx.amount);
+      if (tx.fromAccount.currency.code === defaultCurrency.code) return Number(tx.amount);
+      return tx.baseCurrencyAmount ? Number(tx.baseCurrencyAmount) : Number(tx.amount);
+    }
 
     // Build monthly breakdown (12 months)
     const months = Array.from({ length: 12 }, (_, i) => ({
@@ -68,7 +78,7 @@ export async function GET(request: NextRequest) {
     const bucketTotals = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
 
     for (const tx of transactions) {
-      const amount = Number(tx.amount);
+      const amount = effectiveAmount(tx);
       // tx.date is a Date object; getMonth() returns 0-11
       const monthIndex = new Date(tx.date).getMonth();
 
@@ -156,6 +166,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       year,
+      currencyCode: defaultCurrency?.code ?? null,
+      currencySymbol: defaultCurrency?.symbol ?? null,
       totalIncome: Math.round(totalIncome * 100) / 100,
       totalExpense: Math.round(totalExpense * 100) / 100,
       net: Math.round((totalIncome - totalExpense) * 100) / 100,

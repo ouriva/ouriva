@@ -12,6 +12,7 @@ model Currency {
   code      String    @unique
   name      String
   symbol    String
+  isDefault Boolean   @default(false)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   accounts  Account[]
@@ -77,6 +78,8 @@ model Transaction {
   categoryId          String?
   needsReview         Boolean         @default(false)
   parentTransactionId String?
+  exchangeRate        Float?
+  baseCurrencyAmount  Decimal?        @db.Decimal(14, 4)
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
   category            Category?       @relation(fields: [categoryId], references: [id])

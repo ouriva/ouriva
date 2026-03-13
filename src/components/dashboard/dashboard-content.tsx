@@ -41,10 +41,17 @@ interface CurrencyGroup {
   total: number;
 }
 
+interface BalancesData {
+  byCurrency: CurrencyGroup[];
+  aggregatedTotal: number | null;
+  defaultCurrency: { code: string; symbol: string } | null;
+}
+
 interface MonthlySummary {
   totalIncome: number;
   totalExpense: number;
   net: number;
+  currencySymbol: string | null;
 }
 
 interface RecentTransaction {
@@ -90,7 +97,7 @@ function formatTxDate(dateStr: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DashboardContent() {
-  const [balances, setBalances] = useState<CurrencyGroup[]>([]);
+  const [balancesData, setBalancesData] = useState<BalancesData | null>(null);
   const [monthly, setMonthly] = useState<MonthlySummary | null>(null);
   const [recentTx, setRecentTx] = useState<RecentTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -109,10 +116,7 @@ export function DashboardContent() {
           fetch("/api/transactions?limit=5"),
         ]);
 
-        if (balRes.ok) {
-          const data = await balRes.json();
-          setBalances(data.byCurrency);
-        }
+        if (balRes.ok) setBalancesData(await balRes.json());
         if (monthRes.ok) setMonthly(await monthRes.json());
         if (txRes.ok) {
           const data = await txRes.json();
@@ -124,6 +128,10 @@ export function DashboardContent() {
     }
     fetchAll();
   }, []);
+
+  const balances = balancesData?.byCurrency ?? [];
+  const aggregatedTotal = balancesData?.aggregatedTotal ?? null;
+  const defaultCurrency = balancesData?.defaultCurrency ?? null;
 
   // Flatten all accounts across currency groups for the scroll strip
   const allAccounts = balances.flatMap((g) => g.accounts);
@@ -165,16 +173,39 @@ export function DashboardContent() {
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
             Net Worth
           </p>
-          <div className="mt-2 space-y-0.5">
-            {balances.map((group) => (
-              <div key={group.code} className="flex items-baseline gap-2">
+          {/* Aggregated total in default currency — shown when multi-currency */}
+          {aggregatedTotal !== null && defaultCurrency ? (
+            <div className="mt-2">
+              <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold tabular-nums">
-                  {group.symbol}{group.total.toFixed(2)}
+                  {defaultCurrency.symbol}{aggregatedTotal.toFixed(2)}
                 </span>
-                <span className="text-sm text-zinc-500">{group.code}</span>
+                <span className="text-sm text-zinc-500">{defaultCurrency.code}</span>
               </div>
-            ))}
-          </div>
+              {/* Per-currency breakdown shown as smaller secondary lines when more than one currency */}
+              {balances.length > 1 && (
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
+                  {balances.map((group) => (
+                    <span key={group.code} className="text-xs text-zinc-400 tabular-nums">
+                      {group.symbol}{group.total.toFixed(2)} {group.code}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Single currency or no default set — show each currency on its own line
+            <div className="mt-2 space-y-0.5">
+              {balances.map((group) => (
+                <div key={group.code} className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold tabular-nums">
+                    {group.symbol}{group.total.toFixed(2)}
+                  </span>
+                  <span className="text-sm text-zinc-500">{group.code}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -230,7 +261,7 @@ export function DashboardContent() {
                     Income
                   </p>
                   <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    €{monthly.totalIncome.toFixed(2)}
+                    {monthly.currencySymbol ?? ""}{monthly.totalIncome.toFixed(2)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -238,7 +269,7 @@ export function DashboardContent() {
                     Expenses
                   </p>
                   <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                    €{monthly.totalExpense.toFixed(2)}
+                    {monthly.currencySymbol ?? ""}{monthly.totalExpense.toFixed(2)}
                   </p>
                 </div>
               </div>
@@ -263,8 +294,8 @@ export function DashboardContent() {
                       )}
                     >
                       {monthly.net >= 0
-                        ? `+€${monthly.net.toFixed(2)} saved`
-                        : `−€${Math.abs(monthly.net).toFixed(2)} over`}
+                        ? `+${monthly.currencySymbol ?? ""}${monthly.net.toFixed(2)} saved`
+                        : `−${monthly.currencySymbol ?? ""}${Math.abs(monthly.net).toFixed(2)} over`}
                     </span>
                   </div>
                 </div>

@@ -32,6 +32,7 @@ export const columnMapSchema = z.object({
   debitAmount: columnIndex.optional(),
   creditAmount: columnIndex.optional(),
   reference: columnIndex.optional(),
+  exchangeRate: columnIndex.optional(),
 });
 
 export type ColumnMap = z.infer<typeof columnMapSchema>;
@@ -61,6 +62,7 @@ export const importTransactionSchema = z.object({
   categoryId: z.string().uuid().optional(),
   importRef: z.string(),
   needsReview: z.boolean().optional(),
+  exchangeRate: z.number().positive().optional(),
 });
 
 export const executeImportSchema = z.object({

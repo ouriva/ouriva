@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updateTransactionSchema } from "@/validators/transaction";
+import { resolveExchangeRateFields } from "@/lib/resolve-exchange-rate";
 
 // The include object is reused across GET and PUT to ensure
 // consistent response shape. Splits are included so the form
@@ -101,6 +102,18 @@ export async function PUT(
     const data = parsed.data;
     const hasSplits = data.splits && data.splits.length >= 2;
 
+    // Use effective values for rate resolution — fall back to existing when not provided (partial update)
+    const effectiveAccountId = data.fromAccountId ?? existing.fromAccountId;
+    const effectiveAmount = data.amount ?? Number(existing.amount);
+    const effectiveDate = data.date ?? existing.date;
+
+    const rateFields = await resolveExchangeRateFields(
+      effectiveAccountId,
+      effectiveAmount,
+      effectiveDate,
+      data.exchangeRate
+    );
+
     let transaction;
 
     if (hasSplits) {
@@ -125,6 +138,7 @@ export async function PUT(
             fromAccountId: data.fromAccountId,
             categoryId: null,
             needsReview: data.needsReview,
+            ...rateFields,
           },
         });
 
@@ -165,6 +179,7 @@ export async function PUT(
             fromAccountId: data.fromAccountId,
             categoryId: data.categoryId ?? undefined,
             needsReview: data.needsReview,
+            ...rateFields,
           },
           include: transactionInclude,
         });

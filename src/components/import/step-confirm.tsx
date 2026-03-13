@@ -60,6 +60,14 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
           amount = Math.abs(parseAmount(rawAmount));
         }
 
+        // Extract exchange rate from the mapped column if present
+        let exchangeRate: number | undefined;
+        if (state.columnMap.exchangeRate !== undefined) {
+          const raw = (row[state.columnMap.exchangeRate] ?? "").trim().replace(",", ".");
+          const parsed = parseFloat(raw);
+          if (isFinite(parsed) && parsed > 0) exchangeRate = parsed;
+        }
+
         return {
           type: state.transactionTypes[i] || ("EXPENSE" as const),
           amount,
@@ -71,6 +79,7 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
           categoryId: state.categoryIds[i],
           importRef: state.importRefs[i],
           needsReview: state.needsReview[i] || false,
+          exchangeRate,
         };
       })
       .filter((t): t is NonNullable<typeof t> => t !== null);

@@ -16,6 +16,7 @@ import {
   transactionQuerySchema,
 } from "@/validators/transaction";
 import { Prisma } from "@/generated/prisma/client";
+import { resolveExchangeRateFields } from "@/lib/resolve-exchange-rate";
 
 // Shared include — used by both findMany and the POST response.
 // Including splits lets the client render the split badge and categories
@@ -164,6 +165,14 @@ export async function POST(request: NextRequest) {
     const data = parsed.data;
     const hasSplits = data.splits && data.splits.length >= 2;
 
+    // Resolve exchange rate before the DB write so network errors surface cleanly.
+    const rateFields = await resolveExchangeRateFields(
+      data.fromAccountId,
+      data.amount,
+      data.date,
+      data.exchangeRate
+    );
+
     let transaction;
 
     if (hasSplits) {
@@ -182,6 +191,7 @@ export async function POST(request: NextRequest) {
             fromAccountId: data.fromAccountId,
             categoryId: null,
             needsReview: data.needsReview ?? false,
+            ...rateFields,
           },
         });
 
@@ -216,6 +226,7 @@ export async function POST(request: NextRequest) {
           fromAccountId: data.fromAccountId,
           categoryId: data.categoryId ?? undefined,
           needsReview: data.needsReview ?? false,
+          ...rateFields,
         },
         include: transactionInclude,
       });

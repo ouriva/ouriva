@@ -10,7 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trash2, Plus } from "lucide-react";
+import { Loader2, Trash2, Plus, Star } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
 
 interface Field {
@@ -29,6 +29,11 @@ interface SimpleSettingsListProps {
   displayField: string;    // which field to show as the main label
   subtitleField?: string;   // optional secondary text
   badgeField?: string;      // optional badge
+  // When provided, adds a "Set as default" star button.
+  // `isDefaultField` is the boolean field name on items (e.g. "isDefault").
+  // `setDefaultAction` is the action name appended to apiEndpoint/:id (e.g. "set-default").
+  isDefaultField?: string;
+  setDefaultAction?: string;
 }
 
 export function SimpleSettingsList({
@@ -40,6 +45,8 @@ export function SimpleSettingsList({
   displayField,
   subtitleField,
   badgeField,
+  isDefaultField,
+  setDefaultAction,
 }: SimpleSettingsListProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [items, setItems] = useState<any[]>([]);
@@ -58,6 +65,17 @@ export function SimpleSettingsList({
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  async function handleSetDefault(id: string) {
+    if (!setDefaultAction) return;
+    const res = await fetch(`${apiEndpoint}/${id}/${setDefaultAction}`, { method: "POST" });
+    if (!res.ok) {
+      const error = await res.json();
+      alert(error.error?.message || "Failed to set default");
+      return;
+    }
+    fetchData();
+  }
 
   async function handleDelete(id: string) {
     if (!confirm(`Delete this ${title.toLowerCase()}?`)) return;
@@ -126,8 +144,25 @@ export function SimpleSettingsList({
                 {badgeField && (
                   <Badge variant="outline">{item[badgeField]}</Badge>
                 )}
+                {isDefaultField && item[isDefaultField] && (
+                  <Badge variant="secondary" className="gap-1">
+                    <Star className="h-3 w-3 fill-current" />
+                    Default
+                  </Badge>
+                )}
               </div>
               <div className="flex items-center gap-1">
+                {isDefaultField && setDefaultAction && !item[isDefaultField] && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={() => handleSetDefault(item.id)}
+                    title="Set as default currency"
+                  >
+                    <Star className="h-4 w-4" />
+                  </Button>
+                )}
                 <SettingsItemForm
                   title={title}
                   fields={fields}
