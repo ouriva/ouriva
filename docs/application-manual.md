@@ -20,10 +20,11 @@ A comprehensive guide to every part of this application: what each technology do
 12. [Charts with Recharts](#12-charts-with-recharts)
 13. [PWA: Progressive Web App](#13-pwa-progressive-web-app)
 14. [Dark Mode](#14-dark-mode)
-15. [Docker and Deployment](#15-docker-and-deployment)
-16. [Key Design Decisions](#16-key-design-decisions)
-17. [Common Patterns in This Codebase](#17-common-patterns-in-this-codebase)
-18. [Glossary](#18-glossary)
+15. [Internationalisation (i18n)](#15-internationalisation-i18n)
+16. [Docker and Deployment](#16-docker-and-deployment)
+17. [Key Design Decisions](#17-key-design-decisions)
+18. [Common Patterns in This Codebase](#18-common-patterns-in-this-codebase)
+19. [Glossary](#19-glossary)
 
 ---
 
@@ -270,6 +271,14 @@ import { Plus, Trash2, ChevronLeft } from "lucide-react";
 
 **How it works**: Adds a `dark` CSS class to the `<html>` element based on user preference (system setting, manual toggle, or stored preference). Tailwind's `dark:` variant reads this class.
 
+### Internationalisation: next-intl
+
+**What it is**: The standard i18n library for Next.js App Router. Provides `useTranslations()` for client components, `getTranslations()` for server components, and `NextIntlClientProvider` to distribute messages to the client tree.
+
+**Why next-intl**: Native async Server Component support, type-safe message keys (TypeScript knows if you mistype a key), and active maintenance for App Router patterns.
+
+**Locale strategy**: Cookie-based with no URL prefix (`localePrefix: "never"`). `/dashboard` stays `/dashboard` in both English and Portuguese — essential for a PWA where the service worker caches URLs and the user has the app installed to their home screen.
+
 ---
 
 ## 3. Project Structure
@@ -311,10 +320,16 @@ spendtinel/
 │   │   ├── import-ref.ts         # Import deduplication hash generation
 │   │   ├── category-rules.ts     # Pure rule-matching utility (matchRule)
 │   │   └── category-icons.ts     # CATEGORY_ICONS map + CATEGORY_COLORS + ICON_GROUPS
+│   ├── i18n/                     # Internationalisation config
+│   │   ├── routing.ts            # Locale list + cookie strategy
+│   │   └── request.ts            # Server-side locale resolver
 │   ├── validators/               # Zod schemas
 │   ├── hooks/                    # Custom React hooks
 │   ├── types/                    # Shared TypeScript types
 │   └── generated/                # Prisma-generated client
+├── messages/                     # Translation files
+│   ├── en.json                   # English strings
+│   └── pt.json                   # Portuguese strings
 ├── prisma/
 │   ├── schema.prisma             # Database schema definition
 │   ├── seed.ts                   # Sample data for development
@@ -325,7 +340,8 @@ spendtinel/
 ├── scripts/
 │   └── deploy.sh                 # Build + deploy to Raspberry Pi
 ├── docs/                         # Documentation and SQL scripts
-├── next.config.ts                # Next.js + Serwist configuration
+├── src/proxy.ts                  # Next.js 16 request proxy (replaces middleware.ts)
+├── next.config.ts                # Next.js + Serwist + next-intl configuration
 ├── tsconfig.json                 # TypeScript configuration
 ├── package.json                  # Dependencies and scripts
 ├── postcss.config.mjs            # PostCSS (Tailwind) config
@@ -1716,20 +1732,31 @@ Tailwind uses **mobile-first breakpoints**. Unprefixed classes apply to all scre
 
 ### Currency and Date Formatting (`src/lib/formatters.ts`)
 
+All formatters accept an optional `locale` parameter (`"en"` or `"pt"`) passed in from components via `useLocale()`. This makes number and date presentation match the user's chosen language.
+
 ```typescript
-export function formatCurrency(amount: number | string, currencyCode: string): string {
-  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currencyCode,
-    minimumFractionDigits: 2,
-  }).format(numAmount);
-}
+// Full currency with symbol, locale-aware separators
+formatCurrency(1234.56, "EUR", "en")  // → "€1,234.56"
+formatCurrency(1234.56, "EUR", "pt")  // → "1.234,56 €"
+
+// Amount only — use when only the symbol string is available (not the ISO code)
+formatAmount(1234.56, "en")  // → "1,234.56"
+formatAmount(1234.56, "pt")  // → "1.234,56"
+
+// Percentage without the % sign (caller appends it via a translation key)
+formatPercent(89.5, 1, "en")  // → "89.5"
+formatPercent(89.5, 1, "pt")  // → "89,5"
+
+// Dates via date-fns locale objects
+formatDate("2026-01-15", "d MMM yyyy", "en")  // → "15 Jan 2026"
+formatDate("2026-01-15", "d MMM yyyy", "pt")  // → "15 jan. 2026"
 ```
 
-**`Intl.NumberFormat`** is a browser API for locale-aware number formatting. Given `currencyCode: "EUR"`, it automatically uses the `€` symbol and correct decimal placement. This is more reliable than manual string formatting.
+**`Intl.NumberFormat`** is a browser/Node built-in for locale-aware number formatting. Given `currencyCode: "EUR"`, it automatically applies the correct symbol and decimal placement. The `locale` param maps `"en"` → `"en-US"` and `"pt"` → `"pt-PT"` for BCP 47 tag compatibility.
 
 **Why accept `string | number`?** Prisma returns Decimal fields as strings (to preserve precision). JSON doesn't have a Decimal type, so `"1234.56"` arrives as a string. The formatter handles both.
+
+**`formatDate` guard**: If `parseISO()` produces an invalid `Date` object (e.g. from a malformed import row), the function checks `isNaN(dateObj.getTime())` and returns the raw string instead of throwing a `RangeError`.
 
 ---
 
@@ -1929,7 +1956,152 @@ This tells Tailwind v4 how the `dark:` variant works. The selector `&:is(.dark *
 
 ---
 
-## 15. Docker and Deployment
+## 15. Internationalisation (i18n)
+
+### Overview
+
+The app supports two locales: **English** (`en`, default) and **Portuguese** (`pt`). The active locale is stored in a browser cookie (`NEXT_LOCALE`) and read on every server render. No URL changes — `/dashboard` is `/dashboard` in both locales.
+
+### How next-intl Works
+
+**Message files** (`messages/en.json`, `messages/pt.json`) hold all UI strings, grouped by feature namespace:
+
+```json
+{
+  "dashboard": {
+    "goodMorning": "Good morning",
+    "netWorth": "Net Worth"
+  },
+  "transactions": {
+    "pageTitle": "Transactions"
+  }
+}
+```
+
+**`src/i18n/routing.ts`** declares the locales and strategy:
+
+```typescript
+export const routing = defineRouting({
+  locales: ["en", "pt"],
+  defaultLocale: "en",
+  localePrefix: "never",   // no /en/ prefix — URLs unchanged
+  localeCookie: true,      // read/write NEXT_LOCALE cookie
+});
+```
+
+**`src/i18n/request.ts`** resolves the locale on the server for every request. It reads the `NEXT_LOCALE` cookie directly (bypassing middleware) and loads the matching message file:
+
+```typescript
+export default getRequestConfig(async () => {
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
+  const locale = cookieLocale && routing.locales.includes(cookieLocale)
+    ? cookieLocale
+    : routing.defaultLocale;
+  return { locale, messages: (await import(`../../messages/${locale}.json`)).default };
+});
+```
+
+**`src/app/layout.tsx`** wraps the entire app in `NextIntlClientProvider`, which distributes the messages to every client component in the tree:
+
+```tsx
+const locale = await getLocale();
+const messages = await getMessages();
+
+return (
+  <html lang={locale}>
+    <body>
+      <NextIntlClientProvider locale={locale} messages={messages}>
+        {children}
+      </NextIntlClientProvider>
+    </body>
+  </html>
+);
+```
+
+### Using Translations in Components
+
+**Client components** use the `useTranslations()` hook:
+
+```tsx
+"use client";
+import { useTranslations, useLocale } from "next-intl";
+
+export function DashboardContent() {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
+
+  return <h1>{t("goodMorning")}</h1>;
+  // → "Good morning" (en) or "Bom dia" (pt)
+}
+```
+
+**Server components and pages** use the async `getTranslations()`:
+
+```tsx
+import { getTranslations } from "next-intl/server";
+
+export default async function SummaryPage() {
+  const t = await getTranslations("nav");
+  return <PageHeader title={t("summary")} />;
+}
+```
+
+**Interpolated values** (e.g. amounts, counts) use named placeholders:
+
+```json
+// messages/en.json
+"pctSpent": "{pct}% spent",
+"saved": "+{symbol}{amount} saved"
+```
+```tsx
+t("pctSpent", { pct: formatPercent(spentPct, 0, locale) })
+t("saved", { symbol: "€", amount: formatAmount(net, locale) })
+```
+
+**Arrays** (e.g. month names) are retrieved with `t.raw()`:
+
+```tsx
+const monthNames = t.raw("fullMonthNames") as string[];
+// → ["January", ...] or ["Janeiro", ...]
+```
+
+### Switching Languages
+
+The language picker in **Settings › General** writes the `NEXT_LOCALE` cookie and reloads the page:
+
+```typescript
+function handleLocaleChange(newLocale: string) {
+  document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
+  window.location.reload();
+}
+```
+
+The `max-age` is one year, so the preference persists across sessions without any database storage.
+
+### Why No URL Prefix?
+
+Standard i18n routes the locale through the URL: `/en/dashboard`, `/pt/dashboard`. This is incompatible with a PWA because:
+- The service worker caches `/dashboard` — changing the URL breaks the cache
+- The app is installed to the home screen pointing at `/dashboard`
+- Changing the installed URL requires the user to reinstall
+
+The cookie-based approach avoids all of this while still serving the correct locale to every request.
+
+### Next.js 16 Proxy
+
+Next.js 16 renamed `middleware.ts` to `proxy.ts` and the exported function from `middleware` to `proxy`. The file lives at `src/proxy.ts` and is a passthrough — locale detection happens entirely in `request.ts` via the cookie, so no middleware logic is needed:
+
+```typescript
+export function proxy(request: NextRequest) {
+  return NextResponse.next();
+}
+export const config = { matcher: ["/((?!api|_next|.*\\..*).*)"] };
+```
+
+---
+
+## 16. Docker and Deployment
 
 ### Dockerfile — Multi-Stage Build
 
@@ -2049,7 +2221,7 @@ This forwards local port 5433 to the NUC's port 5432 through SSH. Prisma connect
 
 ---
 
-## 16. Key Design Decisions
+## 17. Key Design Decisions
 
 ### Amounts Are Always Positive
 
@@ -2099,7 +2271,7 @@ The trade-off is that the initial data load shows a spinner. For a personal-use 
 
 ---
 
-## 17. Common Patterns in This Codebase
+## 18. Common Patterns in This Codebase
 
 ### Pattern: Loading → Error → Data
 
@@ -2174,6 +2346,35 @@ Object.entries(filters).forEach(([key, value]) => {
 const response = await fetch(`/api/transactions?${params}`);
 ```
 
+### Pattern: Translating Strings
+
+Client components use `useTranslations` + `useLocale`:
+
+```tsx
+"use client";
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
+
+function MyComponent() {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
+  return <p>{t("income")}: {formatAmount(1234.56, locale)}</p>;
+}
+```
+
+Server components/pages use `getTranslations` (async):
+
+```tsx
+import { getTranslations } from "next-intl/server";
+
+export default async function MyPage() {
+  const t = await getTranslations("nav");
+  return <PageHeader title={t("dashboard")} />;
+}
+```
+
+**Rule of thumb**: if the file has `"use client"` at the top, use `useTranslations`. If it doesn't (default Server Component), use `await getTranslations`.
+
 ### Theme-Aware Recharts Colors
 
 SVG presentation attributes (`fill="..."`, `stroke="..."`) do **not** process CSS custom properties. Writing `fill="hsl(var(--foreground))"` will render the literal string, not the resolved color — the result is usually black in both light and dark mode.
@@ -2201,7 +2402,7 @@ const gridColor = isDark ? "hsl(240, 5%, 26%)" : "hsl(240, 5%, 90%)";
 
 ---
 
-## 18. Glossary
+## 19. Glossary
 
 | Term | Meaning |
 |------|---------|
@@ -2214,12 +2415,15 @@ const gridColor = isDark ? "hsl(240, 5%, 26%)" : "hsl(240, 5%, 90%)";
 | **Discriminated Union** | A TypeScript/Zod pattern where a literal field determines the shape of the rest |
 | **Driver Adapter** | Prisma 7's way of using standard DB drivers instead of its own engine |
 | **Foreign Key** | A field that references another table's primary key (creates a relation) |
+| **BCP 47** | Language tag standard: `"en-US"`, `"pt-PT"`. Used by `Intl.NumberFormat` and `Intl.DateTimeFormat` |
 | **Hook** | A React function starting with `use` that adds state/effects to components |
 | **Hydration** | The process of making server-rendered HTML interactive by attaching JavaScript |
+| **i18n** | Internationalisation — designing software to support multiple languages and locales |
+| **Locale** | A combination of language and region, e.g. `"pt-PT"` (Portuguese, Portugal) |
 | **Idempotent** | An operation that produces the same result no matter how many times you run it |
 | **Index** | A database structure that speeds up queries on specific columns |
 | **JSX** | HTML-like syntax in JavaScript: `<div className="foo">text</div>` |
-| **Middleware** | Code that runs between the request and the handler (not used in this app yet) |
+| **Middleware** | Code that runs between the request and the handler. In Next.js 16 this is `proxy.ts` exporting a `proxy` function |
 | **Migration** | A versioned SQL script that changes the database schema |
 | **ORM** | Object-Relational Mapper — translates between code objects and database rows |
 | **PostCSS** | A CSS processing tool that transforms CSS with plugins (like Tailwind) |
