@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 import { CategoryRulesList } from "@/components/settings/category-rules-list";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Auto-Categorization",
 };
 
-export default function AutoCategorizationPage() {
+export default async function AutoCategorizationPage() {
+  const t = await getTranslations("settings");
   return (
     <CategoryRulesList
-      pageTitle="Auto-Categorization"
-      pageDescription="Rules that auto-assign categories when importing transactions"
+      pageTitle={t("autoCategorization")}
+      pageDescription={t("autoCategorizationDescription")}
     />
   );
 }

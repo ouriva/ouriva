@@ -28,6 +28,7 @@ import {
 import { Loader2, Pencil, Plus, ToggleLeft, ToggleRight } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { useLocale, useTranslations } from "next-intl";
 
 interface Account {
   id: string;
@@ -55,6 +56,8 @@ interface AccountListProps {
 }
 
 export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
+  const locale = useLocale();
+  const t = useTranslations("accounts");
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [accountTypes, setAccountTypes] = useState<AccountType[]>([]);
@@ -135,7 +138,7 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
                 <Badge variant="outline">{account.currency.code}</Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Initial: {formatCurrency(account.initialBalance, account.currency.code)}
+                {t("initialBalance", { amount: formatCurrency(account.initialBalance, account.currency.code, locale) })}
               </p>
             </div>
             <div className="flex items-center gap-1">
@@ -147,7 +150,7 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
                 trigger={
                   <Button variant="ghost" size="sm">
                     <Pencil className="mr-1 h-4 w-4" />
-                    Edit
+                    {t("editButton")}
                   </Button>
                 }
               />
@@ -156,7 +159,7 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
                 size="icon"
                 className="h-8 w-8"
                 onClick={() => toggleActive(account)}
-                title={account.isActive ? "Deactivate" : "Activate"}
+                title={account.isActive ? t("deactivate") : t("activate")}
               >
                 {account.isActive ? (
                   <ToggleRight className="h-5 w-5 text-green-600" />
@@ -190,6 +193,7 @@ function AccountForm({
   onSuccess,
   trigger,
 }: AccountFormProps) {
+  const t = useTranslations("accounts");
   const isEditing = !!account;
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -262,22 +266,22 @@ function AccountForm({
         {trigger || (
           <Button variant="outline" size="sm">
             <Plus className="mr-2 h-4 w-4" />
-            Add
+            {t("addButton")}
           </Button>
         )}
       </SheetTrigger>
       <SheetContent side="bottom" className="rounded-t-xl">
         <SheetHeader>
           <SheetTitle>
-            {isEditing ? "Edit Account" : "New Account"}
+            {isEditing ? t("editTitle") : t("newTitle")}
           </SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div>
-            <Label htmlFor="acc-name">Account Name</Label>
+            <Label htmlFor="acc-name">{t("nameLabel")}</Label>
             <Input
               id="acc-name"
-              placeholder="e.g., Main Checking"
+              placeholder={t("namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-2"
@@ -286,10 +290,10 @@ function AccountForm({
           </div>
 
           <div>
-            <Label htmlFor="acc-currency">Currency</Label>
+            <Label htmlFor="acc-currency">{t("currencyLabel")}</Label>
             <Select value={currencyId} onValueChange={setCurrencyId} required>
               <SelectTrigger id="acc-currency" className="mt-2">
-                <SelectValue placeholder="Select currency" />
+                <SelectValue placeholder={t("currencyPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {currencies.map((c) => (
@@ -302,10 +306,10 @@ function AccountForm({
           </div>
 
           <div>
-            <Label htmlFor="acc-type">Account Type</Label>
+            <Label htmlFor="acc-type">{t("typeLabel")}</Label>
             <Select value={accountTypeId} onValueChange={setAccountTypeId} required>
               <SelectTrigger id="acc-type" className="mt-2">
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder={t("typePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {accountTypes.map((t) => (
@@ -318,7 +322,7 @@ function AccountForm({
           </div>
 
           <div>
-            <Label htmlFor="acc-balance">Initial Balance</Label>
+            <Label htmlFor="acc-balance">{t("initialBalanceLabel")}</Label>
             <Input
               id="acc-balance"
               type="number"
@@ -338,13 +342,13 @@ function AccountForm({
               className="flex-1"
               onClick={() => setIsOpen(false)}
             >
-              Cancel
+              {t("cancelButton")}
             </Button>
             <Button type="submit" className="flex-1" disabled={isSubmitting || !currencyId || !accountTypeId}>
               {isSubmitting && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isEditing ? "Update" : "Create"}
+              {isEditing ? t("updateButton") : t("createButton")}
             </Button>
           </div>
         </form>

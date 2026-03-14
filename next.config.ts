@@ -14,6 +14,7 @@
 import { spawnSync } from "node:child_process";
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // Use git commit hash as a revision identifier for precache entries.
 // This ensures the offline page cache busts when the app is redeployed.
@@ -41,4 +42,9 @@ const nextConfig: NextConfig = {
   output: "standalone",
 };
 
-export default withSerwist(nextConfig);
+// next-intl plugin wires up the server-side request config so that
+// getTranslations() / getLocale() work in Server Components and API
+// routes without any per-call configuration.
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+export default withNextIntl(withSerwist(nextConfig));

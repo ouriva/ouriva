@@ -17,6 +17,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,7 @@ function CategoryEditSheet({
   onSave: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("categories");
   const [name,             setName]             = useState(category.name);
   const [icon,             setIcon]             = useState<string | null>(category.icon);
   const [color,            setColor]            = useState<string | null>(category.color);
@@ -91,9 +93,9 @@ function CategoryEditSheet({
   }
 
   const buckets = [
-    { key: "NEEDS"   as const, label: isGroupDefault ? "Needs"    : "Needs (50%)"    },
-    { key: "WANTS"   as const, label: isGroupDefault ? "Wants"    : "Wants (30%)"    },
-    { key: "SAVINGS" as const, label: isGroupDefault ? "Savings"  : "Savings (20%)"  },
+    { key: "NEEDS"   as const, label: isGroupDefault ? t("needs")    : t("bucketNeeds")    },
+    { key: "WANTS"   as const, label: isGroupDefault ? t("wants")    : t("bucketWants")    },
+    { key: "SAVINGS" as const, label: isGroupDefault ? t("savings")  : t("bucketSavings")  },
   ];
 
   return (
@@ -120,24 +122,24 @@ function CategoryEditSheet({
 
           {/* ── Name ── */}
           <div className="space-y-1.5">
-            <Label>Name</Label>
+            <Label>{t("nameLabel")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Category name"
+              placeholder={t("categoryNameLabel")}
             />
           </div>
 
           {/* ── Color ── */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Color</Label>
+              <Label>{t("colorLabel")}</Label>
               {color && (
                 <button
                   onClick={() => setColor(null)}
                   className="text-xs text-muted-foreground hover:text-foreground"
                 >
-                  Clear
+                  {t("clearColor")}
                 </button>
               )}
             </div>
@@ -160,7 +162,7 @@ function CategoryEditSheet({
           {/* Sections match ICON_GROUPS so the user can find icons by context.
               Tapping the selected icon again clears it (toggle behaviour). */}
           <div className="space-y-3">
-            <Label>Icon</Label>
+            <Label>{t("iconLabel")}</Label>
             {ICON_GROUPS.map(({ label, icons }) => (
               <div key={label}>
                 <p className="mb-1.5 text-xs text-muted-foreground">{label}</p>
@@ -193,8 +195,8 @@ function CategoryEditSheet({
           <div className="space-y-1.5">
             <Label>
               {isGroupDefault
-                ? "Default budget bucket (applied to subcategories without their own)"
-                : "Budget bucket (50/30/20 rule)"}
+                ? t("bucketLabelParent")
+                : t("bucketLabelChild")}
             </Label>
             <div className="flex gap-2">
               {buckets.map(({ key, label }) => (
@@ -228,9 +230,9 @@ function CategoryEditSheet({
                 className="mt-0.5"
               />
               <Label htmlFor={`active-${category.id}`} className="cursor-pointer leading-snug">
-                <span className="font-medium">Active</span>
+                <span className="font-medium">{t("activeLabel")}</span>
                 <span className="block text-xs text-muted-foreground">
-                  Appears in category dropdowns
+                  {t("activeHelper")}
                 </span>
               </Label>
             </div>
@@ -246,9 +248,9 @@ function CategoryEditSheet({
                   className="mt-0.5"
                 />
                 <Label htmlFor={`stats-${category.id}`} className="cursor-pointer leading-snug">
-                  <span className="font-medium">Exclude from stats</span>
+                  <span className="font-medium">{t("excludeFromStatsLabel")}</span>
                   <span className="block text-xs text-muted-foreground">
-                    Transactions won&apos;t appear in summaries or budgets
+                    {t("excludeFromStatsHelper")}
                   </span>
                 </Label>
               </div>
@@ -263,7 +265,7 @@ function CategoryEditSheet({
             className="w-full"
           >
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save
+            {t("saveButton")}
           </Button>
         </SheetFooter>
       </SheetContent>
@@ -308,6 +310,7 @@ interface CategoryTreeProps {
 }
 
 export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) {
+  const t = useTranslations("categories");
   const [categories,       setCategories]       = useState<Category[]>([]);
   const [isLoading,        setIsLoading]        = useState(true);
   const [expanded,         setExpanded]         = useState<Set<string>>(new Set());
@@ -354,7 +357,7 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
   }
 
   const parents     = categories.filter((c) => !c.parentId);
-  const nameField   = [{ name: "name", label: "Category Name", placeholder: "e.g., Groceries" }];
+  const nameField   = [{ name: "name", label: t("categoryNameLabel"), placeholder: t("namePlaceholder") }];
 
   return (
     <>
@@ -368,7 +371,7 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
             )}
           </div>
           <SettingsItemForm
-            title="Category"
+            title={t("categoryFormTitle")}
             fields={nameField}
             apiEndpoint="/api/categories"
             onSuccess={fetchData}
@@ -415,7 +418,7 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
                   <button
                     onClick={() => openEdit(parent.id)}
                     className="shrink-0 rounded-full transition-opacity hover:opacity-80 active:opacity-60"
-                    title="Edit category"
+                    title={t("editTitle")}
                   >
                     <SmallIconCircle icon={parent.icon} color={parent.color} />
                   </button>
@@ -424,21 +427,21 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
                   <div className="flex flex-1 items-center gap-2 px-2">
                     <span className="font-medium">{parent.name}</span>
                     {parent.children.length > 0 && (
-                      <Badge variant="secondary">{activeChildren}</Badge>
+                      <Badge variant="secondary">{t("activeChildCount", { count: activeChildren })}</Badge>
                     )}
                     {!parent.isActive && (
-                      <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
+                      <Badge variant="outline" className="text-muted-foreground">{t("inactiveBadge")}</Badge>
                     )}
                     {parent.children.length === 0 && parent.excludeFromStats && (
                       <Badge variant="outline" className="border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400">
-                        Non-tracked
+                        {t("nonTrackedBadge")}
                       </Badge>
                     )}
                   </div>
 
                   {/* Add subcategory */}
                   <SettingsItemForm
-                    title="Subcategory"
+                    title={t("subcategoryFormTitle")}
                     fields={nameField}
                     initialValues={{ parentId: parent.id }}
                     apiEndpoint="/api/categories"
@@ -468,11 +471,11 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
                         <span className="flex-1 text-sm">{child.name}</span>
 
                         {!child.isActive && (
-                          <Badge variant="outline" className="text-xs text-muted-foreground">Inactive</Badge>
+                          <Badge variant="outline" className="text-xs text-muted-foreground">{t("inactiveBadge")}</Badge>
                         )}
                         {child.excludeFromStats && (
                           <Badge variant="outline" className="border-purple-300 text-xs text-purple-700 dark:border-purple-700 dark:text-purple-400">
-                            Non-tracked
+                            {t("nonTrackedBadge")}
                           </Badge>
                         )}
                         <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

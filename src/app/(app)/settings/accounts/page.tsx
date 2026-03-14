@@ -5,16 +5,18 @@
 
 import type { Metadata } from "next";
 import { AccountList } from "@/components/settings/account-list";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Accounts",
 };
 
-export default function AccountsSettingsPage() {
+export default async function AccountsSettingsPage() {
+  const t = await getTranslations("accounts");
   return (
     <AccountList
-      pageTitle="Accounts"
-      pageDescription="Manage your bank accounts and wallets"
+      pageTitle={t("pageTitle")}
+      pageDescription={t("pageDescription")}
     />
   );
 }

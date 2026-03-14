@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/sheet";
 import { Loader2, Pencil, Plus, Trash2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,13 +65,6 @@ interface CategoryRulesListProps {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const MATCH_TYPE_LABELS: Record<MatchType, string> = {
-  CONTAINS:    "Contains",
-  STARTS_WITH: "Starts with",
-  EXACT:       "Exact",
-  REGEX:       "Regex",
-};
-
 function categoryDisplayName(rule: CategoryRule): string {
   return rule.category.parent
     ? `${rule.category.parent.name} › ${rule.category.name}`
@@ -80,6 +74,7 @@ function categoryDisplayName(rule: CategoryRule): string {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesListProps) {
+  const t = useTranslations("settings.categoryRules");
   const [rules, setRules]           = useState<CategoryRule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
@@ -98,7 +93,7 @@ export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesL
   useEffect(() => { fetchData(); }, [fetchData]);
 
   async function deleteRule(id: string) {
-    if (!confirm("Delete this rule?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     await fetch(`/api/category-rules/${id}`, { method: "DELETE" });
     fetchData();
   }
@@ -128,7 +123,7 @@ export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesL
       <div className="space-y-3">
         {rules.length === 0 ? (
           <div className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
-            No rules yet. Add a rule to auto-assign categories during import.
+            {t("noRules")}
           </div>
         ) : (
           rules.map((rule) => (
@@ -139,7 +134,7 @@ export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesL
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="font-mono text-sm font-medium">{rule.pattern}</span>
                     <Badge variant="secondary" className="text-[10px]">
-                      {MATCH_TYPE_LABELS[rule.matchType]}
+                      {({"CONTAINS": t("matchContainsBadge"), "STARTS_WITH": t("matchStartsWithBadge"), "EXACT": t("matchExactBadge"), "REGEX": t("matchRegexBadge")} as Record<MatchType, string>)[rule.matchType]}
                     </Badge>
                     {rule.priority > 0 && (
                       <Badge variant="outline" className="text-[10px]">
@@ -162,7 +157,7 @@ export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesL
                     trigger={
                       <Button variant="ghost" size="sm">
                         <Pencil className="mr-1 h-4 w-4" />
-                        Edit
+                        {t("editButton")}
                       </Button>
                     }
                   />
@@ -194,6 +189,7 @@ interface RuleFormProps {
 }
 
 function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
+  const t = useTranslations("settings.categoryRules");
   const isEditing = !!rule;
   const [isOpen, setIsOpen]               = useState(false);
   const [isSubmitting, setIsSubmitting]   = useState(false);
@@ -259,23 +255,23 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
         {trigger || (
           <Button variant="outline" size="sm">
             <Plus className="mr-2 h-4 w-4" />
-            Add
+            {t("addButton")}
           </Button>
         )}
       </SheetTrigger>
 
       <SheetContent side="bottom" className="rounded-t-xl">
         <SheetHeader>
-          <SheetTitle>{isEditing ? "Edit Rule" : "New Rule"}</SheetTitle>
+          <SheetTitle>{isEditing ? t("editTitle") : t("newTitle")}</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           {/* Pattern */}
           <div>
-            <Label htmlFor="rule-pattern">Pattern</Label>
+            <Label htmlFor="rule-pattern">{t("patternLabel")}</Label>
             <Input
               id="rule-pattern"
-              placeholder='e.g. LIDL'
+              placeholder={t("patternPlaceholder")}
               value={pattern}
               onChange={(e) => setPattern(e.target.value)}
               className="mt-2 font-mono"
@@ -285,26 +281,26 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
 
           {/* Match type */}
           <div>
-            <Label htmlFor="rule-match-type">Match Type</Label>
+            <Label htmlFor="rule-match-type">{t("matchTypeLabel")}</Label>
             <Select value={matchType} onValueChange={(v) => setMatchType(v as MatchType)}>
               <SelectTrigger id="rule-match-type" className="mt-2">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="CONTAINS">Contains — description includes the pattern</SelectItem>
-                <SelectItem value="STARTS_WITH">Starts with — description begins with the pattern</SelectItem>
-                <SelectItem value="EXACT">Exact — description matches exactly</SelectItem>
-                <SelectItem value="REGEX">Regex — full regular expression</SelectItem>
+                <SelectItem value="CONTAINS">{t("matchContains")}</SelectItem>
+                <SelectItem value="STARTS_WITH">{t("matchStartsWith")}</SelectItem>
+                <SelectItem value="EXACT">{t("matchExact")}</SelectItem>
+                <SelectItem value="REGEX">{t("matchRegex")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Category */}
           <div>
-            <Label htmlFor="rule-category">Category</Label>
+            <Label htmlFor="rule-category">{t("categoryLabel")}</Label>
             <Select value={categoryId} onValueChange={setCategoryId} required>
               <SelectTrigger id="rule-category" className="mt-2">
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder={t("categoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {parentCategories.map((parent) => {
@@ -333,13 +329,13 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
 
           {/* Display Name */}
           <div>
-            <Label htmlFor="rule-friendly-name">Display Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Label htmlFor="rule-friendly-name">{t("displayNameLabel")} <span className="text-muted-foreground font-normal">{t("displayNameOptional")}</span></Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Auto-filled in the Display Name field when this rule matches.
+              {t("displayNameHelper")}
             </p>
             <Input
               id="rule-friendly-name"
-              placeholder='e.g. Lidl'
+              placeholder={t("displayNamePlaceholder")}
               value={friendlyName}
               onChange={(e) => setFriendlyName(e.target.value)}
               className="mt-2"
@@ -348,9 +344,9 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
 
           {/* Priority */}
           <div>
-            <Label htmlFor="rule-priority">Priority</Label>
+            <Label htmlFor="rule-priority">{t("priorityLabel")}</Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Higher number = checked first. Default 0.
+              {t("priorityHelper")}
             </p>
             <Input
               id="rule-priority"
@@ -373,17 +369,17 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
               onChange={(e) => setIsActive(e.target.checked)}
               className="h-4 w-4 rounded border-input"
             />
-            <Label htmlFor="rule-active">Active (inactive rules are skipped during import)</Label>
+            <Label htmlFor="rule-active">{t("activeLabel")}</Label>
           </div>
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setIsOpen(false)}>
-              Cancel
+              {t("cancelButton")}
             </Button>
             <Button type="submit" className="flex-1" disabled={isSubmitting || !pattern || !categoryId}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Update" : "Create"}
+              {isEditing ? t("updateButton") : t("createButton")}
             </Button>
           </div>
         </form>

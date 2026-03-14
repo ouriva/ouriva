@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Plus, Star } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
+import { useTranslations } from "next-intl";
 
 interface Field {
   name: string;
@@ -48,6 +49,7 @@ export function SimpleSettingsList({
   isDefaultField,
   setDefaultAction,
 }: SimpleSettingsListProps) {
+  const tCommon = useTranslations("common");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,19 +73,19 @@ export function SimpleSettingsList({
     const res = await fetch(`${apiEndpoint}/${id}/${setDefaultAction}`, { method: "POST" });
     if (!res.ok) {
       const error = await res.json();
-      alert(error.error?.message || "Failed to set default");
+      alert(error.error?.message || tCommon("failedToSetDefault"));
       return;
     }
     fetchData();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(`Delete this ${title.toLowerCase()}?`)) return;
+    if (!confirm(tCommon("deleteConfirm", { title: title.toLowerCase() }))) return;
 
     const res = await fetch(`${apiEndpoint}/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const error = await res.json();
-      alert(error.error?.message || "Failed to delete");
+      alert(error.error?.message || tCommon("failedToDelete"));
       return;
     }
     fetchData();
@@ -114,7 +116,7 @@ export function SimpleSettingsList({
           trigger={
             <Button variant="outline" size="sm">
               <Plus className="mr-2 h-4 w-4" />
-              Add
+              {tCommon("add")}
             </Button>
           }
         />
@@ -147,7 +149,7 @@ export function SimpleSettingsList({
                 {isDefaultField && item[isDefaultField] && (
                   <Badge variant="secondary" className="gap-1">
                     <Star className="h-3 w-3 fill-current" />
-                    Default
+                    {tCommon("defaultBadge")}
                   </Badge>
                 )}
               </div>
@@ -172,7 +174,7 @@ export function SimpleSettingsList({
                   onSuccess={fetchData}
                   trigger={
                     <Button variant="ghost" size="sm">
-                      Edit
+                      {tCommon("edit")}
                     </Button>
                   }
                 />
@@ -192,7 +194,7 @@ export function SimpleSettingsList({
 
       {items.length === 0 && (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          No {title.toLowerCase()}s yet
+          {tCommon("noItemsYet", { title: title.toLowerCase() })}
         </div>
       )}
       </div>

@@ -1,3 +1,5 @@
+"use client";
+
 // Budget Split — 50/30/20 Rule View
 // ===================================
 // Displays actual spending across the three 50/30/20 buckets
@@ -9,8 +11,9 @@
 // Bucket inheritance: effective bucket = category.bucket ?? parent.bucket.
 // This is resolved server-side; the component just consumes the totals.
 
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount, formatPercent } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 
 interface BucketBreakdown {
   NEEDS: number;
@@ -24,10 +27,9 @@ interface BudgetSplitProps {
   totalIncome: number;
 }
 
-const BUCKETS = [
+const BUCKET_CONFIG = [
   {
     key: "NEEDS" as const,
-    label: "Needs",
     target: 50,
     color: "bg-blue-500",
     textColor: "text-blue-700 dark:text-blue-300",
@@ -39,7 +41,6 @@ const BUCKETS = [
   },
   {
     key: "WANTS" as const,
-    label: "Wants",
     target: 30,
     color: "bg-amber-500",
     textColor: "text-amber-700 dark:text-amber-300",
@@ -51,7 +52,6 @@ const BUCKETS = [
   },
   {
     key: "SAVINGS" as const,
-    label: "Savings",
     target: 20,
     color: "bg-emerald-500",
     textColor: "text-emerald-700 dark:text-emerald-300",
@@ -69,17 +69,25 @@ const STATUS_CLASSES = {
   bad: "text-red-600 dark:text-red-400",
 };
 
-const STATUS_LABELS = {
-  good: "On track",
-  warn: "Review",
-  bad: "Off track",
-};
-
 export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
+  const t = useTranslations("summary");
+  const locale = useLocale();
+
+  const STATUS_LABELS = {
+    good: t("statusOnTrack"),
+    warn: t("statusReview"),
+    bad: t("statusOffTrack"),
+  };
+
+  const BUCKETS = BUCKET_CONFIG.map((b) => ({
+    ...b,
+    label: t(b.key === "NEEDS" ? "needs" : b.key === "WANTS" ? "wants" : "savings"),
+  }));
+
   if (totalIncome === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        No income recorded for this period
+        {t("noIncomeThisPeriod")}
       </div>
     );
   }
@@ -103,7 +111,7 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
         <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
           <span>0%</span>
           <span>50%</span>
-          <span>100% of income</span>
+          <span>{t("pctOfIncome", { pct: 100 })}</span>
         </div>
         <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
           {needsPct > 0 && (
@@ -136,12 +144,12 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
           <div
             className="absolute top-0 h-2 w-px bg-blue-400 opacity-60"
             style={{ left: "50%" }}
-            title="Needs target: 50%"
+            title={t("budgetSplit50Target")}
           />
           <div
             className="absolute top-0 h-2 w-px bg-amber-400 opacity-60"
             style={{ left: "80%" }}
-            title="Wants target: 30% → 80% cumulative"
+            title={t("budgetSplit30Target")}
           />
         </div>
       </div>
@@ -169,7 +177,7 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
                     {bucket.label}
                   </p>
                   <p className="mt-1 text-xl font-bold tabular-nums">
-                    €{amount.toFixed(2)}
+                    €{formatAmount(amount, locale)}
                   </p>
                 </div>
                 <div className="text-right">
@@ -177,7 +185,7 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
                     {STATUS_LABELS[status]}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Target: {bucket.target}%
+                    {t("target", { pct: bucket.target })}
                   </p>
                 </div>
               </div>
@@ -185,9 +193,13 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
               {/* Progress bar within the card */}
               <div className="mt-3">
                 <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                  <span>{actualPct.toFixed(1)}% of income</span>
+                  <span>{t("pctOfIncome", { pct: formatPercent(actualPct, 1, locale) })}</span>
                   <span className={cn("font-medium", STATUS_CLASSES[status])}>
-                    {diff > 0 ? `+${diff.toFixed(1)}%` : diff < 0 ? `${diff.toFixed(1)}%` : "Exact"}
+                    {diff > 0
+                      ? t("differenceOver", { diff: formatPercent(diff, 1, locale) })
+                      : diff < 0
+                      ? t("differenceUnder", { diff: formatPercent(Math.abs(diff), 1, locale) })
+                      : t("differenceExact")}
                   </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
@@ -205,11 +217,11 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
       {/* Unclassified warning */}
       {breakdown.unclassified > 0 && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
-          €{breakdown.unclassified.toFixed(2)} in expenses ({pct(breakdown.unclassified).toFixed(1)}%) has no bucket assigned.{" "}
-          <Link href="/settings/categories" className="underline underline-offset-2">
-            Assign buckets in Settings › Categories
-          </Link>
-          .
+            {t("unclassifiedWarning", {
+            symbol: "€",
+            amount: formatAmount(breakdown.unclassified, locale),
+            pct: formatPercent(pct(breakdown.unclassified), 1, locale),
+          })}
         </div>
       )}
     </div>

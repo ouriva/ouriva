@@ -7,6 +7,10 @@
 // The table scrolls horizontally for files with many columns —
 // important for mobile since bank statements often have 10+ columns.
 
+"use client";
+
+import { useTranslations } from "next-intl";
+
 interface ImportPreviewTableProps {
   headers: string[];
   rows: string[][];
@@ -20,6 +24,7 @@ export function ImportPreviewTable({
   maxRows = 5,
   highlightedColumns,
 }: ImportPreviewTableProps) {
+  const t = useTranslations("import");
   const previewRows = rows.slice(0, maxRows);
 
   return (
@@ -63,7 +68,7 @@ export function ImportPreviewTable({
       </table>
       {rows.length > maxRows && (
         <div className="border-t px-3 py-1.5 text-center text-xs text-muted-foreground">
-          Showing {maxRows} of {rows.length} rows
+          {t("showingRows", { max: maxRows, total: rows.length })}
         </div>
       )}
     </div>

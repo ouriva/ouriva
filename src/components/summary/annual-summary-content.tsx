@@ -13,6 +13,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,6 +77,8 @@ function AnnualSkeleton() {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function AnnualSummaryContent() {
+  const t = useTranslations("summary");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const now = new Date();
   const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
@@ -125,10 +129,10 @@ export function AnnualSummaryContent() {
             <Card className="py-0">
               <CardContent className="p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Income
+                  {t("income")}
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                  €{data.totalIncome.toFixed(2)}
+                  €{formatAmount(data.totalIncome, locale)}
                 </p>
               </CardContent>
             </Card>
@@ -136,10 +140,10 @@ export function AnnualSummaryContent() {
             <Card className="py-0">
               <CardContent className="p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Expenses
+                  {t("expenses")}
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                  €{data.totalExpense.toFixed(2)}
+                  €{formatAmount(data.totalExpense, locale)}
                 </p>
               </CardContent>
             </Card>
@@ -148,7 +152,7 @@ export function AnnualSummaryContent() {
           <Card className="py-0">
             <CardContent className="p-3">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Net saved
+                {t("netSaved")}
               </p>
               <p
                 className={cn(
@@ -158,7 +162,7 @@ export function AnnualSummaryContent() {
                     : "text-red-600 dark:text-red-400"
                 )}
               >
-                €{data.net.toFixed(2)}
+                €{formatAmount(data.net, locale)}
               </p>
             </CardContent>
           </Card>
@@ -170,14 +174,14 @@ export function AnnualSummaryContent() {
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {selectedCategoryData
                     ? selectedCategoryData.name
-                    : "Monthly Overview"}
+                    : t("monthlyOverview")}
                 </p>
                 {selectedCategoryData && (
                   <button
                     onClick={() => setSelectedCategoryId(null)}
                     className="shrink-0 text-[10px] font-medium text-muted-foreground hover:text-foreground transition-colors"
                   >
-                    ← Overview
+                    {t("backToOverview")}
                   </button>
                 )}
               </div>
@@ -200,15 +204,15 @@ export function AnnualSummaryContent() {
             onValueChange={() => setSelectedCategoryId(null)}
           >
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="income">Income</TabsTrigger>
-              <TabsTrigger value="budget">50·30·20</TabsTrigger>
+              <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
+              <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
+              <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="expenses" className="mt-4">
               <AnnualCategoryTable
                 categories={data.categories}
-                emptyMessage="No expense data for this year"
+                emptyMessage={t("noExpenseDataYear")}
                 selectedId={selectedCategoryId}
                 onSelect={setSelectedCategoryId}
               />
@@ -217,7 +221,7 @@ export function AnnualSummaryContent() {
             <TabsContent value="income" className="mt-4">
               <AnnualCategoryTable
                 categories={data.incomeCategories || []}
-                emptyMessage="No income data for this year"
+                emptyMessage={t("noIncomeDataYear")}
                 selectedId={selectedCategoryId}
                 onSelect={setSelectedCategoryId}
               />
@@ -233,7 +237,7 @@ export function AnnualSummaryContent() {
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          Failed to load summary data
+          {t("loadError")}
         </div>
       )}
     </div>

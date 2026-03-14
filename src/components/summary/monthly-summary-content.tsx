@@ -12,6 +12,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,7 +49,6 @@ interface MonthlySummary {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const MONTH_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 // Compute a percentage-change delta string and its sentiment.
 // Returns null when the previous value is zero (no meaningful baseline).
@@ -91,10 +92,12 @@ function MonthlySkeleton() {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function MonthlySummaryContent() {
+  const t = useTranslations("summary");
   const searchParams = useSearchParams();
   const now = new Date();
   const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
   const month = parseInt(searchParams.get("month") || String(now.getMonth() + 1));
+  const MONTH_SHORT = t.raw("monthNames") as string[];
 
   const [data, setData] = useState<MonthlySummary | null>(null);
   const [prevData, setPrevData] = useState<Pick<MonthlySummary, "totalIncome" | "totalExpense" | "net"> | null>(null);
@@ -136,14 +139,14 @@ export function MonthlySummaryContent() {
           {/* Row 1: Income | Expenses side by side */}
           <div className="grid grid-cols-2 gap-3">
             <StatCard
-              label="Income"
+              label={t("income")}
               value={data.totalIncome}
               valueClass="text-emerald-600 dark:text-emerald-400"
               delta={prevData ? computeDelta(data.totalIncome, prevData.totalIncome) : null}
               deltaPositiveIsGood
             />
             <StatCard
-              label="Expenses"
+              label={t("expenses")}
               value={data.totalExpense}
               valueClass="text-red-600 dark:text-red-400"
               delta={prevData ? computeDelta(data.totalExpense, prevData.totalExpense) : null}
@@ -160,16 +163,16 @@ export function MonthlySummaryContent() {
           {/* ── Tabs ───────────────────────────────────────────────────── */}
           <Tabs defaultValue="expenses">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="income">Income</TabsTrigger>
-              <TabsTrigger value="budget">50·30·20</TabsTrigger>
+              <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
+              <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
+              <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="expenses" className="mt-4">
               <CategoryBreakdown
                 categories={data.categories}
                 total={data.totalExpense}
-                emptyMessage="No expense data for this period"
+                emptyMessage={t("noExpenseData")}
               />
             </TabsContent>
 
@@ -177,7 +180,7 @@ export function MonthlySummaryContent() {
               <CategoryBreakdown
                 categories={data.incomeCategories || []}
                 total={data.totalIncome}
-                emptyMessage="No income data for this period"
+                emptyMessage={t("noIncomeData")}
               />
             </TabsContent>
 
@@ -191,7 +194,7 @@ export function MonthlySummaryContent() {
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          Failed to load summary data
+          {t("loadError")}
         </div>
       )}
     </div>
@@ -210,6 +213,7 @@ interface StatCardProps {
 
 // Half-width card (2-col row). Delta shows as compact "↑5%" on one line.
 function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood }: StatCardProps) {
+  const locale = useLocale();
   let deltaClass = "text-muted-foreground";
   if (delta) {
     const isGood = deltaPositiveIsGood ? delta.pct > 0 : delta.pct < 0;
@@ -233,7 +237,7 @@ function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood }: Stat
           )}
         </div>
         <p className={cn("mt-1 text-xl font-bold tabular-nums", valueClass)}>
-          €{value.toFixed(2)}
+          €{formatAmount(value, locale)}
         </p>
       </CardContent>
     </Card>
@@ -248,6 +252,8 @@ interface NetStatCardProps {
 
 // Full-width card. Has room for the full "↑ €120 vs Jan" delta.
 function NetStatCard({ value, prevNet, prevLabel }: NetStatCardProps) {
+  const t = useTranslations("summary");
+  const locale = useLocale();
   const valueClass =
     value >= 0
       ? "text-emerald-600 dark:text-emerald-400"
@@ -263,7 +269,7 @@ function NetStatCard({ value, prevNet, prevLabel }: NetStatCardProps) {
       <CardContent className="p-3">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Net saved
+            {t("netSaved")}
           </p>
           {delta && (
             <p
@@ -274,12 +280,12 @@ function NetStatCard({ value, prevNet, prevLabel }: NetStatCardProps) {
                   : "text-red-600 dark:text-red-400"
               )}
             >
-              {delta.positive ? "↑" : "↓"} €{Math.abs(delta.diff).toFixed(2)} vs {prevLabel}
+              {delta.positive ? "↑" : "↓"} €{formatAmount(Math.abs(delta.diff), locale)} vs {prevLabel}
             </p>
           )}
         </div>
         <p className={cn("mt-1 text-xl font-bold tabular-nums", valueClass)}>
-          €{value.toFixed(2)}
+          €{formatAmount(value, locale)}
         </p>
       </CardContent>
     </Card>

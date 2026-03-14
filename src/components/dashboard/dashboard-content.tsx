@@ -23,6 +23,8 @@ import { ArrowDownLeft, ArrowRight, ArrowUpRight, Plus } from "lucide-react";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useTranslations, useLocale } from "next-intl";
+import { formatCurrency, formatAmount, formatPercent } from "@/lib/formatters";
 
 // ─── Interfaces ─────────────────────────────────────────────────────────────
 
@@ -71,15 +73,19 @@ interface RecentTransaction {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function getGreeting(): string {
+function getGreetingKey(): "goodMorning" | "goodAfternoon" | "goodEvening" {
   const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
+  if (h < 12) return "goodMorning";
+  if (h < 18) return "goodAfternoon";
+  return "goodEvening";
 }
 
-function getMonthYear(): string {
-  return new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+function getMonthYear(locale: string): string {
+  const intlLocale = locale === "pt" ? "pt-PT" : "en-US";
+  const result = new Date().toLocaleDateString(intlLocale, { month: "long", year: "numeric" });
+  // Portuguese (and some other locales) returns lowercase month names ("março de 2026").
+  // Capitalise the first letter so it reads as a title ("Março de 2026").
+  return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
 // Format a transaction date as "Today", "Yesterday", or "Mar 5"
@@ -97,6 +103,8 @@ function formatTxDate(dateStr: string): string {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function DashboardContent() {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
   const [balancesData, setBalancesData] = useState<BalancesData | null>(null);
   const [monthly, setMonthly] = useState<MonthlySummary | null>(null);
   const [recentTx, setRecentTx] = useState<RecentTransaction[]>([]);
@@ -154,13 +162,13 @@ export function DashboardContent() {
       {/* ── 1. Greeting ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{getGreeting()}</h1>
-          <p className="text-sm text-muted-foreground">{getMonthYear()}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t(getGreetingKey())}</h1>
+          <p className="text-sm text-muted-foreground">{getMonthYear(locale)}</p>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link href="/transactions/new">
             <Plus className="mr-2 h-4 w-4" />
-            Add
+            {t("addTransaction")}
           </Link>
         </Button>
       </div>
@@ -171,14 +179,14 @@ export function DashboardContent() {
       ) : balances.length > 0 ? (
         <div className="rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-950 p-5 text-white shadow-lg">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
-            Net Worth
+            {t("netWorth")}
           </p>
           {/* Aggregated total in default currency — shown when multi-currency */}
           {aggregatedTotal !== null && defaultCurrency ? (
             <div className="mt-2">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold tabular-nums">
-                  {defaultCurrency.symbol}{aggregatedTotal.toFixed(2)}
+                  {defaultCurrency.symbol}{formatAmount(aggregatedTotal, locale)}
                 </span>
                 <span className="text-sm text-zinc-500">{defaultCurrency.code}</span>
               </div>
@@ -187,7 +195,7 @@ export function DashboardContent() {
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
                   {balances.map((group) => (
                     <span key={group.code} className="text-xs text-zinc-400 tabular-nums">
-                      {group.symbol}{group.total.toFixed(2)} {group.code}
+                      {formatCurrency(group.total, group.code, locale)} {group.code}
                     </span>
                   ))}
                 </div>
@@ -199,7 +207,7 @@ export function DashboardContent() {
               {balances.map((group) => (
                 <div key={group.code} className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold tabular-nums">
-                    {group.symbol}{group.total.toFixed(2)}
+                    {formatCurrency(group.total, group.code, locale)}
                   </span>
                   <span className="text-sm text-zinc-500">{group.code}</span>
                 </div>
@@ -229,7 +237,7 @@ export function DashboardContent() {
                 {account.name}
               </p>
               <p className="mt-1.5 truncate text-base font-bold tabular-nums">
-                {account.currency.symbol}{account.balance.toFixed(2)}
+                {formatCurrency(account.balance, account.currency.code, locale)}
               </p>
               <p className="mt-0.5 truncate text-xs text-muted-foreground">
                 {account.accountType.name}
@@ -245,10 +253,10 @@ export function DashboardContent() {
       ) : monthly ? (
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">This Month</h2>
+            <h2 className="text-sm font-semibold">{t("thisMonth")}</h2>
             <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" asChild>
               <Link href="/summary">
-                Details <ArrowRight className="h-3 w-3" />
+                {t("details")} <ArrowRight className="h-3 w-3" />
               </Link>
             </Button>
           </div>
@@ -258,18 +266,18 @@ export function DashboardContent() {
               <div className="flex justify-between">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Income
+                    {t("income")}
                   </p>
                   <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {monthly.currencySymbol ?? ""}{monthly.totalIncome.toFixed(2)}
+                    {monthly.currencySymbol ?? ""}{formatAmount(monthly.totalIncome, locale)}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Expenses
+                    {t("expenses")}
                   </p>
                   <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                    {monthly.currencySymbol ?? ""}{monthly.totalExpense.toFixed(2)}
+                    {monthly.currencySymbol ?? ""}{formatAmount(monthly.totalExpense, locale)}
                   </p>
                 </div>
               </div>
@@ -284,7 +292,7 @@ export function DashboardContent() {
                     />
                   </div>
                   <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-                    <span>{spentPct.toFixed(0)}% spent</span>
+                    <span>{t("pctSpent", { pct: formatPercent(spentPct, 0, locale) })}</span>
                     <span
                       className={cn(
                         "font-semibold",
@@ -294,8 +302,8 @@ export function DashboardContent() {
                       )}
                     >
                       {monthly.net >= 0
-                        ? `+${monthly.currencySymbol ?? ""}${monthly.net.toFixed(2)} saved`
-                        : `−${monthly.currencySymbol ?? ""}${Math.abs(monthly.net).toFixed(2)} over`}
+                        ? t("saved", { symbol: monthly.currencySymbol ?? "", amount: formatAmount(monthly.net, locale) })
+                        : t("over", { symbol: monthly.currencySymbol ?? "", amount: formatAmount(Math.abs(monthly.net), locale) })}
                     </span>
                   </div>
                 </div>
@@ -308,10 +316,10 @@ export function DashboardContent() {
       {/* ── 5. Recent Transactions — compact list ────────────────────────── */}
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Recent</h2>
+          <h2 className="text-sm font-semibold">{t("recent")}</h2>
           <Button variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs" asChild>
             <Link href="/transactions">
-              All <ArrowRight className="h-3 w-3" />
+              {t("viewAll")} <ArrowRight className="h-3 w-3" />
             </Link>
           </Button>
         </div>
@@ -385,7 +393,7 @@ export function DashboardContent() {
                       <span className={cn("text-sm font-semibold tabular-nums", config.amountColor)}>
                         {config.sign}
                         {tx.fromAccount.currency.symbol}
-                        {parseFloat(tx.amount).toFixed(2)}
+                        {formatAmount(parseFloat(tx.amount), locale)}
                       </span>
                     </div>
                   </Link>
@@ -395,7 +403,7 @@ export function DashboardContent() {
           </Card>
         ) : (
           <div className="rounded-lg border p-6 text-center text-muted-foreground">
-            No transactions yet
+            {t("noTransactions")}
           </div>
         )}
       </section>

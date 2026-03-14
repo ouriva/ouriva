@@ -8,6 +8,10 @@
 // Colors are index-based so the top category is always blue, second
 // always violet, etc. — consistent across months.
 
+"use client";
+
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 import { AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -48,12 +52,15 @@ interface CategoryBreakdownProps {
 export function CategoryBreakdown({
   categories,
   total,
-  emptyMessage = "No data for this period",
+  emptyMessage,
 }: CategoryBreakdownProps) {
+  const t = useTranslations("summary");
+  const locale = useLocale();
+  const resolvedEmptyMessage = emptyMessage ?? t("noDataPeriod");
   if (categories.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
-        {emptyMessage}
+        {resolvedEmptyMessage}
       </div>
     );
   }
@@ -94,7 +101,7 @@ export function CategoryBreakdown({
                     {pct.toFixed(1)}%
                   </span>
                   <span className="font-semibold tabular-nums">
-                    €{category.total.toFixed(2)}
+                    €{formatAmount(category.total, locale)}
                   </span>
                 </div>
               </div>
@@ -129,7 +136,7 @@ export function CategoryBreakdown({
                             {childPct.toFixed(1)}%
                           </span>
                           <span className="tabular-nums text-muted-foreground">
-                            €{child.total.toFixed(2)}
+                            €{formatAmount(child.total, locale)}
                           </span>
                         </div>
                       </div>

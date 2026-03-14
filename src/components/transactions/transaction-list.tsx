@@ -40,6 +40,8 @@ import {
   X,
 } from "lucide-react";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -66,7 +68,7 @@ interface Pagination {
 
 // Format a date key (YYYY-MM-DD) into a human-readable group header label.
 // Recent dates use relative labels; older ones use the full date.
-function formatGroupDate(dateKey: string): string {
+function formatGroupDate(dateKey: string, locale: string, todayLabel: string, yesterdayLabel: string): string {
   // Parse as local midnight to avoid UTC offset shifting the day
   const [y, m, d] = dateKey.split("-").map(Number);
   const date = new Date(y, m - 1, d);
@@ -76,20 +78,13 @@ function formatGroupDate(dateKey: string): string {
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
 
-  if (date.getTime() === today.getTime()) return "Today";
-  if (date.getTime() === yesterday.getTime()) return "Yesterday";
+  if (date.getTime() === today.getTime()) return todayLabel;
+  if (date.getTime() === yesterday.getTime()) return yesterdayLabel;
 
-  const daysDiff = (today.getTime() - date.getTime()) / 86_400_000;
-  if (daysDiff < 7) {
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
-  }
-  return date.toLocaleDateString("en-US", {
-    month: "short",
+  const intlLocale = locale === "pt" ? "pt-PT" : "en-US";
+  return date.toLocaleDateString(intlLocale, {
     day: "numeric",
+    month: "short",
     year: "numeric",
   });
 }
@@ -129,9 +124,11 @@ function TransactionListSkeleton() {
 
 function FilterChip({
   label,
+  ariaLabel,
   onRemove,
 }: {
   label: string;
+  ariaLabel?: string;
   onRemove: () => void;
 }) {
   return (
@@ -140,7 +137,7 @@ function FilterChip({
       <button
         onClick={onRemove}
         className="ml-0.5 rounded-full text-muted-foreground hover:text-foreground"
-        aria-label={`Remove ${label} filter`}
+        aria-label={ariaLabel ?? `Remove ${label} filter`}
       >
         <X className="h-3 w-3" />
       </button>
@@ -151,6 +148,9 @@ function FilterChip({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TransactionList() {
+  const t = useTranslations("transactions");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -340,7 +340,7 @@ export function TransactionList() {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search transactions..."
+            placeholder={t("searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -361,9 +361,9 @@ export function TransactionList() {
           onValueChange={(v) => updateParams({ type: v === "ALL" ? undefined : v })}
         >
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="ALL">All</TabsTrigger>
-            <TabsTrigger value="INCOME">Income</TabsTrigger>
-            <TabsTrigger value="EXPENSE">Expense</TabsTrigger>
+            <TabsTrigger value="ALL">{t("tabAll")}</TabsTrigger>
+            <TabsTrigger value="INCOME">{t("tabIncome")}</TabsTrigger>
+            <TabsTrigger value="EXPENSE">{t("tabExpense")}</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -372,37 +372,43 @@ export function TransactionList() {
           <div className="flex flex-wrap gap-1.5">
             {accountId && (
               <FilterChip
-                label={accounts.find((a) => a.id === accountId)?.name ?? "Account"}
+                label={accounts.find((a) => a.id === accountId)?.name ?? t("filterAccount")}
+                ariaLabel={t("removeFilter", { label: accounts.find((a) => a.id === accountId)?.name ?? t("filterAccount") })}
                 onRemove={() => updateParams({ accountId: undefined })}
               />
             )}
             {categoryId && categoryId !== "uncategorized" && (
               <FilterChip
-                label={categories.find((c) => c.id === categoryId)?.name ?? "Category"}
+                label={categories.find((c) => c.id === categoryId)?.name ?? t("filterCategory")}
+                ariaLabel={t("removeFilter", { label: categories.find((c) => c.id === categoryId)?.name ?? t("filterCategory") })}
                 onRemove={() => updateParams({ categoryId: undefined })}
               />
             )}
             {categoryId === "uncategorized" && (
               <FilterChip
-                label="Uncategorized"
+                label={t("uncategorized")}
+                ariaLabel={t("removeFilter", { label: t("uncategorized") })}
                 onRemove={() => updateParams({ categoryId: undefined })}
               />
             )}
             {startDate && (
               <FilterChip
-                label={`From ${startDate}`}
+                label={`${t("filterFrom")} ${startDate}`}
+                ariaLabel={t("removeFilter", { label: `${t("filterFrom")} ${startDate}` })}
                 onRemove={() => updateParams({ startDate: undefined })}
               />
             )}
             {endDate && (
               <FilterChip
-                label={`To ${endDate}`}
+                label={`${t("filterTo")} ${endDate}`}
+                ariaLabel={t("removeFilter", { label: `${t("filterTo")} ${endDate}` })}
                 onRemove={() => updateParams({ endDate: undefined })}
               />
             )}
             {needsReview && (
               <FilterChip
-                label="Needs review"
+                label={t("needsReviewOnly")}
+                ariaLabel={t("removeFilter", { label: t("needsReviewOnly") })}
                 onRemove={() => updateParams({ needsReview: undefined })}
               />
             )}
@@ -417,7 +423,7 @@ export function TransactionList() {
             onClick={() => setShowFilters(!showFilters)}
           >
             <SlidersHorizontal className="mr-2 h-4 w-4" />
-            Filters
+            {t("filtersButton")}
             {activeFilterCount > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {activeFilterCount}
@@ -427,7 +433,7 @@ export function TransactionList() {
           {(activeFilterCount > 0 || search || type) && (
             <Button variant="ghost" size="sm" onClick={clearFilters}>
               <X className="mr-1 h-3 w-3" />
-              Clear all
+              {t("clearAll")}
             </Button>
           )}
         </div>
@@ -438,17 +444,17 @@ export function TransactionList() {
         <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Account
+              {t("filterAccount")}
             </label>
             <Select
               value={accountId || "all"}
               onValueChange={(v) => updateParams({ accountId: v === "all" ? undefined : v })}
             >
               <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="All accounts" />
+                <SelectValue placeholder={t("allAccounts")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All accounts</SelectItem>
+                <SelectItem value="all">{t("allAccounts")}</SelectItem>
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.name} ({account.currency.symbol})
@@ -460,18 +466,18 @@ export function TransactionList() {
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Category
+              {t("filterCategory")}
             </label>
             <Select
               value={categoryId || "all"}
               onValueChange={(v) => updateParams({ categoryId: v === "all" ? undefined : v })}
             >
               <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder="All categories" />
+                <SelectValue placeholder={t("allCategories")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                <SelectItem value="uncategorized">Uncategorized</SelectItem>
+                <SelectItem value="all">{t("allCategories")}</SelectItem>
+                <SelectItem value="uncategorized">{t("uncategorized")}</SelectItem>
                 {parentCategories.map((parent) => {
                   const children = childCategories.filter((c) => c.parentId === parent.id);
                   if (children.length > 0) {
@@ -498,7 +504,7 @@ export function TransactionList() {
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              From
+              {t("filterFrom")}
             </label>
             <Input
               type="date"
@@ -509,7 +515,7 @@ export function TransactionList() {
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              To
+              {t("filterTo")}
             </label>
             <Input
               type="date"
@@ -531,7 +537,7 @@ export function TransactionList() {
               htmlFor="needsReviewFilter"
               className="cursor-pointer text-xs font-medium text-muted-foreground"
             >
-              Needs review only
+              {t("needsReviewOnly")}
             </Label>
           </div>
         </div>
@@ -546,7 +552,7 @@ export function TransactionList() {
         </div>
       ) : allTransactions.length === 0 ? (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          No transactions found
+          {t("noTransactionsFound")}
         </div>
       ) : (
         <div className="space-y-5">
@@ -566,7 +572,7 @@ export function TransactionList() {
                 {/* Date group header: label on left, day net on right */}
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {formatGroupDate(dateKey)}
+                    {formatGroupDate(dateKey, locale, tCommon("today"), tCommon("yesterday"))}
                   </h3>
                   <span
                     className={cn(
@@ -577,7 +583,7 @@ export function TransactionList() {
                     )}
                   >
                     {dayNet >= 0 ? "+" : "−"}
-                    {Math.abs(dayNet).toFixed(2)}
+                    {formatAmount(Math.abs(dayNet), locale)}
                   </span>
                 </div>
 
@@ -608,17 +614,17 @@ export function TransactionList() {
               {isLoadingMore ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading...
+                  {t("loadMore")}
                 </>
               ) : (
-                "Load more"
+                t("loadMore")
               )}
             </Button>
           ) : (
             <p className="py-2 text-center text-xs text-muted-foreground">
               {allTransactions.length === 1
-                ? "1 transaction"
-                : `${allTransactions.length} transactions`}
+                ? t("countSingle")
+                : t("countPlural", { count: allTransactions.length })}
             </p>
           )}
         </div>

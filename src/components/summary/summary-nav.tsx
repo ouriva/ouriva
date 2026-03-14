@@ -6,12 +6,15 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { getTranslations } from "next-intl/server";
 
 interface SummaryNavProps {
   mode: "monthly" | "annual";
 }
 
-export function SummaryNav({ mode }: SummaryNavProps) {
+export async function SummaryNav({ mode }: SummaryNavProps) {
+  const t = await getTranslations("summary");
+
   return (
     <div className="flex rounded-lg border bg-muted p-1">
       <Link
@@ -23,7 +26,7 @@ export function SummaryNav({ mode }: SummaryNavProps) {
             : "text-muted-foreground hover:text-foreground"
         )}
       >
-        Monthly
+        {t("tabMonthly")}
       </Link>
       <Link
         href="/summary/annual"
@@ -34,7 +37,7 @@ export function SummaryNav({ mode }: SummaryNavProps) {
             : "text-muted-foreground hover:text-foreground"
         )}
       >
-        Annual
+        {t("tabAnnual")}
       </Link>
     </div>
   );

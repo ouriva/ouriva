@@ -15,6 +15,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount, formatDate } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +121,8 @@ const ReviewRow = memo(function ReviewRow({
   onNoteChange,
   onNeedsReviewChange,
 }: ReviewRowProps) {
+  const t = useTranslations("import");
+  const locale = useLocale();
   return (
     <div
       className={`flex items-start gap-3 rounded-lg border p-3 ${
@@ -134,15 +138,15 @@ const ReviewRow = memo(function ReviewRow({
 
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">{row.date}</span>
+          <span className="text-xs text-muted-foreground">{formatDate(row.date, "d MMM yyyy", locale)}</span>
           {isDuplicate && (
             <Badge variant="destructive" className="text-[10px]">
-              Duplicate
+              {t("duplicateBadge")}
             </Badge>
           )}
           {autoApplied && (
             <Badge variant="secondary" className="text-[10px]">
-              Auto
+              {t("autoBadge")}
             </Badge>
           )}
         </div>
@@ -152,14 +156,14 @@ const ReviewRow = memo(function ReviewRow({
 
         <input
           type="text"
-          placeholder="Display name (optional)"
+          placeholder={t("displayNamePlaceholder")}
           value={friendlyName ?? ""}
           onChange={(e) => onFriendlyNameChange(i, e.target.value)}
           className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
         />
         <input
           type="text"
-          placeholder="Notes (optional)"
+          placeholder={t("notesPlaceholder")}
           value={note ?? ""}
           onChange={(e) => onNoteChange(i, e.target.value)}
           className="h-6 w-full rounded border border-input bg-transparent px-2 text-xs placeholder:text-muted-foreground/50"
@@ -172,7 +176,7 @@ const ReviewRow = memo(function ReviewRow({
             onCheckedChange={(checked) => onNeedsReviewChange(i, !!checked)}
           />
           <label htmlFor={`review-${i}`} className="text-xs text-muted-foreground">
-            Review
+            {t("reviewCheckbox")}
           </label>
         </div>
 
@@ -185,8 +189,8 @@ const ReviewRow = memo(function ReviewRow({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="INCOME">Income</SelectItem>
-              <SelectItem value="EXPENSE">Expense</SelectItem>
+              <SelectItem value="INCOME">{t("incomeBadge")}</SelectItem>
+              <SelectItem value="EXPENSE">{t("expenseBadge")}</SelectItem>
             </SelectContent>
           </Select>
 
@@ -199,7 +203,7 @@ const ReviewRow = memo(function ReviewRow({
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No category</SelectItem>
+                <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
                 {parentCategories.map((parent) => {
                   const children = childCategories.filter(
                     (c) => c.parentId === parent.id
@@ -233,8 +237,8 @@ const ReviewRow = memo(function ReviewRow({
           row.amount >= 0 ? "text-green-600" : "text-red-600"
         }`}
       >
-        {row.amount >= 0 ? "+" : ""}
-        {row.amount.toFixed(2)}
+        {row.amount >= 0 ? "+" : "−"}
+        {formatAmount(Math.abs(row.amount), locale)}
       </span>
     </div>
   );
@@ -243,6 +247,7 @@ const ReviewRow = memo(function ReviewRow({
 // ── StepReview ─────────────────────────────────────────────────────────────
 
 export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
+  const t = useTranslations("import");
   const [categories, setCategories] = useState<Category[]>([]);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<boolean[]>([]);
@@ -438,7 +443,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       <Card>
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-          Checking for duplicates...
+          {t("checkingDuplicates")}
         </CardContent>
       </Card>
     );
@@ -462,10 +467,10 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
       <CardContent className="space-y-4 p-4">
         {/* Summary bar */}
         <div className="flex flex-wrap gap-2 text-sm">
-          <Badge variant="outline">{parsedRows.length} total rows</Badge>
-          <Badge variant="secondary">{selectedCount} selected</Badge>
+          <Badge variant="outline">{t("totalRows", { count: parsedRows.length })}</Badge>
+          <Badge variant="secondary">{t("selectedRows", { count: selectedCount })}</Badge>
           {duplicateCount > 0 && (
-            <Badge variant="destructive">{duplicateCount} duplicates</Badge>
+            <Badge variant="destructive">{t("duplicateRows", { count: duplicateCount })}</Badge>
           )}
         </div>
 
@@ -477,7 +482,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
             onCheckedChange={(checked) => toggleAll(!!checked)}
           />
           <label htmlFor="select-all" className="text-sm">
-            Select all non-duplicate rows
+            {t("selectAllNonDuplicate")}
           </label>
         </div>
 
@@ -529,7 +534,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
             disabled={selectedCount === 0}
             className="flex-1"
           >
-            Next: Confirm ({selectedCount})
+            {t("nextConfirm", { count: selectedCount })}
           </Button>
         </div>
       </CardContent>

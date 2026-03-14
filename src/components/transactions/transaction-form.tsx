@@ -22,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Plus, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   createTransactionSchema,
   type CreateTransactionInput,
@@ -87,6 +88,8 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ initialData, onSuccess }: TransactionFormProps) {
+  const t = useTranslations("transactionForm");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -250,7 +253,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   function CategorySelect({
     value,
     onChange,
-    placeholder = "Select category",
+    placeholder,
   }: {
     value: string | undefined;
     onChange: (v: string) => void;
@@ -262,10 +265,10 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
         onValueChange={(v) => onChange(v === "none" ? "" : v)}
       >
         <SelectTrigger>
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder ?? t("selectCategoryPlaceholder")} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">No category</SelectItem>
+          <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
           {parentCategories.map((parent) => {
             const children = childCategories.filter(
               (c) => c.parentId === parent.id
@@ -313,7 +316,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Transaction Type Tabs */}
       <div>
-        <Label>Type</Label>
+        <Label>{t("typeLabel")}</Label>
         <Tabs
           value={transactionType}
           onValueChange={(value) =>
@@ -322,22 +325,22 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           className="mt-2"
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="EXPENSE">Expense</TabsTrigger>
-            <TabsTrigger value="INCOME">Income</TabsTrigger>
+            <TabsTrigger value="EXPENSE">{t("typeLabelExpense")}</TabsTrigger>
+            <TabsTrigger value="INCOME">{t("typeLabelIncome")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       {/* Amount */}
       <div>
-        <Label htmlFor="amount">Amount</Label>
+        <Label htmlFor="amount">{t("amountLabel")}</Label>
         <Input
           id="amount"
           type="number"
           step="0.01"
           min="0.01"
           inputMode="decimal" // shows numeric keyboard on mobile
-          placeholder="0.00"
+          placeholder={t("amountPlaceholder")}
           {...register("amount", { valueAsNumber: true })}
           className="mt-2 text-lg"
         />
@@ -350,10 +353,10 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
 
       {/* Description */}
       <div>
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">{t("descriptionLabel")}</Label>
         <Input
           id="description"
-          placeholder="What was this for?"
+          placeholder={t("descriptionPlaceholder")}
           {...register("description")}
           className="mt-2"
         />
@@ -361,24 +364,24 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
 
       {/* Display Name (friendly name) */}
       <div>
-        <Label htmlFor="friendlyName">Display Name</Label>
+        <Label htmlFor="friendlyName">{t("displayNameLabel")}</Label>
         <Input
           id="friendlyName"
-          placeholder="Short name to display (optional)"
+          placeholder={t("displayNamePlaceholder")}
           {...register("friendlyName")}
           className="mt-2"
         />
         <p className="mt-1 text-xs text-muted-foreground">
-          Overrides the description when shown in lists
+          {t("displayNameHelper")}
         </p>
       </div>
 
       {/* Notes */}
       <div>
-        <Label htmlFor="notes">Notes</Label>
+        <Label htmlFor="notes">{t("notesLabel")}</Label>
         <Textarea
           id="notes"
-          placeholder="Additional details (optional)"
+          placeholder={t("notesPlaceholder")}
           {...register("notes")}
           className="mt-2"
           rows={3}
@@ -387,7 +390,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
 
       {/* Date */}
       <div>
-        <Label htmlFor="date">Date</Label>
+        <Label htmlFor="date">{t("dateLabel")}</Label>
         <Input
           id="date"
           type="date"
@@ -403,13 +406,13 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
 
       {/* Account */}
       <div>
-        <Label>Account</Label>
+        <Label>{t("accountLabel")}</Label>
         <Select
           value={watch("fromAccountId")}
           onValueChange={(value) => setValue("fromAccountId", value)}
         >
           <SelectTrigger className="mt-2">
-            <SelectValue placeholder="Select account" />
+            <SelectValue placeholder={t("accountPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {accounts.map((account) => (
@@ -430,7 +433,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
       {showExchangeRate && (
         <div>
           <Label htmlFor="exchangeRate">
-            Exchange Rate ({selectedAccount!.currency.code} → {defaultCurrency!.code})
+            {t("exchangeRateLabel", { from: selectedAccount!.currency.code, to: defaultCurrency!.code })}
           </Label>
           <Input
             id="exchangeRate"
@@ -438,14 +441,14 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             step="any"
             min="0.000001"
             inputMode="decimal"
-            placeholder="Leave blank to auto-fetch ECB rate"
+            placeholder={t("exchangeRatePlaceholder")}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             {...register("exchangeRate" as any, { valueAsNumber: true })}
             className="mt-2 tabular-nums"
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            1 {selectedAccount!.currency.code} = ? {defaultCurrency!.code}.
-            Leave blank to use the ECB rate for the transaction date.
+            {t("exchangeRateDescription", { from: selectedAccount!.currency.code, to: defaultCurrency!.code })}
+            {" "}{t("exchangeRateHelper")}
           </p>
         </div>
       )}
@@ -453,7 +456,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
       {/* Category / Split section */}
       <div>
         <div className="flex items-center justify-between">
-          <Label>{isSplitMode ? "Split categories" : "Category"}</Label>
+          <Label>{isSplitMode ? t("splitCategoryLabel") : t("categoryLabel")}</Label>
           <Button
             type="button"
             variant="ghost"
@@ -461,7 +464,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             className="h-7 text-xs"
             onClick={handleToggleSplitMode}
           >
-            {isSplitMode ? "Single category" : "Split transaction"}
+            {isSplitMode ? t("singleCategoryButton") : t("splitTransactionButton")}
           </Button>
         </div>
 
@@ -517,7 +520,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
               onClick={() => appendSplit({ categoryId: "", amount: 0 } as any)}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add category
+              {t("addCategoryButton")}
             </Button>
 
             {/* Running total indicator */}
@@ -530,14 +533,14 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
               )}
             >
               {isFullyAllocated ? (
-                <span>All {(totalCents / 100).toFixed(2)} allocated ✓</span>
+                <span>{t("allAllocated", { amount: (totalCents / 100).toFixed(2) })}</span>
               ) : remainingCents > 0 ? (
                 <span>
-                  {(remainingCents / 100).toFixed(2)} remaining to allocate
+                  {t("remainingToAllocate", { amount: (remainingCents / 100).toFixed(2) })}
                 </span>
               ) : (
                 <span>
-                  {(Math.abs(remainingCents) / 100).toFixed(2)} over-allocated
+                  {t("overAllocated", { amount: (Math.abs(remainingCents) / 100).toFixed(2) })}
                 </span>
               )}
             </div>
@@ -577,7 +580,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           }
         />
         <Label htmlFor="needsReview" className="cursor-pointer text-sm font-normal">
-          Mark for review
+          {t("markForReview")}
         </Label>
       </div>
 
@@ -589,11 +592,11 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           className="flex-1"
           onClick={() => router.back()}
         >
-          Cancel
+          {tCommon("cancel")}
         </Button>
         <Button type="submit" className="flex-1" disabled={isSubmitting}>
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? "Update" : "Create"}
+          {isEditing ? t("updateButton") : t("createButton")}
         </Button>
       </div>
     </form>

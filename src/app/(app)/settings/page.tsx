@@ -15,56 +15,59 @@ import {
   CreditCard,
   Wand2,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Settings",
 };
 
-const settingsLinks = [
-  {
-    title: "General",
-    description: "Transfer category and app-wide preferences",
-    href: "/settings/general",
-    icon: Settings2,
-  },
-  {
-    title: "Accounts",
-    description: "Manage bank accounts, credit cards, and wallets",
-    href: "/settings/accounts",
-    icon: Landmark,
-  },
-  {
-    title: "Categories",
-    description: "Organize transactions with parent and subcategories",
-    href: "/settings/categories",
-    icon: FolderTree,
-  },
-  {
-    title: "Currencies",
-    description: "Configure currencies for your accounts",
-    href: "/settings/currencies",
-    icon: Coins,
-  },
-  {
-    title: "Account Types",
-    description: "Define types like Checking, Savings, Credit Card",
-    href: "/settings/account-types",
-    icon: CreditCard,
-  },
-  {
-    title: "Auto-Categorization",
-    description: "Rules that auto-assign categories during import",
-    href: "/settings/auto-categorization",
-    icon: Wand2,
-  },
-];
+export default async function SettingsPage() {
+  const t = await getTranslations("settings");
 
-export default function SettingsPage() {
+  const settingsLinks = [
+    {
+      title: t("general"),
+      description: t("generalDescription"),
+      href: "/settings/general",
+      icon: Settings2,
+    },
+    {
+      title: t("accounts"),
+      description: t("accountsDescription"),
+      href: "/settings/accounts",
+      icon: Landmark,
+    },
+    {
+      title: t("categories"),
+      description: t("categoriesDescription"),
+      href: "/settings/categories",
+      icon: FolderTree,
+    },
+    {
+      title: t("currencies"),
+      description: t("currenciesDescription"),
+      href: "/settings/currencies",
+      icon: Coins,
+    },
+    {
+      title: t("accountTypes"),
+      description: t("accountTypesDescription"),
+      href: "/settings/account-types",
+      icon: CreditCard,
+    },
+    {
+      title: t("autoCategorization"),
+      description: t("autoCategorizationDescription"),
+      href: "/settings/auto-categorization",
+      icon: Wand2,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Settings"
-        description="Manage your accounts, categories, and preferences"
+        title={t("pageTitle")}
+        description={t("pageDescription")}
       />
 
       <div className="grid gap-3">

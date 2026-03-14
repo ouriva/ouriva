@@ -26,38 +26,41 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Navigation items configuration — single source of truth.
-// Adding a new tab means adding one object here.
-const navItems = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Transactions",
-    href: "/transactions",
-    icon: ArrowLeftRight,
-  },
-  {
-    label: "Summary",
-    href: "/summary",
-    icon: BarChart3,
-  },
-  {
-    label: "Budget",
-    href: "/budget",
-    icon: Wallet,
-  },
-  {
-    label: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
-];
+import { useTranslations } from "next-intl";
 
 export function BottomNav() {
+  const t = useTranslations("nav");
+
+  // Navigation items configuration — single source of truth.
+  // Adding a new tab means adding one object here.
+  const navItems = [
+    {
+      label: t("dashboard"),
+      href: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      label: t("transactions"),
+      href: "/transactions",
+      icon: ArrowLeftRight,
+    },
+    {
+      label: t("summary"),
+      href: "/summary",
+      icon: BarChart3,
+    },
+    {
+      label: t("budget"),
+      href: "/budget",
+      icon: Wallet,
+    },
+    {
+      label: t("settings"),
+      href: "/settings",
+      icon: Settings,
+    },
+  ];
+
   // usePathname() returns the current URL path, e.g. "/transactions"
   // It updates automatically when the user navigates.
   const pathname = usePathname();

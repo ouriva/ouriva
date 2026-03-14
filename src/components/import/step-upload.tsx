@@ -7,6 +7,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ interface StepUploadProps {
 }
 
 export function StepUpload({ onComplete }: StepUploadProps) {
+  const t = useTranslations("import");
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState("");
   const [profileId, setProfileId] = useState("");
@@ -141,16 +143,16 @@ export function StepUpload({ onComplete }: StepUploadProps) {
       <CardContent className="space-y-6 p-4">
         {/* File upload */}
         <div>
-          <Label className="mb-2 block">Bank Statement File</Label>
+          <Label className="mb-2 block">{t("fileLabel")}</Label>
           <FileDropzone onFileSelect={setFile} />
         </div>
 
         {/* Account selection */}
         <div>
-          <Label>Target Account</Label>
+          <Label>{t("accountLabel")}</Label>
           <Select value={accountId} onValueChange={setAccountId}>
             <SelectTrigger className="mt-2">
-              <SelectValue placeholder="Which account is this statement for?" />
+              <SelectValue placeholder={t("accountPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
               {accounts.map((account) => (
@@ -165,24 +167,24 @@ export function StepUpload({ onComplete }: StepUploadProps) {
         {/* CSV parsing options */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label>Delimiter</Label>
+            <Label>{t("delimiterLabel")}</Label>
             <Select value={delimiter} onValueChange={setDelimiter}>
               <SelectTrigger className="mt-2">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">Auto-detect</SelectItem>
-                <SelectItem value=";">Semicolon (;)</SelectItem>
-                <SelectItem value=",">Comma (,)</SelectItem>
-                <SelectItem value="\t">Tab</SelectItem>
+                <SelectItem value="auto">{t("delimiterAuto")}</SelectItem>
+                <SelectItem value=";">{t("delimiterSemicolon")}</SelectItem>
+                <SelectItem value=",">{t("delimiterComma")}</SelectItem>
+                <SelectItem value="\t">{t("delimiterTab")}</SelectItem>
               </SelectContent>
             </Select>
             <p className="mt-1 text-xs text-muted-foreground">
-              European CSVs typically use semicolons
+              {t("delimiterHelper")}
             </p>
           </div>
           <div>
-            <Label>Skip Rows</Label>
+            <Label>{t("skipRowsLabel")}</Label>
             <Input
               type="number"
               min="0"
@@ -191,7 +193,7 @@ export function StepUpload({ onComplete }: StepUploadProps) {
               className="mt-2"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Skip metadata rows before the column headers
+              {t("skipRowsHelper")}
             </p>
           </div>
         </div>
@@ -199,10 +201,10 @@ export function StepUpload({ onComplete }: StepUploadProps) {
         {/* Profile selection (optional) */}
         {profiles.length > 0 && (
           <div>
-            <Label>Saved Profile (optional)</Label>
+            <Label>{t("savedProfileLabel")}</Label>
             <Select value={profileId} onValueChange={setProfileId}>
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Use a saved column mapping" />
+                <SelectValue placeholder={t("savedProfilePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {profiles.map((profile) => (
@@ -227,7 +229,7 @@ export function StepUpload({ onComplete }: StepUploadProps) {
           className="w-full"
         >
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Next: Map Columns
+          {t("nextMapColumns")}
         </Button>
       </CardContent>
     </Card>

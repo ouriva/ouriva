@@ -14,6 +14,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Upload } from "lucide-react";
 
 interface FileDropzoneProps {
@@ -25,6 +26,7 @@ export function FileDropzone({
   onFileSelect,
   accept = ".csv,.xlsx,.xls",
 }: FileDropzoneProps) {
+  const t = useTranslations("import");
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -77,10 +79,10 @@ export function FileDropzone({
       ) : (
         <>
           <p className="text-sm font-medium">
-            Drop your bank statement here
+            {t("fileDropPrompt")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            CSV or XLSX files up to 10 MB
+            {t("fileDropHint")}
           </p>
         </>
       )}

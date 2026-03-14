@@ -14,19 +14,22 @@ import { PageHeader } from "@/components/layout/page-header";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { Button } from "@/components/ui/button";
 import { Plus, Upload, Loader2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Transactions",
 };
 
-export default function TransactionsPage() {
+export default async function TransactionsPage() {
+  const t = await getTranslations("transactions");
+
   return (
     <div className="space-y-6">
-      <PageHeader title="Transactions">
+      <PageHeader title={t("pageTitle")}>
         <Link href="/transactions/import">
           <Button variant="outline" size="sm">
             <Upload className="mr-2 h-4 w-4" />
-            Import
+            {t("importButton")}
           </Button>
         </Link>
       </PageHeader>
@@ -52,7 +55,7 @@ export default function TransactionsPage() {
           className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
         >
           <Plus className="h-6 w-6" />
-          <span className="sr-only">Add transaction</span>
+          <span className="sr-only">{t("addAriaLabel")}</span>
         </Button>
       </Link>
     </div>

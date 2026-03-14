@@ -23,6 +23,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 
 // A curated color palette that works well in both light and dark mode
 const COLORS = [
@@ -47,6 +49,7 @@ interface ExpensePieChartProps {
 }
 
 export function ExpensePieChart({ data, emptyMessage = "No data" }: ExpensePieChartProps) {
+  const locale = useLocale();
   if (data.length === 0) {
     return (
       <div className="flex h-[250px] items-center justify-center text-muted-foreground">
@@ -79,7 +82,7 @@ export function ExpensePieChart({ data, emptyMessage = "No data" }: ExpensePieCh
           ))}
         </Pie>
         <Tooltip
-          formatter={(value: number | undefined) => `€${(value ?? 0).toFixed(2)}`}
+          formatter={(value: number | undefined) => `€${formatAmount(value ?? 0, locale)}`}
           contentStyle={{
             borderRadius: "8px",
             border: "1px solid hsl(var(--border))",

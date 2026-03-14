@@ -19,6 +19,8 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 import {
   LineChart,
   Line,
@@ -65,6 +67,7 @@ export function AnnualBarChart({
   categoryData,
 }: AnnualBarChartProps) {
   const { resolvedTheme } = useTheme();
+  const locale = useLocale();
   const isDark = resolvedTheme === "dark";
 
   // Concrete axis label color — must be an explicit value, not a CSS variable,
@@ -115,7 +118,7 @@ export function AnnualBarChart({
           <Tooltip
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             formatter={(value: any) =>
-              [`€${Number(value).toFixed(2)}`, categoryData.name] as any
+              [`€${formatAmount(Number(value), locale)}`, categoryData.name] as any
             }
             contentStyle={TOOLTIP_STYLE}
           />
@@ -151,7 +154,7 @@ export function AnnualBarChart({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           formatter={(value: any, name: any) =>
             [
-              `€${Number(value).toFixed(2)}`,
+              `€${formatAmount(Number(value), locale)}`,
               typeof name === "string"
                 ? name.charAt(0).toUpperCase() + name.slice(1)
                 : String(name),

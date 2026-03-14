@@ -14,6 +14,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ export function StepColumnMapping({
   onComplete,
   onBack,
 }: StepColumnMappingProps) {
+  const t = useTranslations("import");
   // Detect initial amount mode from existing columnMap
   const initialMode: AmountMode =
     state.columnMap.debitAmount !== undefined || state.columnMap.creditAmount !== undefined
@@ -193,12 +195,13 @@ export function StepColumnMapping({
     }
   }
 
+
   return (
     <Card>
       <CardContent className="space-y-6 p-4">
         {/* File preview */}
         <div>
-          <Label className="mb-2 block">Data Preview</Label>
+          <Label className="mb-2 block">{t("dataPreview")}</Label>
           <ImportPreviewTable
             headers={state.headers}
             rows={state.rows}
@@ -209,7 +212,7 @@ export function StepColumnMapping({
         {/* Column mapping dropdowns */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label>Date Column</Label>
+            <Label>{t("dateColumn")}</Label>
             <Select
               value={String(columnMap.date)}
               onValueChange={(v) =>
@@ -230,7 +233,7 @@ export function StepColumnMapping({
           </div>
 
           <div>
-            <Label>Description Column</Label>
+            <Label>{t("descriptionColumn")}</Label>
             <Select
               value={String(columnMap.description)}
               onValueChange={(v) =>
@@ -253,14 +256,14 @@ export function StepColumnMapping({
 
         {/* Amount mode toggle */}
         <div>
-          <Label className="mb-2 block">Amount Columns</Label>
+          <Label className="mb-2 block">{t("amountColumns")}</Label>
           <Tabs
             value={amountMode}
             onValueChange={(v) => handleAmountModeChange(v as AmountMode)}
           >
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="single">Single Column</TabsTrigger>
-              <TabsTrigger value="split">Debit / Credit</TabsTrigger>
+              <TabsTrigger value="single">{t("singleColumn")}</TabsTrigger>
+              <TabsTrigger value="split">{t("debitCredit")}</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -269,7 +272,7 @@ export function StepColumnMapping({
         <div className="grid gap-4 sm:grid-cols-2">
           {amountMode === "single" ? (
             <div>
-              <Label>Amount Column</Label>
+              <Label>{t("amountColumn")}</Label>
               <Select
                 value={columnMap.amount !== undefined ? String(columnMap.amount) : ""}
                 onValueChange={(v) =>
@@ -288,13 +291,13 @@ export function StepColumnMapping({
                 </SelectContent>
               </Select>
               <p className="mt-1 text-xs text-muted-foreground">
-                Negative values = expense, positive = income
+                {t("amountColumnHelper")}
               </p>
             </div>
           ) : (
             <>
               <div>
-                <Label>Debit Column (expenses)</Label>
+                <Label>{t("debitColumn")}</Label>
                 <Select
                   value={columnMap.debitAmount !== undefined ? String(columnMap.debitAmount) : ""}
                   onValueChange={(v) =>
@@ -314,7 +317,7 @@ export function StepColumnMapping({
                 </Select>
               </div>
               <div>
-                <Label>Credit Column (income)</Label>
+                <Label>{t("creditColumn")}</Label>
                 <Select
                   value={columnMap.creditAmount !== undefined ? String(columnMap.creditAmount) : ""}
                   onValueChange={(v) =>
@@ -338,7 +341,7 @@ export function StepColumnMapping({
 
           {/* Reference column (optional) — always shown */}
           <div>
-            <Label>Reference Column (optional)</Label>
+            <Label>{t("referenceColumn")}</Label>
             <Select
               value={columnMap.reference !== undefined ? String(columnMap.reference) : "none"}
               onValueChange={(v) =>
@@ -352,7 +355,7 @@ export function StepColumnMapping({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Not mapped</SelectItem>
+                <SelectItem value="none">{t("notMapped")}</SelectItem>
                 {columnOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
@@ -365,7 +368,7 @@ export function StepColumnMapping({
           {/* Exchange Rate column — only shown when account currency ≠ default */}
           {showExchangeRateColumn && (
             <div>
-              <Label>Exchange Rate Column (optional)</Label>
+              <Label>{t("exchangeRateColumn")}</Label>
               <Select
                 value={columnMap.exchangeRate !== undefined ? String(columnMap.exchangeRate) : "none"}
                 onValueChange={(v) =>
@@ -379,7 +382,7 @@ export function StepColumnMapping({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Not mapped (auto-fetch ECB rate)</SelectItem>
+                  <SelectItem value="none">{t("exchangeRateNotMapped")}</SelectItem>
                   {columnOptions.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
                       {opt.label}
@@ -388,8 +391,7 @@ export function StepColumnMapping({
                 </SelectContent>
               </Select>
               <p className="mt-1 text-xs text-muted-foreground">
-                1 {accountCurrencyCode} = ? {defaultCurrencyCode}.
-                If not mapped, the ECB rate for each transaction date is fetched automatically.
+                {t("exchangeRateHelper")}
               </p>
             </div>
           )}
@@ -397,7 +399,7 @@ export function StepColumnMapping({
 
         {/* Date format */}
         <div>
-          <Label>Date Format</Label>
+          <Label>{t("dateFormatLabel")}</Label>
           <Select value={dateFormat} onValueChange={setDateFormat}>
             <SelectTrigger className="mt-2">
               <SelectValue />
@@ -414,10 +416,10 @@ export function StepColumnMapping({
 
         {/* Save as profile (optional) */}
         <div>
-          <Label>Save as Profile (optional)</Label>
+          <Label>{t("saveProfileLabel")}</Label>
           <div className="mt-2 flex gap-2">
             <Input
-              placeholder="e.g., My Bank - Checking"
+              placeholder={t("saveProfilePlaceholder")}
               value={profileName}
               onChange={(e) => setProfileName(e.target.value)}
             />
@@ -426,7 +428,7 @@ export function StepColumnMapping({
               onClick={handleSaveProfile}
               disabled={!profileName.trim() || isSaving}
             >
-              Save
+              {t("saveProfileButton")}
             </Button>
           </div>
         </div>
@@ -434,14 +436,14 @@ export function StepColumnMapping({
         {/* Navigation */}
         <div className="flex gap-3">
           <Button variant="outline" onClick={onBack} className="flex-1">
-            Back
+            {t("back")}
           </Button>
           <Button
             onClick={() => onComplete(getCleanColumnMap(), dateFormat)}
             disabled={!isValid}
             className="flex-1"
           >
-            Next: Review
+            {t("nextReview")}
           </Button>
         </div>
       </CardContent>

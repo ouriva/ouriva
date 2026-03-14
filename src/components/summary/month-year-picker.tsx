@@ -13,11 +13,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+import { useTranslations } from "next-intl";
 
 interface MonthYearPickerProps {
   mode: "month" | "year";
@@ -27,6 +23,7 @@ interface MonthYearPickerProps {
 export function MonthYearPicker({ mode, basePath }: MonthYearPickerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("summary");
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -62,8 +59,9 @@ export function MonthYearPicker({ mode, basePath }: MonthYearPickerProps) {
     navigate(currentYear, currentMonth);
   }
 
+  const fullMonthNames = t.raw("fullMonthNames") as string[];
   const label =
-    mode === "month" ? `${MONTH_NAMES[month - 1]} ${year}` : String(year);
+    mode === "month" ? `${fullMonthNames[month - 1]} ${year}` : String(year);
 
   const isCurrentPeriod =
     mode === "year"
@@ -90,7 +88,7 @@ export function MonthYearPicker({ mode, basePath }: MonthYearPickerProps) {
           onClick={goToCurrent}
           className="rounded-full border px-3 py-0.5 text-xs text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
         >
-          {mode === "month" ? "This month" : "This year"}
+          {mode === "month" ? t("thisMonth") : t("thisYear")}
         </button>
       )}
     </div>

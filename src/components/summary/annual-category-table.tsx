@@ -11,11 +11,8 @@
 
 import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const MONTH_LABELS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
+import { useLocale, useTranslations } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 
 interface Category {
   id: string;
@@ -38,6 +35,9 @@ export function AnnualCategoryTable({
   selectedId,
   onSelect,
 }: AnnualCategoryTableProps) {
+  const locale = useLocale();
+  const t = useTranslations("summary");
+  const monthLabels = t.raw("monthNames") as string[];
   if (categories.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
@@ -58,10 +58,10 @@ export function AnnualCategoryTable({
         <thead>
           <tr className="border-b bg-muted/50">
             <th className="sticky left-0 bg-muted/50 px-3 py-2 text-left font-medium">
-              Category
+              {t("tableCategory")}
             </th>
-            <th className="px-3 py-2 text-right font-medium">Total</th>
-            {MONTH_LABELS.map((m) => (
+            <th className="px-3 py-2 text-right font-medium">{t("tableTotal")}</th>
+            {monthLabels.map((m) => (
               <th key={m} className="px-3 py-2 text-right font-medium">
                 {m}
               </th>
@@ -98,14 +98,14 @@ export function AnnualCategoryTable({
                   )}
                 </td>
                 <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                  {category.total.toFixed(2)}
+                  {formatAmount(category.total, locale)}
                 </td>
                 {category.months.map((amount, i) => (
                   <td
                     key={i}
                     className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                   >
-                    {amount > 0 ? amount.toFixed(2) : "—"}
+                    {amount > 0 ? formatAmount(amount, locale) : "—"}
                   </td>
                 ))}
               </tr>
@@ -114,13 +114,13 @@ export function AnnualCategoryTable({
 
           {/* Grand total row */}
           <tr className="bg-muted/50 font-semibold">
-            <td className="sticky left-0 bg-muted/50 px-3 py-2">Total</td>
+            <td className="sticky left-0 bg-muted/50 px-3 py-2">{t("tableTotal")}</td>
             <td className="px-3 py-2 text-right tabular-nums">
-              {grandTotal.toFixed(2)}
+              {formatAmount(grandTotal, locale)}
             </td>
             {monthlyTotals.map((amount, i) => (
               <td key={i} className="px-3 py-2 text-right tabular-nums">
-                {amount > 0 ? amount.toFixed(2) : "—"}
+                {amount > 0 ? formatAmount(amount, locale) : "—"}
               </td>
             ))}
           </tr>

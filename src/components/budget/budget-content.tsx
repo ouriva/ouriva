@@ -25,6 +25,8 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,6 +105,8 @@ interface GroupHeaderProps {
 }
 
 function GroupHeader({ group }: GroupHeaderProps) {
+  const t = useTranslations("budget");
+  const locale = useLocale();
   const remainingClass = group.isIncome
     ? group.actual >= group.budgeted
       ? "text-emerald-600 dark:text-emerald-400"
@@ -113,11 +117,11 @@ function GroupHeader({ group }: GroupHeaderProps) {
 
   const remainingLabel = group.isIncome
     ? group.remaining > 0
-      ? `€${group.remaining.toFixed(2)} to go`
-      : `€${Math.abs(group.remaining).toFixed(2)} over`
+      ? t("remainingToGo", { symbol: "€", amount: formatAmount(group.remaining, locale) })
+      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(group.remaining), locale) })
     : group.remaining >= 0
-      ? `€${group.remaining.toFixed(2)} left`
-      : `€${Math.abs(group.remaining).toFixed(2)} over`;
+      ? t("remainingLeft", { symbol: "€", amount: formatAmount(group.remaining, locale) })
+      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(group.remaining), locale) });
 
   return (
     <div className="flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5">
@@ -126,7 +130,7 @@ function GroupHeader({ group }: GroupHeaderProps) {
       </span>
       <div className="flex shrink-0 items-center gap-3">
         <span className="text-xs tabular-nums text-muted-foreground">
-          €{group.actual.toFixed(2)} / €{group.budgeted.toFixed(2)}
+          €{formatAmount(group.actual, locale)} / €{formatAmount(group.budgeted, locale)}
         </span>
         {group.budgeted > 0 && (
           <span className={cn("text-xs font-medium tabular-nums", remainingClass)}>
@@ -160,6 +164,8 @@ interface CategoryRowProps {
 }
 
 function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild }: CategoryRowProps) {
+  const t = useTranslations("budget");
+  const locale = useLocale();
   const [noteState, setNoteState] = useState<NoteState>("closed");
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didLongPress   = useRef(false);
@@ -205,11 +211,11 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
 
   const remainingLabel = category.isIncome
     ? remaining > 0
-      ? `€${remaining.toFixed(2)} to go`
-      : `€${Math.abs(remaining).toFixed(2)} over`
+      ? t("remainingToGo", { symbol: "€", amount: formatAmount(remaining, locale) })
+      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) })
     : remaining >= 0
-      ? `€${remaining.toFixed(2)} left`
-      : `€${Math.abs(remaining).toFixed(2)} over`;
+      ? t("remainingLeft", { symbol: "€", amount: formatAmount(remaining, locale) })
+      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) });
 
   return (
     <div className={cn("space-y-2 py-3", isChild ? "pl-7 pr-4" : "px-4")}>
@@ -245,7 +251,7 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
           </Tooltip>
         </div>
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          €{category.actual.toFixed(2)} actual
+          {t("actualAmount", { symbol: "€", amount: formatAmount(category.actual, locale) })}
         </span>
       </div>
 
@@ -264,7 +270,7 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
         <Input
           autoFocus
           type="text"
-          placeholder="Add a note..."
+          placeholder={t("addNotePlaceholder")}
           value={note ?? ""}
           onChange={(e) => onNoteChange(e.target.value)}
           onBlur={() => setNoteState(note ? "preview" : "closed")}
@@ -277,7 +283,7 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
 
       {/* Budget input + remaining */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Budget</span>
+        <span className="text-xs text-muted-foreground">{t("budgetLabel")}</span>
         <div className="relative">
           <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
             €
@@ -303,6 +309,8 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function BudgetContent() {
+  const t = useTranslations("budget");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const now = new Date();
   const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
@@ -436,14 +444,14 @@ export function BudgetContent() {
       {/* Unsaved changes banner — sticky so it's never off-screen on mobile */}
       {hasEdits && (
         <div className="sticky top-0 z-10 -mx-4 flex items-center justify-between gap-3 border-b bg-background/95 px-4 py-2 backdrop-blur-sm">
-          <p className="text-sm text-muted-foreground">Unsaved changes</p>
+          <p className="text-sm text-muted-foreground">{t("unsavedChanges")}</p>
           <Button size="sm" onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
             ) : (
               <Save className="mr-1.5 h-3.5 w-3.5" />
             )}
-            Save
+            {t("saveButton")}
           </Button>
         </div>
       )}
@@ -457,13 +465,13 @@ export function BudgetContent() {
             <Card className="py-0">
               <CardContent className="p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Budgeted Income
+                  {t("budgetedIncome")}
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                  €{data.income.totalBudgeted.toFixed(2)}
+                  €{formatAmount(data.income.totalBudgeted, locale)}
                 </p>
                 <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
-                  €{data.income.totalActual.toFixed(2)} received
+                  {t("received", { amount: `€${formatAmount(data.income.totalActual, locale)}` })}
                 </p>
               </CardContent>
             </Card>
@@ -471,13 +479,13 @@ export function BudgetContent() {
             <Card className="py-0">
               <CardContent className="p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Budgeted Expenses
+                  {t("budgetedExpenses")}
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                  €{data.expense.totalBudgeted.toFixed(2)}
+                  €{formatAmount(data.expense.totalBudgeted, locale)}
                 </p>
                 <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
-                  €{data.expense.totalActual.toFixed(2)} spent
+                  {t("spent", { amount: `€${formatAmount(data.expense.totalActual, locale)}` })}
                 </p>
               </CardContent>
             </Card>
@@ -486,7 +494,7 @@ export function BudgetContent() {
           <Card className="py-0">
             <CardContent className="p-3">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Budget Balance
+                {t("budgetBalance")}
               </p>
               <p
                 className={cn(
@@ -496,12 +504,12 @@ export function BudgetContent() {
                     : "text-red-600 dark:text-red-400"
                 )}
               >
-                €{data.budgetBalance.toFixed(2)}
+                €{formatAmount(data.budgetBalance, locale)}
               </p>
               <p className="mt-0.5 text-[10px] text-muted-foreground">
                 {data.budgetBalance >= 0
-                  ? "Plan is viable — income covers expenses"
-                  : "Plan is not viable — expenses exceed income"}
+                  ? t("planViable")
+                  : t("planNotViable")}
               </p>
             </CardContent>
           </Card>
@@ -509,15 +517,14 @@ export function BudgetContent() {
           {/* ── Category tabs ────────────────────────────────────────── */}
           <Tabs defaultValue="expenses">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="expenses">Expenses</TabsTrigger>
-              <TabsTrigger value="income">Income</TabsTrigger>
+              <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
+              <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="expenses" className="mt-4">
               {data.expense.groups.length === 0 ? (
                 <div className="rounded-lg border p-8 text-center text-muted-foreground">
-                  No expense categories found.{" "}
-                  Add categories in Settings › Categories.
+                  {t("noExpenseCategories")}
                 </div>
               ) : (
                 <div className="divide-y overflow-hidden rounded-lg border">
@@ -529,8 +536,7 @@ export function BudgetContent() {
             <TabsContent value="income" className="mt-4">
               {data.income.groups.length === 0 ? (
                 <div className="rounded-lg border p-8 text-center text-muted-foreground">
-                  No income categories for {year}.{" "}
-                  Add income transactions to see them here.
+                  {t("noIncomeCategories", { year })}
                 </div>
               ) : (
                 <div className="divide-y overflow-hidden rounded-lg border">
@@ -544,12 +550,11 @@ export function BudgetContent() {
           <Card className="py-0">
             <CardContent className="p-3 pb-4">
               <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Planned 50·30·20 Allocation
+                {t("planned503020")}
               </p>
               {data.income.totalBudgeted === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Set income budgets in the Income tab to see how your planned
-                  expenses align with the 50·30·20 rule.
+                  {t("set503020Hint")}
                 </p>
               ) : (
                 <BudgetSplit
@@ -562,7 +567,7 @@ export function BudgetContent() {
         </>
       ) : (
         <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          Failed to load budget data
+          {t("failedToLoad")}
         </div>
       )}
     </div>

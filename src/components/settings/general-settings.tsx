@@ -25,6 +25,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 
 interface Category {
   id: string;
@@ -40,10 +41,22 @@ interface Settings {
 }
 
 export function GeneralSettings() {
+  const t = useTranslations("generalSettings");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [categories, setCategories] = useState<Category[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  function handleLocaleChange(newLocale: string) {
+    // Set the NEXT_LOCALE cookie directly. The next-intl middleware reads
+    // this cookie on every request and makes the locale available to all
+    // Server Components and Client Components. A full page reload is
+    // required so the server re-renders with the new locale's message bundle.
+    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
+    window.location.reload();
+  }
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -115,7 +128,7 @@ export function GeneralSettings() {
   }) {
     return (
       <div className="rounded-lg border p-4">
-        <p className="text-sm text-muted-foreground">Balance</p>
+        <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
         <p
           className={`text-2xl font-bold tabular-nums ${
             balance === 0
@@ -123,7 +136,7 @@ export function GeneralSettings() {
               : "text-amber-600 dark:text-amber-400"
           }`}
         >
-          {formatCurrency(String(balance), "EUR")}
+          {formatCurrency(String(balance), "EUR", locale)}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {balance === 0 ? zeroLabel : nonZeroLabel}
@@ -134,13 +147,31 @@ export function GeneralSettings() {
 
   return (
     <div className="space-y-6">
+      {/* Language */}
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div>
+            <Label>{t("languageLabel")}</Label>
+            <Select value={locale} onValueChange={handleLocaleChange}>
+              <SelectTrigger className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">{t("languageEnglish")}</SelectItem>
+                <SelectItem value="pt">{t("languagePortuguese")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Transfer Category */}
       <Card>
         <CardContent className="space-y-4 p-4">
           <div>
-            <Label>Transfer Category</Label>
+            <Label>{t("transferCategoryLabel")}</Label>
             <p className="mt-1 text-sm text-muted-foreground">
-              Transactions in this category are excluded from summaries and budgets.
+              {t("transferCategoryDescription")}
             </p>
             <Select
               value={settings?.transferCategoryId ?? "none"}
@@ -151,7 +182,7 @@ export function GeneralSettings() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">None</SelectItem>
+                <SelectItem value="none">{tCommon("none")}</SelectItem>
                 {parentCategories.map((parent) => {
                   const children = childCategories.filter((c) => c.parentId === parent.id);
                   if (children.length > 0) {
@@ -178,8 +209,8 @@ export function GeneralSettings() {
           {settings?.transferCategoryId && (
             <BalanceIndicator
               balance={settings.transferBalance}
-              zeroLabel="All transfers are matched."
-              nonZeroLabel="Non-zero balance means some transfers are not matched across accounts."
+              zeroLabel={t("balanceZero")}
+              nonZeroLabel={t("balanceNonZero")}
             />
           )}
         </CardContent>
@@ -189,23 +220,20 @@ export function GeneralSettings() {
       <Card>
         <CardContent className="space-y-4 p-4">
           <div>
-            <Label>Non-tracked Balance</Label>
+            <Label>{t("nonTrackedLabel")}</Label>
             <p className="mt-1 text-sm text-muted-foreground">
-              Combined balance of all non-tracked categories. Should be €0 when all
-              on-behalf-of-others transactions are settled.
+              {t("nonTrackedDescription")}
             </p>
             <p className="mt-2 text-sm">
-              Mark categories as non-tracked in{" "}
               <Link href="/settings/categories" className="underline underline-offset-2">
-                Settings › Categories
+                {t("nonTrackedLink")}
               </Link>
-              .
             </p>
           </div>
           <BalanceIndicator
             balance={settings?.nonTrackedBalance ?? 0}
-            zeroLabel="All non-tracked transactions are settled."
-            nonZeroLabel="Outstanding amount across all non-tracked categories."
+            zeroLabel={t("nonTrackedZero")}
+            nonZeroLabel={t("nonTrackedNonZero")}
           />
         </CardContent>
       </Card>

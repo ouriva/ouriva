@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { SummaryNav } from "@/components/summary/summary-nav";
 import { AnnualSummaryContent } from "@/components/summary/annual-summary-content";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Annual Summary",
@@ -23,10 +24,11 @@ function AnnualSummaryFallback() {
   );
 }
 
-export default function AnnualSummaryPage() {
+export default async function AnnualSummaryPage() {
+  const t = await getTranslations("nav");
   return (
     <div className="space-y-4">
-      <PageHeader title="Summary" />
+      <PageHeader title={t("summary")} />
       <SummaryNav mode="annual" />
       <Suspense fallback={<AnnualSummaryFallback />}>
         <AnnualSummaryContent />

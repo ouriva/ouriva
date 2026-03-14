@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/layout/page-header";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { DeleteTransactionButton } from "@/components/transactions/delete-transaction-button";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Edit Transaction",
@@ -24,6 +25,7 @@ export default async function EditTransactionPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const t = await getTranslations("transactions");
 
   // Fetch directly from the database on the server.
   // No API call needed — Server Components can access the DB directly.
@@ -63,7 +65,7 @@ export default async function EditTransactionPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Edit Transaction">
+      <PageHeader title={t("editTitle")}>
         <DeleteTransactionButton transactionId={id} />
       </PageHeader>
       <TransactionForm initialData={initialData} />

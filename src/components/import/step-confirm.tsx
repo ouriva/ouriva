@@ -8,6 +8,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { formatAmount } from "@/lib/formatters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +23,8 @@ interface StepConfirmProps {
 }
 
 export function StepConfirm({ state, onBack }: StepConfirmProps) {
+  const t = useTranslations("import");
+  const locale = useLocale();
   const router = useRouter();
   const [isImporting, setIsImporting] = useState(false);
   const [result, setResult] = useState<{
@@ -127,9 +131,9 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
       <Card>
         <CardContent className="flex flex-col items-center py-12 text-center">
           <CheckCircle2 className="mb-4 h-16 w-16 text-green-500" />
-          <h3 className="text-xl font-semibold">Import Complete</h3>
+          <h3 className="text-xl font-semibold">{t("successTitle")}</h3>
           <p className="mt-2 text-muted-foreground">
-            {result.imported} transactions imported successfully.
+            {t("successMessage", { count: result.imported ?? 0 })}
           </p>
           <Button
             className="mt-6"
@@ -138,7 +142,7 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
               router.refresh();
             }}
           >
-            View Transactions
+            {t("viewTransactions")}
           </Button>
         </CardContent>
       </Card>
@@ -151,7 +155,7 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
       <Card>
         <CardContent className="flex flex-col items-center py-12 text-center">
           <XCircle className="mb-4 h-16 w-16 text-destructive" />
-          <h3 className="text-xl font-semibold">Import Failed</h3>
+          <h3 className="text-xl font-semibold">{t("errorTitle")}</h3>
           <p className="mt-2 text-sm text-destructive">{result.error}</p>
           <div className="mt-6 flex gap-3">
             <Button variant="outline" onClick={() => setResult(null)}>
@@ -170,19 +174,19 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
   return (
     <Card>
       <CardContent className="space-y-6 p-4">
-        <h3 className="text-lg font-semibold">Import Summary</h3>
+        <h3 className="text-lg font-semibold">{t("summaryTitle")}</h3>
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 gap-4">
           <div className="rounded-lg border p-4 text-center">
             <p className="text-2xl font-bold">{transactions.length}</p>
-            <p className="text-sm text-muted-foreground">Transactions</p>
+            <p className="text-sm text-muted-foreground">{t("statTransactions")}</p>
           </div>
           <div className="rounded-lg border p-4 text-center">
             <p className="text-2xl font-bold">
               {state.duplicateRefs.size}
             </p>
-            <p className="text-sm text-muted-foreground">Skipped duplicates</p>
+            <p className="text-sm text-muted-foreground">{t("statSkipped")}</p>
           </div>
         </div>
 
@@ -191,26 +195,26 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
           {incomeCount > 0 && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">Income</Badge>
+                <Badge variant="secondary">{t("incomeBadge")}</Badge>
                 <span className="text-sm text-muted-foreground">
-                  {incomeCount} transactions
+                  {incomeCount} {t("statTransactions")}
                 </span>
               </div>
               <span className="font-semibold text-green-600">
-                +{totalIncome.toFixed(2)}
+                +{formatAmount(totalIncome, locale)}
               </span>
             </div>
           )}
           {expenseCount > 0 && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Badge variant="secondary">Expense</Badge>
+                <Badge variant="secondary">{t("expenseBadge")}</Badge>
                 <span className="text-sm text-muted-foreground">
-                  {expenseCount} transactions
+                  {expenseCount} {t("statTransactions")}
                 </span>
               </div>
               <span className="font-semibold text-red-600">
-                -{totalExpense.toFixed(2)}
+                −{formatAmount(totalExpense, locale)}
               </span>
             </div>
           )}
@@ -218,7 +222,7 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
 
         {/* File info */}
         <div className="text-xs text-muted-foreground">
-          From: {state.fileName}
+          {t("fromFile", { fileName: state.fileName })}
         </div>
 
         {/* Navigation */}
@@ -232,7 +236,7 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
             className="flex-1"
           >
             {isImporting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Import {transactions.length} Transactions
+            {t("importButton", { count: transactions.length })}
           </Button>
         </div>
       </CardContent>

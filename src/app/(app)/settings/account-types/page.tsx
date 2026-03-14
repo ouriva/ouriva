@@ -1,21 +1,25 @@
 import type { Metadata } from "next";
 import { SimpleSettingsList } from "@/components/settings/simple-settings-list";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Account Types",
 };
 
-const accountTypeFields = [
-  { name: "name", label: "Name", placeholder: "e.g., Checking" },
-];
+export default async function AccountTypesSettingsPage() {
+  const t = await getTranslations("settings");
+  const tCategories = await getTranslations("categories");
 
-export default function AccountTypesSettingsPage() {
+  const accountTypeFields = [
+    { name: "name", label: tCategories("nameLabel"), placeholder: "e.g., Checking" },
+  ];
+
   return (
     <SimpleSettingsList
       apiEndpoint="/api/account-types"
-      title="Account Type"
-      pageTitle="Account Types"
-      pageDescription="Define account classifications"
+      title={t("accountTypesItem")}
+      pageTitle={t("accountTypes")}
+      pageDescription={t("accountTypesDescription")}
       fields={accountTypeFields}
       displayField="name"
     />

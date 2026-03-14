@@ -7,17 +7,19 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/layout/page-header";
 import { ImportWizard } from "@/components/import/import-wizard";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Import Transactions",
 };
 
-export default function ImportTransactionsPage() {
+export default async function ImportTransactionsPage() {
+  const t = await getTranslations("import");
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Import Transactions"
-        description="Import from a CSV or XLSX bank statement"
+        title={t("pageTitle")}
+        description={t("pageDescription")}
       />
       <ImportWizard />
     </div>

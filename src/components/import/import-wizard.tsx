@@ -13,6 +13,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Progress } from "@/components/ui/progress";
 import { StepUpload } from "./step-upload";
 import { StepColumnMapping } from "./step-column-mapping";
@@ -46,12 +47,12 @@ export interface ImportState {
   needsReview: boolean[];
 }
 
-const STEP_LABELS = ["Upload", "Map Columns", "Review", "Confirm"];
-
 export function ImportWizard() {
+  const t = useTranslations("import");
   const [step, setStep] = useState(0);
   const [state, setState] = useState<ImportState | null>(null);
 
+  const STEP_LABELS = [t("stepUpload"), t("stepMapColumns"), t("stepReview"), t("stepConfirm")];
   const progressPercent = ((step + 1) / STEP_LABELS.length) * 100;
 
   return (

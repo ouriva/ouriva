@@ -18,6 +18,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Loader2, Plus, Pencil } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface Field {
   name: string;
@@ -45,6 +46,7 @@ export function SettingsItemForm({
   onSuccess,
   trigger,
 }: SettingsItemFormProps) {
+  const tCommon = useTranslations("common");
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [values, setValues] = useState<Record<string, string>>(
@@ -86,14 +88,14 @@ export function SettingsItemForm({
         {trigger || (
           <Button variant="outline" size="sm">
             <Plus className="mr-2 h-4 w-4" />
-            Add
+            {tCommon("add")}
           </Button>
         )}
       </SheetTrigger>
       <SheetContent side="bottom" className="rounded-t-xl">
         <SheetHeader>
           <SheetTitle>
-            {isEditing ? `Edit ${title}` : `New ${title}`}
+            {isEditing ? tCommon("editItem", { title }) : tCommon("addNew", { title })}
           </SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
@@ -123,13 +125,13 @@ export function SettingsItemForm({
               className="flex-1"
               onClick={() => setIsOpen(false)}
             >
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" className="flex-1" disabled={isSubmitting}>
               {isSubmitting && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              {isEditing ? "Update" : "Create"}
+              {isEditing ? tCommon("updateButton") : tCommon("createButton")}
             </Button>
           </div>
         </form>

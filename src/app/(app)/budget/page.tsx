@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BudgetContent } from "@/components/budget/budget-content";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Budget",
@@ -24,10 +25,11 @@ function BudgetFallback() {
   );
 }
 
-export default function BudgetPage() {
+export default async function BudgetPage() {
+  const t = await getTranslations("nav");
   return (
     <div className="space-y-4">
-      <PageHeader title="Budget" />
+      <PageHeader title={t("budget")} />
       <Suspense fallback={<BudgetFallback />}>
         <BudgetContent />
       </Suspense>

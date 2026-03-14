@@ -18,6 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Loader2, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface DeleteTransactionButtonProps {
   transactionId: string;
@@ -26,6 +27,7 @@ interface DeleteTransactionButtonProps {
 export function DeleteTransactionButton({
   transactionId,
 }: DeleteTransactionButtonProps) {
+  const t = useTranslations("deleteTransaction");
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -45,7 +47,7 @@ export function DeleteTransactionButton({
       router.refresh();
     } catch (error) {
       console.error("Delete error:", error);
-      alert("Failed to delete transaction");
+      alert(t("errorMessage"));
     } finally {
       setIsDeleting(false);
       setIsOpen(false);
@@ -57,20 +59,19 @@ export function DeleteTransactionButton({
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="text-destructive">
           <Trash2 className="h-5 w-5" />
-          <span className="sr-only">Delete transaction</span>
+          <span className="sr-only">{t("ariaLabel")}</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Transaction</DialogTitle>
+          <DialogTitle>{t("dialogTitle")}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this transaction? This action cannot
-            be undone.
+            {t("dialogDescription")}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsOpen(false)}>
-            Cancel
+            {t("cancelButton")}
           </Button>
           <Button
             variant="destructive"
@@ -78,7 +79,7 @@ export function DeleteTransactionButton({
             disabled={isDeleting}
           >
             {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Delete
+            {t("deleteButton")}
           </Button>
         </DialogFooter>
       </DialogContent>
