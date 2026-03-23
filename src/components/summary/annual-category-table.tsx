@@ -6,20 +6,33 @@
 // Rows are clickable: selecting a category highlights the row and
 // updates the chart above (via onSelect) to show that category's
 // monthly breakdown. Clicking the same row again resets to overview.
+//
+// Categories with subcategories show a chevron on the left. Clicking
+// the chevron expands the row to reveal indented subcategory rows,
+// each with their own totals and monthly breakdown. Subcategory rows
+// are also selectable for the chart.
 
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { Fragment, useState } from "react";
+import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
 import { formatAmount } from "@/lib/formatters";
+
+interface Child {
+  id: string;
+  name: string;
+  total: number;
+  months: number[];
+}
 
 interface Category {
   id: string;
   name: string;
   total: number;
   months: number[];
-  children: { id: string; name: string; total: number }[];
+  children: Child[];
 }
 
 interface AnnualCategoryTableProps {
@@ -38,6 +51,21 @@ export function AnnualCategoryTable({
   const locale = useLocale();
   const t = useTranslations("summary");
   const monthLabels = t.raw("monthNames") as string[];
+
+  // Track which parent rows are expanded
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  function toggleExpand(id: string, e: React.MouseEvent) {
+    // Prevent the row click from also firing (chart selection)
+    e.stopPropagation();
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   if (categories.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center text-muted-foreground">
@@ -71,44 +99,101 @@ export function AnnualCategoryTable({
         <tbody>
           {categories.map((category) => {
             const isSelected = selectedId === category.id;
+            const hasChildren = category.children.length > 0;
+            const isExpanded = expandedIds.has(category.id);
 
             return (
-              <tr
-                key={category.id}
-                className={cn(
-                  "border-b transition-colors",
-                  onSelect && "cursor-pointer hover:bg-muted/30",
-                  isSelected && "bg-muted/50"
-                )}
-                onClick={() =>
-                  onSelect?.(isSelected ? null : category.id)
-                }
-              >
-                <td className={cn(
-                  "sticky left-0 px-3 py-2 font-medium transition-colors",
-                  isSelected ? "bg-muted/50" : "bg-background"
-                )}>
-                  {category.id === "__uncategorized__" ? (
-                    <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                      <AlertTriangle className="h-3.5 w-3.5" />
-                      {category.name}
-                    </span>
-                  ) : (
-                    category.name
+              <Fragment key={category.id}>
+                {/* ── Parent row ─────────────────────────────────────────── */}
+                <tr
+                  className={cn(
+                    "border-b transition-colors",
+                    onSelect && "cursor-pointer hover:bg-muted/30",
+                    isSelected && "bg-muted/50"
                   )}
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                  {formatAmount(category.total, locale)}
-                </td>
-                {category.months.map((amount, i) => (
-                  <td
-                    key={i}
-                    className="px-3 py-2 text-right tabular-nums text-muted-foreground"
-                  >
-                    {amount > 0 ? formatAmount(amount, locale) : "—"}
+                  onClick={() => onSelect?.(isSelected ? null : category.id)}
+                >
+                  <td className={cn(
+                    "sticky left-0 px-3 py-2 font-medium transition-colors",
+                    isSelected ? "bg-muted/50" : "bg-background"
+                  )}>
+                    <span className="flex items-center gap-1">
+                      {/* Expand chevron — only shown when children exist */}
+                      {hasChildren ? (
+                        <button
+                          onClick={(e) => toggleExpand(category.id, e)}
+                          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                          aria-label={isExpanded ? "Collapse" : "Expand"}
+                        >
+                          {isExpanded
+                            ? <ChevronDown className="h-3.5 w-3.5" />
+                            : <ChevronRight className="h-3.5 w-3.5" />
+                          }
+                        </button>
+                      ) : (
+                        // Spacer keeps alignment consistent for rows without children
+                        <span className="w-3.5 shrink-0" />
+                      )}
+                      {category.id === "__uncategorized__" ? (
+                        <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          {category.name}
+                        </span>
+                      ) : (
+                        category.name
+                      )}
+                    </span>
                   </td>
-                ))}
-              </tr>
+                  <td className="px-3 py-2 text-right tabular-nums font-semibold">
+                    {formatAmount(category.total, locale)}
+                  </td>
+                  {category.months.map((amount, i) => (
+                    <td
+                      key={i}
+                      className="px-3 py-2 text-right tabular-nums text-muted-foreground"
+                    >
+                      {amount > 0 ? formatAmount(amount, locale) : "—"}
+                    </td>
+                  ))}
+                </tr>
+
+                {/* ── Child rows (shown when expanded) ────────────────────── */}
+                {isExpanded && category.children.map((child) => {
+                  const isChildSelected = selectedId === child.id;
+                  return (
+                    <tr
+                      key={child.id}
+                      className={cn(
+                        "border-b transition-colors",
+                        onSelect && "cursor-pointer hover:bg-muted/30",
+                        isChildSelected && "bg-muted/50"
+                      )}
+                      onClick={() => onSelect?.(isChildSelected ? null : child.id)}
+                    >
+                      <td className={cn(
+                        "sticky left-0 px-3 py-2 transition-colors",
+                        isChildSelected ? "bg-muted/50" : "bg-background"
+                      )}>
+                        {/* Indent: spacer (chevron width) + left padding */}
+                        <span className="flex items-center gap-1 pl-5 text-muted-foreground">
+                          {child.name}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {formatAmount(child.total, locale)}
+                      </td>
+                      {child.months.map((amount, i) => (
+                        <td
+                          key={i}
+                          className="px-3 py-2 text-right tabular-nums text-muted-foreground"
+                        >
+                          {amount > 0 ? formatAmount(amount, locale) : "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </Fragment>
             );
           })}
 

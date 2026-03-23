@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
       name: string;
       total: number;
       months: number[];
-      children: Map<string, { id: string; name: string; total: number }>;
+      children: Map<string, { id: string; name: string; total: number; months: number[] }>;
     };
     const categoryMap = new Map<string, CategoryEntry>();
     const incomeCategoryMap = new Map<string, CategoryEntry>();
@@ -121,9 +121,12 @@ export async function GET(request: NextRequest) {
               id: tx.category.id,
               name: tx.category.name,
               total: 0,
+              months: new Array(12).fill(0),
             });
           }
-          parent.children.get(tx.category.id)!.total += amount;
+          const child = parent.children.get(tx.category.id)!;
+          child.total += amount;
+          child.months[monthIndex] += amount;
         }
       } else {
         // Uncategorized — group under a special bucket
@@ -158,7 +161,11 @@ export async function GET(request: NextRequest) {
           total: Math.round(cat.total * 100) / 100,
           months: cat.months.map((m) => Math.round(m * 100) / 100),
           children: Array.from(cat.children.values())
-            .map((c) => ({ ...c, total: Math.round(c.total * 100) / 100 }))
+            .map((c) => ({
+              ...c,
+              total: Math.round(c.total * 100) / 100,
+              months: c.months.map((m) => Math.round(m * 100) / 100),
+            }))
             .sort((a, b) => b.total - a.total),
         }))
         .sort((a, b) => b.total - a.total);

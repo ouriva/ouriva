@@ -31,7 +31,7 @@ interface AnnualCategoryData {
   name: string;
   total: number;
   months: number[];
-  children: { id: string; name: string; total: number }[];
+  children: { id: string; name: string; total: number; months: number[] }[];
 }
 
 interface AnnualSummary {
@@ -108,12 +108,17 @@ export function AnnualSummaryContent() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   // Resolve the selected category's monthly data for the chart.
-  // Searches both expense and income category arrays.
+  // Searches parent categories first, then subcategories within them.
   const selectedCategoryData = useMemo(() => {
     if (!selectedCategoryId || !data) return undefined;
     const all = [...(data.categories ?? []), ...(data.incomeCategories ?? [])];
-    const cat = all.find((c) => c.id === selectedCategoryId);
-    return cat ? { name: cat.name, months: cat.months } : undefined;
+    const parent = all.find((c) => c.id === selectedCategoryId);
+    if (parent) return { name: parent.name, months: parent.months };
+    for (const cat of all) {
+      const child = cat.children.find((c) => c.id === selectedCategoryId);
+      if (child) return { name: child.name, months: child.months };
+    }
+    return undefined;
   }, [selectedCategoryId, data]);
 
   return (
