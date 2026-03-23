@@ -320,6 +320,32 @@ export async function GET(
       }
     }
 
+    // ── Net off reimbursements — income in expense categories ─────────────
+    // Income transactions assigned to an expense category (e.g. an insurance
+    // reimbursement categorised as "Health") are treated as contra-expenses:
+    //   • They reduce the expense actual → net out-of-pocket cost
+    //   • They are removed from the income actual → not double-counted
+    //
+    // A category is "in expense context" when it has expense transactions or
+    // an expense budget target. Pure income categories (salary, freelance)
+    // are untouched.
+    for (const tx of incomeTransactions) {
+      if (!tx.category) continue;
+      const catId = tx.category.id;
+      if (actualExpenseMap.has(catId) || expenseBudgetMap.has(catId)) {
+        // Reduce expense actual (may go negative if reimbursement > expense)
+        actualExpenseMap.set(catId, (actualExpenseMap.get(catId) ?? 0) - Number(tx.amount));
+        // Remove from income actual so it doesn't show on the income tab
+        const incEntry = actualIncomeMap.get(catId);
+        if (incEntry) {
+          incEntry.total -= Number(tx.amount);
+          if (incEntry.total <= 0) {
+            actualIncomeMap.delete(catId);
+          }
+        }
+      }
+    }
+
     // ── Build grouped category lists ──────────────────────────────────────
     // Expense: seeded from all active leaf categories
     const expenseGroups = buildGroupsFromSeeds(leafCategories, expenseBudgetMap, actualExpenseMap, false);
