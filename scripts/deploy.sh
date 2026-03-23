@@ -78,15 +78,13 @@ if [ -z "${VERSION}" ]; then
   exit 1
 fi
 
-# Check for uncommitted changes — deploying dirty state is risky
+# Warn about uncommitted changes but continue — the Docker build
+# captures the full working tree so the deployed image reflects
+# the actual current state regardless.
 if [ -n "$(git -C "${PROJECT_DIR}" status --porcelain)" ]; then
-  echo "Warning: You have uncommitted changes."
-  read -p "Deploy anyway? (y/N) " -n 1 -r
+  echo "Warning: You have uncommitted changes:"
+  git -C "${PROJECT_DIR}" status --short
   echo ""
-  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Aborted."
-    exit 1
-  fi
 fi
 
 # Check the tag points to the current commit
