@@ -39,9 +39,10 @@ This is a **personal finance application** that replaces an Excel spreadsheet. I
 - Add friendly display names and notes to transactions
 - Flag transactions for review (pending refunds, split bills, suspicious charges)
 - Search and filter transactions by text, type, account, category, date range, or review status
+- Export transactions to CSV (with active filters applied) for use in spreadsheets
 - Organize transactions with hierarchical categories (e.g., Food > Groceries)
-- Set annual budgets per category and track spending against them
-- View monthly and annual summaries with charts
+- Set annual budgets per category and track spending against them; reimbursements (income in an expense category) are automatically netted off the expense actual
+- View monthly and annual summaries with charts; drill into subcategory breakdowns in the annual view
 - Access everything from your phone as a PWA (Progressive Web App)
 
 ### Architecture Overview
@@ -858,6 +859,10 @@ api/
 ├── account-types/
 │   ├── route.ts          → GET, POST
 │   └── [id]/route.ts     → PUT, DELETE
+├── transactions/
+│   ├── route.ts          → GET (list + pagination), POST (create)
+│   ├── [id]/route.ts     → GET, PUT, DELETE
+│   └── export/route.ts   → GET (CSV download, same filters as list)
 ├── budgets/
 │   ├── route.ts          → GET (list), POST (bulk upsert)
 │   └── [year]/route.ts   → GET (budget vs actual)
@@ -1011,7 +1016,17 @@ It then joins categories with their parents to build a hierarchical breakdown:
 }
 ```
 
-Both `categories` (expenses) and `incomeCategories` use the same hierarchical structure. Income breakdown enables the "same category" reimbursement workflow — categorize a reimbursement under the original expense category, and the summary shows the net impact per category.
+Both `categories` (expenses) and `incomeCategories` use the same hierarchical structure. Each category's `children` array now includes a `months: number[]` field (12-element array) alongside the existing `total`, enabling per-month drill-down for subcategories in the annual summary table.
+
+#### `GET /api/transactions/export` — CSV Download
+
+Accepts the same filter query params as `GET /api/transactions` (type, accountId, categoryId, startDate, endDate, search, needsReview) but fetches all matching rows without pagination and returns a `text/csv` file.
+
+Split transactions are expanded to one row per split child — the exported data is flat and directly usable in spreadsheets and pivot tables. Category paths use `Parent > Child` notation.
+
+The response includes a UTF-8 BOM (`\uFEFF`) so Excel auto-detects the encoding without any import wizard step. The `Content-Disposition` filename reflects any active date range: `transactions_2026-01-01_2026-03-31.csv`.
+
+Columns: `Date, Type, Amount, Currency, Description, Category, Account, Notes`
 
 **`bucketBreakdown`** — Totals broken down by `CategoryBucket` value, plus `unclassified` for expenses in categories that have no bucket assignment (including via parent inheritance). This field drives the `BudgetSplit` component's 50/30/20 view. The annual summary API returns the same `bucketBreakdown` field, but aggregated across the full year.
 
@@ -1030,6 +1045,8 @@ Merges budget targets with actual spending. For each category:
 ```
 
 The `percentage` drives the progress bar color: green (<75%), yellow (75-100%), red (>100%).
+
+**Reimbursement netoff**: Income transactions assigned to an expense category (e.g. an insurance reimbursement categorised as "Health") are treated as contra-expenses. The expense `actual` = gross expenses − reimbursements in that category, giving the true out-of-pocket cost. Those same income transactions are excluded from the income tab so they are not double-counted. A category is considered "in expense context" when it has expense transactions or an expense budget target — pure income categories (salary, freelance) are unaffected.
 
 #### `POST /api/budgets` — Bulk Upsert
 
@@ -1522,9 +1539,11 @@ A table with 14 columns: Category (sticky), Total, and 12 months. On mobile, thi
 
 **`sticky` positioning** — The first column has `position: sticky; left: 0`. As you scroll horizontally, it "sticks" to the left edge. This is essential on mobile where the table is wider than the screen.
 
-**Clickable rows for chart drill-down**: Rows are interactive. Clicking a category row highlights it (selected state with a distinct background) and updates the `AnnualBarChart` above to show that category's monthly spending as a single blue line. Clicking the selected row again, or switching tabs, resets the chart back to the overview mode (income vs expense lines). There is no heat map — just row selection driving the chart above.
+**Clickable rows for chart drill-down**: Rows are interactive. Clicking a category row highlights it (selected state with a distinct background) and updates the `AnnualBarChart` above to show that category's monthly spending as a single blue line. Clicking the selected row again, or switching tabs, resets the chart back to the overview mode (income vs expense lines). Subcategory rows are also selectable for the chart.
 
 The selected category name appears in the chart card's title with a "← Overview" reset button alongside it.
+
+**Subcategory expand/collapse**: Category rows that have subcategories show a `ChevronRight` / `ChevronDown` icon on the left of the name. Clicking the chevron expands the row to reveal indented child rows, each with their own annual total and 12-month breakdown. Chevron clicks use `stopPropagation` so they don't also trigger chart selection. Expanded state is tracked in a local `Set<string>` via `useState`. Each child row is also selectable for the chart — the `selectedCategoryData` resolver in `AnnualSummaryContent` searches both parent and child categories when resolving monthly data for the chart.
 
 #### `MonthlySummaryContent` (`src/components/summary/monthly-summary-content.tsx`)
 

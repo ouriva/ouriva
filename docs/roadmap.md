@@ -38,10 +38,15 @@ A boolean `needsReview` flag on transactions for marking items that need attenti
 - "Needs review only" filter toggle in the transaction list
 - Supported during bank statement import (per-row checkbox in step 3)
 
-### 3. CSV Export
-**Priority:** High | **Effort:** Low
+### ~~3. CSV Export~~ (Done — v1.15.0)
 
-"Download CSV" button on the transactions page. Exports transactions matching the current filters (date range, account, category, type). One API endpoint, one button. Builds user trust — data isn't trapped.
+"Export CSV" button in the filter bar of the Transactions page. Exports all transactions matching the current active filters (type, account, category, date range, search, needs-review). Split transactions are expanded to one row per split child for flat, pivot-table-friendly output.
+
+- `GET /api/transactions/export` — same filter params as the list endpoint, no pagination, returns `text/csv`
+- UTF-8 BOM included so Excel auto-detects encoding
+- Filename reflects active date range: `transactions_2026-01-01_2026-03-31.csv`
+- Columns: Date, Type, Amount, Currency, Description, Category (Parent > Child notation), Account, Notes
+- Export button is an `<a download>` link — triggers browser download without any JS fetch
 
 ### 4. Recurring Transactions
 **Priority:** High | **Effort:** Medium
