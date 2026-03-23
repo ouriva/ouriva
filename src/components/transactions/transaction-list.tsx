@@ -34,6 +34,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
+  Download,
   Loader2,
   Search,
   SlidersHorizontal,
@@ -302,6 +303,21 @@ export function TransactionList() {
 
   const activeFilterCount = [accountId, categoryId, startDate, endDate, needsReview].filter(Boolean).length;
 
+  // Build the export URL from the current filter state.
+  // The export endpoint accepts the same params as the list endpoint.
+  const exportUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    if (accountId) params.set("accountId", accountId);
+    if (categoryId) params.set("categoryId", categoryId);
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    if (needsReview) params.set("needsReview", "true");
+    if (urlSearch) params.set("search", urlSearch);
+    const qs = params.toString();
+    return `/api/transactions/export${qs ? `?${qs}` : ""}`;
+  }, [type, accountId, categoryId, startDate, endDate, needsReview, urlSearch]);
+
   function clearFilters() {
     setSearch("");
     router.push("/transactions");
@@ -415,7 +431,7 @@ export function TransactionList() {
           </div>
         )}
 
-        {/* Filters toggle + clear */}
+        {/* Filters toggle + clear + export */}
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -436,6 +452,12 @@ export function TransactionList() {
               {t("clearAll")}
             </Button>
           )}
+          <a href={exportUrl} download aria-label={t("exportAriaLabel")} className="ml-auto">
+            <Button variant="ghost" size="sm">
+              <Download className="mr-2 h-4 w-4" />
+              {t("exportButton")}
+            </Button>
+          </a>
         </div>
       </div>
 

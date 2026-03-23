@@ -77,7 +77,9 @@
     "splitBadge": "Split",
     "reviewBadge": "Review",
     "noDescription": "(no description)",
-    "editTitle": "Edit Transaction"
+    "editTitle": "Edit Transaction",
+    "exportButton": "Export CSV",
+    "exportAriaLabel": "Export transactions as CSV"
   },
   "transactionForm": {
     "typeLabel": "Type",
