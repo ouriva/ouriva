@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const accounts = await prisma.account.findMany({
       where: showAll ? {} : { isActive: true },
       include: { currency: true, accountType: true },
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
 
     return NextResponse.json({ data: accounts });
@@ -44,8 +44,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Place the new account at the end of the list
+    const maxOrder = await prisma.account.aggregate({ _max: { sortOrder: true } });
+    const nextOrder = (maxOrder._max.sortOrder ?? -1) + 1;
+
     const account = await prisma.account.create({
-      data: parsed.data,
+      data: { ...parsed.data, sortOrder: nextOrder },
       include: { currency: true, accountType: true },
     });
 

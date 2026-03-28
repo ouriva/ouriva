@@ -31,6 +31,7 @@ model Account {
   name             String
   initialBalance   Decimal       @default(0) @db.Decimal(12, 2)
   isActive         Boolean       @default(true)
+  sortOrder        Int           @default(0)
   currencyId       String
   accountTypeId    String
   createdAt        DateTime      @default(now())

@@ -29,7 +29,7 @@ export async function GET() {
       prisma.account.findMany({
         where: { isActive: true },
         include: { currency: true, accountType: true },
-        orderBy: { name: "asc" },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       }),
       prisma.transaction.findMany({
         where: {

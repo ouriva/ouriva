@@ -25,7 +25,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Loader2, Pencil, Plus, ToggleLeft, ToggleRight } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Pencil, Plus, ToggleLeft, ToggleRight } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
@@ -35,6 +35,7 @@ interface Account {
   name: string;
   initialBalance: string;
   isActive: boolean;
+  sortOrder: number;
   currency: { id: string; code: string; symbol: string };
   accountType: { id: string; name: string };
 }
@@ -99,6 +100,28 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
     fetchData();
   }
 
+  // Move the active account at `activeIndex` one position up or down.
+  // We swap by array position and then assign clean sequential sortOrder
+  // values (0, 1, 2...), so duplicate DB values never cause a silent no-op.
+  async function move(activeIndex: number, direction: "up" | "down") {
+    const active = accounts.filter((a) => a.isActive);
+    const targetIndex = direction === "up" ? activeIndex - 1 : activeIndex + 1;
+    if (targetIndex < 0 || targetIndex >= active.length) return;
+
+    const reordered = [...active];
+    [reordered[activeIndex], reordered[targetIndex]] = [reordered[targetIndex], reordered[activeIndex]];
+    const updatedActive = reordered.map((a, i) => ({ ...a, sortOrder: i }));
+
+    const inactive = accounts.filter((a) => !a.isActive);
+    setAccounts([...updatedActive, ...inactive]);
+
+    await fetch("/api/accounts/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedActive.map((a) => ({ id: a.id, sortOrder: a.sortOrder }))),
+    });
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -125,7 +148,10 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
 
       <div className="space-y-4">
 
-      {accounts.map((account) => (
+      {accounts.map((account) => {
+        const activeAccounts = accounts.filter((a) => a.isActive);
+        const activeIndex = activeAccounts.findIndex((a) => a.id === account.id);
+        return (
         <Card
           key={account.id}
           className={cn(!account.isActive && "opacity-50")}
@@ -142,6 +168,30 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
               </p>
             </div>
             <div className="flex items-center gap-1">
+              {account.isActive && (
+                <div className="flex flex-col">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-8"
+                    onClick={() => move(activeIndex, "up")}
+                    disabled={activeIndex === 0}
+                    title="Move up"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-8"
+                    onClick={() => move(activeIndex, "down")}
+                    disabled={activeIndex === activeAccounts.length - 1}
+                    title="Move down"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
               <AccountForm
                 currencies={currencies}
                 accountTypes={accountTypes}
@@ -170,7 +220,8 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
             </div>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
       </div>
     </div>
   );

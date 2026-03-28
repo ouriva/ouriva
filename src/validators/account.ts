@@ -12,6 +12,7 @@ export const createAccountSchema = z.object({
 
 export const updateAccountSchema = createAccountSchema.partial().extend({
   isActive: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
 });
 
 export type CreateAccountInput = z.infer<typeof createAccountSchema>;
