@@ -8,11 +8,14 @@
 // with the data already loaded.
 
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Copy } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/layout/page-header";
 import { TransactionForm } from "@/components/transactions/transaction-form";
 import { DeleteTransactionButton } from "@/components/transactions/delete-transaction-button";
+import { Button } from "@/components/ui/button";
 import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
@@ -66,7 +69,18 @@ export default async function EditTransactionPage({
   return (
     <div className="space-y-6">
       <PageHeader title={t("editTitle")}>
-        <DeleteTransactionButton transactionId={id} />
+        <div className="flex items-center gap-1">
+          {/* Duplicate: navigates to /transactions/new with the current id as
+              a `from` param. The new page fetches the source and pre-fills
+              the form, but omits the id so it saves as a brand-new record. */}
+          <Button variant="ghost" size="icon" asChild>
+            <Link href={`/transactions/new?from=${id}`}>
+              <Copy className="h-5 w-5" />
+              <span className="sr-only">Duplicate transaction</span>
+            </Link>
+          </Button>
+          <DeleteTransactionButton transactionId={id} />
+        </div>
       </PageHeader>
       <TransactionForm initialData={initialData} />
     </div>

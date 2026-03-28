@@ -38,6 +38,7 @@ This is a **personal finance application** that replaces an Excel spreadsheet. I
 - Auto-categorize imported transactions using configurable text-matching rules (contains / starts with / exact / regex)
 - Add friendly display names and notes to transactions
 - Flag transactions for review (pending refunds, split bills, suspicious charges)
+- Duplicate an existing transaction — pre-fills a new form with all the source fields (including splits), defaulting the date to today
 - Search and filter transactions by text, type, account, category, date range, or review status
 - Export transactions to CSV (with active filters applied) for use in spreadsheets
 - Organize transactions with hierarchical categories (e.g., Food > Groceries)
@@ -1315,6 +1316,14 @@ Groups transactions by date and displays them with search, filtering, and load-m
 A trash icon that opens a confirmation dialog before deleting.
 
 **Why a confirmation dialog?** Deleting a transaction is destructive (hard-delete, not soft-delete). The dialog prevents accidental deletions from mistaken taps on mobile.
+
+#### Duplicate Transaction
+
+A `Copy` icon button in the edit page header navigates to `/transactions/new?from=<id>`. The new page (`transactions/new/page.tsx`) reads the `from` query param, fetches the source transaction from the database on the server, and passes its fields to `TransactionForm` as `initialData` — but **without** the `id`, so the form submits a POST (create) rather than a PUT (edit).
+
+The date is reset to today because duplicating is most commonly used for a recurring expense that happened again, not to re-create a historical record. All other fields (type, amount, description, friendly name, notes, account, category, splits, exchange rate) are copied verbatim.
+
+**`isEditing` flag**: `TransactionForm` derives create-vs-edit mode from `!!initialData?.id` (not `!!initialData`). This makes it possible to pass pre-filled `initialData` without an `id` and still get a POST — the key that makes duplicate work without duplicating form logic.
 
 #### `CategoryIcon` (`src/components/ui/category-icon.tsx`)
 

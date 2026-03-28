@@ -130,10 +130,14 @@ Implementation:
 
 Show the 3-4 most-used categories at the top of category dropdowns. Can be computed from usage frequency or manually pinned. Saves scrolling on mobile where the dropdown can be long.
 
+### ~~10a. Duplicate Transaction~~ (Done — v1.17.0)
+
+A `Copy` icon button on the transaction detail page that opens `/transactions/new?from=<id>`. The form is pre-filled with all source fields (type, amount, description, splits, etc.), with the date defaulted to today. Submits as a new POST — no extra API endpoint needed.
+
 ### 10. Transaction Templates
 **Priority:** Low | **Effort:** Low
 
-Save frequent transactions as templates: "Coffee, 4.50, Food > Coffee." One tap to create from a template. Like recurring but on-demand, for variable-frequency expenses.
+Save frequent transactions as templates: "Coffee, 4.50, Food > Coffee." One tap to create from a template. Like recurring but on-demand, for variable-frequency expenses. Duplicate (10a above) covers ad-hoc one-off reuse; templates would add named, persistent shortcuts.
 
 ---
 

@@ -64,10 +64,12 @@ interface Category {
   children?: Category[];
 }
 
-// Form data shape for editing — looser than the Zod schema because
-// we build it dynamically on the server. Zod validates on submit.
+// Form data shape for editing or pre-filling (e.g. duplicate) — looser
+// than the Zod schema because we build it dynamically on the server.
+// `id` is optional: when present the form PUTs to that record (edit);
+// when absent the form POSTs a new record (create/duplicate).
 interface TransactionFormData {
-  id: string;
+  id?: string;
   type: "INCOME" | "EXPENSE";
   amount: number;
   description?: string;
@@ -102,7 +104,9 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     () => !!initialData?.splits && initialData.splits.length >= 2
   );
 
-  const isEditing = !!initialData;
+  // True only when we have an existing record's id — a pre-filled form
+  // without an id (e.g. duplicate) still submits as a new POST.
+  const isEditing = !!initialData?.id;
 
   // Initialize react-hook-form with Zod validation.
   // The resolver connects Zod's schema to the form — when the user
