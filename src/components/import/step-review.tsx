@@ -248,6 +248,7 @@ const ReviewRow = memo(function ReviewRow({
 
 export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const t = useTranslations("import");
+  const locale = useLocale();
   const [categories, setCategories] = useState<Category[]>([]);
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<boolean[]>([]);
@@ -260,6 +261,8 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const [autoApplied, setAutoApplied] = useState<boolean[]>([]);
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentBalance, setCurrentBalance] = useState<number | null>(null);
+  const [accountCurrency, setAccountCurrency] = useState<{ code: string; symbol: string } | null>(null);
 
   // Parse rows, generate importRefs, load categories, check duplicates
   useEffect(() => {
@@ -327,11 +330,25 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
 
       setParsedRows(parsed);
 
-      // Step 2: Load categories and auto-categorization rules in parallel
-      const [catRes, rulesRes] = await Promise.all([
+      // Step 2: Load categories, auto-categorization rules, and the account
+      // balance in parallel — all three are independent fetches.
+      const [catRes, rulesRes, balancesRes] = await Promise.all([
         fetch("/api/categories"),
         fetch("/api/category-rules"),
+        fetch("/api/accounts/balances"),
       ]);
+
+      if (balancesRes.ok) {
+        const balancesData = await balancesRes.json();
+        const account = (balancesData.accounts ?? []).find(
+          (a: { id: string; balance: number; currency: { code: string; symbol: string } }) =>
+            a.id === state.accountId
+        );
+        if (account) {
+          setCurrentBalance(account.balance);
+          setAccountCurrency(account.currency);
+        }
+      }
 
       let loadedCategories: Category[] = [];
       let loadedRules: CategoryRuleInput[] = [];
@@ -399,6 +416,17 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
   const duplicateCount = parsedRows.filter((r) =>
     duplicateRefs.has(r.importRef)
   ).length;
+
+  // Net change from the selected rows, using the (possibly user-overridden)
+  // transaction type to determine direction. Recomputes whenever the user
+  // selects/deselects rows or flips a type dropdown.
+  const netChange = useMemo(() => {
+    return parsedRows.reduce((sum, row, i) => {
+      if (!selectedRows[i]) return sum;
+      const abs = Math.abs(row.amount);
+      return transactionTypes[i] === "INCOME" ? sum + abs : sum - abs;
+    }, 0);
+  }, [parsedRows, selectedRows, transactionTypes]);
 
   function toggleAll(checked: boolean) {
     setSelectedRows(
@@ -473,6 +501,31 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
             <Badge variant="destructive">{t("duplicateRows", { count: duplicateCount })}</Badge>
           )}
         </div>
+
+        {/* Balance preview — only shown once the account balance has loaded.
+            netChange recomputes live as the user selects rows or changes types. */}
+        {currentBalance !== null && accountCurrency && (
+          <div className="grid grid-cols-3 gap-2 rounded-lg border bg-muted/40 p-3 text-center text-xs">
+            <div>
+              <p className="text-muted-foreground">{t("balanceCurrent")}</p>
+              <p className="mt-0.5 font-semibold tabular-nums">
+                {accountCurrency.symbol}{formatAmount(currentBalance, locale)}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">{t("balanceChange")}</p>
+              <p className={`mt-0.5 font-semibold tabular-nums ${netChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+                {netChange >= 0 ? "+" : "−"}{accountCurrency.symbol}{formatAmount(Math.abs(netChange), locale)}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground">{t("balanceAfter")}</p>
+              <p className="mt-0.5 font-semibold tabular-nums">
+                {accountCurrency.symbol}{formatAmount(currentBalance + netChange, locale)}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Select all checkbox */}
         <div className="flex items-center gap-2">
