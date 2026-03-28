@@ -5,17 +5,17 @@
 -- For development setup, see database-setup.sql.
 --
 -- Two users are involved in production:
---   - homelab_admin: Runs migrations (CREATE TABLE, ALTER, etc.)
+--   - db_admin:   Runs migrations (CREATE TABLE, ALTER, etc.)
 --     You already have this user. No changes needed to it.
---   - budget_app:    Runs the app (SELECT, INSERT, UPDATE, DELETE)
+--   - budget_app: Runs the app (SELECT, INSERT, UPDATE, DELETE)
 --     This script creates it with restricted permissions.
 --
 -- Prerequisites:
 --   - PostgreSQL server running
---   - Connected as a superuser or admin (e.g., homelab_admin)
+--   - Connected as a superuser or admin (e.g., db_admin)
 --
 -- Usage:
---   psql -U homelab_admin -f database-production.sql
+--   psql -U db_admin -f database-production.sql
 --
 -- After running this script, set your production DATABASE_URL to:
 --   DATABASE_URL="postgresql://budget_app:<password>@<db-host>:5432/personal_finance"
@@ -49,12 +49,12 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO budget_ap
 -- 7. Grant sequence access (needed for UUID generation and defaults)
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO budget_app;
 
--- 8. Auto-grant on future tables created by homelab_admin (via migrations)
---    When you run `prisma migrate deploy` as homelab_admin and new tables
+-- 8. Auto-grant on future tables created by db_admin (via migrations)
+--    When you run `prisma migrate deploy` as db_admin and new tables
 --    are created, budget_app automatically gets CRUD access to them.
-ALTER DEFAULT PRIVILEGES FOR USER homelab_admin IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR USER db_admin IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO budget_app;
-ALTER DEFAULT PRIVILEGES FOR USER homelab_admin IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR USER db_admin IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO budget_app;
 
 -- ============================================================

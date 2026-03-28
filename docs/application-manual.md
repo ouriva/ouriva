@@ -63,7 +63,7 @@ The application follows a **client-server architecture** running in a single Nex
 └─────────┼─────────────────────────────────────────┘
           │ HTTP (JSON)
 ┌─────────┼─────────────────────────────────────────┐
-│         ▼         Raspberry Pi (Docker)            │
+│         ▼         App Server (Docker)              │
 │  ┌─────────────┐                                   │
 │  │  Next.js    │                                   │
 │  │  API Routes │                                   │
@@ -72,7 +72,7 @@ The application follows a **client-server architecture** running in a single Nex
 └─────────┼─────────────────────────────────────────┘
           │ TCP (PostgreSQL protocol)
 ┌─────────┼─────────────────────────────────────────┐
-│         ▼         NUC Server (Docker)              │
+│         ▼         Database Server (Docker)         │
 │  ┌─────────────┐                                   │
 │  │  PostgreSQL │                                   │
 │  │  Database   │                                   │
@@ -80,7 +80,7 @@ The application follows a **client-server architecture** running in a single Nex
 └───────────────────────────────────────────────────┘
 ```
 
-**The request lifecycle**: You tap a button on your phone → the browser sends a `fetch()` request to the Next.js server on the Raspberry Pi → Next.js runs the API route handler → Prisma translates it to SQL → PostgreSQL on the NUC executes the query → the result travels back through the same chain → React renders the updated UI.
+**The request lifecycle**: You tap a button on your phone → the browser sends a `fetch()` request to the Next.js server → Next.js runs the API route handler → Prisma translates it to SQL → PostgreSQL executes the query → the result travels back through the same chain → React renders the updated UI.
 
 ### Why This Stack?
 
@@ -89,7 +89,7 @@ The stack was chosen for these priorities:
 1. **Mobile-first** — Tailwind CSS makes responsive design natural; PWA removes app store friction
 2. **Type safety end-to-end** — TypeScript catches errors at compile time; Zod catches them at runtime; Prisma generates types from the database schema
 3. **Single language** — JavaScript/TypeScript for frontend, backend, and database queries. One language to learn.
-4. **Low resource usage** — Next.js standalone output runs on a Raspberry Pi with ~150MB of Docker image
+4. **Low resource usage** — Next.js standalone output produces a ~150MB Docker image, suitable for modest servers
 5. **Modern patterns** — App Router, Server Components, and React 19 features
 
 ---
@@ -340,7 +340,7 @@ spendtinel/
 │   ├── icons/                    # PWA icons
 │   └── sw.js                     # Compiled service worker (generated)
 ├── scripts/
-│   └── deploy.sh                 # Build + deploy to Raspberry Pi
+│   └── deploy.sh                 # Build + deploy to production server
 ├── docs/                         # Documentation and SQL scripts
 ├── src/proxy.ts                  # Next.js 16 request proxy (replaces middleware.ts)
 ├── next.config.ts                # Next.js + Serwist + next-intl configuration
@@ -482,7 +482,7 @@ export default withSerwist(nextConfig);
 
 **`reactCompiler: true`**: React 19's compiler automatically adds `useMemo`, `useCallback`, and `React.memo` where needed. Before this, developers had to manually optimize re-renders. The compiler does it automatically.
 
-**`output: "standalone"`**: During build, Next.js traces which files the server actually needs (which `node_modules`, which source files) and copies only those into `.next/standalone/`. This produces a ~20MB server instead of the full `node_modules` (~300MB+). Essential for the Raspberry Pi's limited storage and bandwidth.
+**`output: "standalone"`**: During build, Next.js traces which files the server actually needs (which `node_modules`, which source files) and copies only those into `.next/standalone/`. This produces a ~20MB server instead of the full `node_modules` (~300MB+), keeping the Docker image lean.
 
 **`turbopack: {}`**: An empty object that tells Next.js "I know Serwist adds Webpack config, that's fine." Without this, dev mode warns about having a Webpack config but no Turbopack config.
 
@@ -823,7 +823,7 @@ Migrations are versioned SQL scripts that evolve the database schema over time. 
 **Production workflow** (`npx prisma migrate deploy`):
 1. Applies all pending migrations (never generates new ones)
 2. Runs inside the deploy script via SSH tunnel to the production database
-3. Uses `homelab_admin` user (which has DDL privileges)
+3. Uses the migration user (which has DDL privileges)
 
 ### Seed Data (`prisma/seed.ts`)
 
@@ -2209,7 +2209,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}  # From .env on the Pi
+      - DATABASE_URL=${DATABASE_URL}  # From .env on the server
       - NODE_ENV=production
     restart: unless-stopped
     healthcheck:
@@ -2218,7 +2218,7 @@ services:
 
 **`${DATABASE_URL}`** — Docker Compose reads `.env` from the same directory. The `${}` syntax substitutes the value. This keeps credentials out of the compose file.
 
-**`restart: unless-stopped`** — Restarts the container automatically if it crashes or the Pi reboots. It only stays stopped if you explicitly `docker compose down`.
+**`restart: unless-stopped`** — Restarts the container automatically if it crashes or the server reboots. It only stays stopped if you explicitly `docker compose down`.
 
 **Health check** — Docker periodically hits `http://127.0.0.1:3000/` to verify the app is responsive. If 3 checks fail, Docker marks the container as unhealthy. Uses `127.0.0.1` instead of `localhost` because Alpine's DNS resolves `localhost` to IPv6 (`::1`), but Node.js listens on IPv4.
 
@@ -2229,13 +2229,13 @@ A 6-step automated deployment:
 1. **Build** — `docker build` with version tag + `latest` tag
 2. **Migrate** — SSH tunnel to production DB, run `prisma migrate deploy`
 3. **Export** — `docker save | gzip` creates a compressed image file
-4. **Transfer** — `scp` copies the file to the Raspberry Pi
-5. **Load** — `docker load` on the Pi imports the image
+4. **Transfer** — `scp` copies the file to the app server
+5. **Load** — `docker load` on the app server imports the image
 6. **Verify** — Check the container is running and healthy
 
 **Configuration** is read from `.env.production.local` (gitignored):
-- `PI_SSH` — SSH host for the Raspberry Pi
-- `PI_APP_DIR` — Where `docker-compose.yml` lives on the Pi (full path, not `~`)
+- `APP_SSH` — SSH host for the app server
+- `APP_DIR` — Where `docker-compose.yml` lives on the app server (full path, not `~`)
 - `DB_SSH` — SSH host for the database server
 - `MIGRATE_DB_URL` — Connection string through the SSH tunnel
 
@@ -2243,7 +2243,7 @@ A 6-step automated deployment:
 ```bash
 ssh -f -N -L 5433:localhost:5432 "${DB_SSH}"
 ```
-This forwards local port 5433 to the NUC's port 5432 through SSH. Prisma connects to `localhost:5433` which tunnels to the production database securely.
+This forwards local port 5433 to the database server's port 5432 through SSH. Prisma connects to `localhost:5433` which tunnels to the production database securely.
 
 **Git tag versioning**: The script reads the latest git tag (e.g., `v1.0.0`) and uses it as the Docker image tag. Safety checks warn about uncommitted changes and tag/HEAD mismatches.
 
