@@ -1,5 +1,5 @@
 # ============================================================
-# Spendtinel — Multi-stage Docker Build
+# Ouriva — Multi-stage Docker Build
 # ============================================================
 # This Dockerfile produces a minimal production image using
 # Next.js standalone output mode.

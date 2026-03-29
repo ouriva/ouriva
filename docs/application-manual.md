@@ -1,4 +1,4 @@
-# Spendtinel — Application Manual
+# Ouriva — Application Manual
 
 A comprehensive guide to every part of this application: what each technology does, why it was chosen, how the pieces fit together, and what every file in the codebase does.
 
@@ -286,7 +286,7 @@ import { Plus, Trash2, ChevronLeft } from "lucide-react";
 ## 3. Project Structure
 
 ```
-spendtinel/
+ouriva/
 ├── src/                          # All application source code
 │   ├── app/                      # Next.js App Router (pages + API)
 │   │   ├── layout.tsx            # Root layout (HTML shell)
@@ -1866,8 +1866,8 @@ Three things turn a website into a PWA:
 ```typescript
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Spendtinel",
-    short_name: "Spendtinel",
+    name: "Ouriva",
+    short_name: "Ouriva",
     start_url: "/",
     display: "standalone",    // No browser chrome (address bar, tabs)
     background_color: "#09090b",
@@ -1935,7 +1935,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,                    // Enable standalone mode on iOS
     statusBarStyle: "default",       // Black status bar
-    title: "Spendtinel",          // Name under the icon
+    title: "Ouriva",          // Name under the icon
   },
   formatDetection: { telephone: false }, // Don't auto-link phone numbers
   icons: {
@@ -2185,7 +2185,7 @@ CMD ["node", "server.js"]
 services:
   db:
     image: postgres:17-alpine
-    container_name: spendtinel-db
+    container_name: ouriva-db
     ports:
       - "5432:5432"
     environment:
@@ -2193,19 +2193,19 @@ services:
       POSTGRES_USER: budget_app_dev
       POSTGRES_PASSWORD: dev_password_change_me
     volumes:
-      - spendtinel_dev_data:/var/lib/postgresql/data
+      - ouriva_dev_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U budget_app_dev -d personal_finance_dev"]
 ```
 
-**Named volume** (`spendtinel_dev_data`) — Data persists across container restarts. `docker compose down` keeps the volume; `docker compose down -v` deletes it.
+**Named volume** (`ouriva_dev_data`) — Data persists across container restarts. `docker compose down` keeps the volume; `docker compose down -v` deletes it.
 
 **`docker-compose.yml`** — Production deployment:
 
 ```yaml
 services:
   app:
-    image: spendtinel:latest
+    image: ouriva:latest
     ports:
       - "3000:3000"
     environment:

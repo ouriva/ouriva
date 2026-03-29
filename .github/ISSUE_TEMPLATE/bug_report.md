@@ -26,5 +26,5 @@ What actually happened. Include any error messages, screenshots, or console outp
 
 - Browser / device:
 - OS:
-- Spendtinel version (shown in Settings or package.json):
+- Ouriva version (shown in Settings or package.json):
 - Deployment: Docker / dev server / other

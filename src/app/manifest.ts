@@ -19,8 +19,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Spendtinel",
-    short_name: "Spendtinel",
+    name: "Ouriva",
+    short_name: "Ouriva",
     description: "Personal budget tracking and expense management",
     start_url: "/",
     display: "standalone",
@@ -28,12 +28,25 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#09090b",
     icons: [
       {
-        src: "/icons/icon-192.png",
+        src: "/icons/ouriva_transparent_192.png",
         sizes: "192x192",
         type: "image/png",
+        purpose: "any",
       },
       {
-        src: "/icons/icon-512.png",
+        src: "/icons/ouriva_transparent_512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
+      {
+        src: "/icons/ouriva_background_maskable_192.png",
+        sizes: "192x192",
+        type: "image/png",
+        purpose: "maskable",
+      },
+      {
+        src: "/icons/ouriva_background_maskable_512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

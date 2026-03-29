@@ -18,20 +18,24 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Spendtinel",
-    template: "%s | Spendtinel",
+    default: "Ouriva",
+    template: "%s | Ouriva",
   },
   description: "Personal budget tracking with multi-currency support",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Spendtinel",
+    title: "Ouriva",
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
-    apple: "/icons/apple-touch-icon.png",
+    icon: [
+      { url: "/icons/ouriva_transparent_32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/ouriva_transparent_192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/ouriva_background_180.png",
   },
 };
 

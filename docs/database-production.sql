@@ -1,5 +1,5 @@
 -- ============================================================
--- Spendtinel — Production Database Setup Script
+-- Ouriva — Production Database Setup Script
 -- ============================================================
 -- This script creates the PRODUCTION database and user.
 -- For development setup, see database-setup.sql.

@@ -1,14 +1,13 @@
 # ============================================================
-# Spendtinel — Docker Compose (Production)
+# Ouriva — Docker Compose (Production)
 # ============================================================
-# Runs the pre-built app image on the Raspberry Pi.
-# The image is built on your Mac and transferred via deploy.sh.
+# Runs the pre-built app image against an external database.
 #
-# Setup (one-time on the Pi):
-#   1. mkdir ~/spendtinel && cd ~/spendtinel
-#   2. Copy this file: scp docker-compose.yml pi:~/spendtinel/
-#   3. Create .env with your real DATABASE_URL:
-#      echo 'DATABASE_URL=postgresql://budget_app:YOUR_PASS@DB_HOST:5432/personal_finance' > .env
+# Setup (one-time on your server):
+#   1. mkdir ~/ouriva && cd ~/ouriva
+#   2. Copy this file to the server
+#   3. Create .env with your DATABASE_URL:
+#      echo 'DATABASE_URL=postgresql://user:pass@db-host:5432/ouriva' > .env
 #
 # Usage:
 #   Start:    docker compose up -d
@@ -18,14 +17,12 @@
 
 services:
   app:
-    image: spendtinel:latest
+    image: ouriva:latest
     ports:
       - "3000:3000"
     environment:
-      # Read DATABASE_URL from the .env file on the Pi.
-      # Docker Compose automatically loads .env from the same
-      # directory as docker-compose.yml. The ${VAR} syntax
-      # substitutes the value from that file.
+      # DATABASE_URL is read from the .env file in the same directory.
+      # Docker Compose loads .env automatically; ${VAR} substitutes it.
       - DATABASE_URL=${DATABASE_URL}
       - NODE_ENV=production
     restart: unless-stopped

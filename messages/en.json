@@ -48,7 +48,11 @@
     "recent": "Recent",
     "viewAll": "All",
     "noTransactions": "No transactions yet",
-    "addTransaction": "Add"
+    "addTransaction": "Add",
+    "emptyTitle": "Start tracking your finances",
+    "emptySubtitle": "Add your first account to see your balances, track spending, and build your financial picture.",
+    "emptyAddAccount": "Add account",
+    "onTrack": "On track"
   },
   "transactions": {
     "pageTitle": "Transactions",

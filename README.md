@@ -1,8 +1,8 @@
-# Spendtinel
+# Ouriva
 
 > Privacy-first personal finance tracking. Your data stays on your server.
 
-Spendtinel is a mobile-first PWA for tracking multi-currency bank accounts, categorizing transactions, setting annual budgets, and reviewing monthly/annual summaries. Built for self-hosters who want full control over their financial data.
+Ouriva is a mobile-first PWA for tracking multi-currency bank accounts, categorizing transactions, setting annual budgets, and reviewing monthly/annual summaries. Built for self-hosters who want full control over their financial data.
 
 ## Features
 
@@ -30,8 +30,8 @@ Spendtinel is a mobile-first PWA for tracking multi-currency bank accounts, cate
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/spendtinel.git
-cd spendtinel
+git clone https://github.com/your-org/ouriva.git
+cd ouriva
 ```
 
 ### 2. Configure environment
@@ -43,7 +43,7 @@ cp .env.example .env
 Edit `.env` and set your `DATABASE_URL`:
 
 ```
-DATABASE_URL="postgresql://db_user:db_password@db_host:5432/spendtinel"
+DATABASE_URL="postgresql://db_user:db_password@db_host:5432/ouriva"
 ```
 
 ### 3. Run database migrations
@@ -148,8 +148,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-Spendtinel is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).
+Ouriva is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).
 
-You are free to self-host, modify, and distribute Spendtinel under the terms of the AGPL-3.0. If you offer Spendtinel as a hosted service, you must release any modifications under the same license.
+You are free to self-host, modify, and distribute Ouriva under the terms of the AGPL-3.0. If you offer Ouriva as a hosted service, you must release any modifications under the same license.
 
-For commercial licensing (e.g., proprietary modifications or SaaS without AGPL obligations), contact [hello@spendtinel.com](mailto:hello@spendtinel.com).
+For commercial licensing (e.g., proprietary modifications or SaaS without AGPL obligations), contact [hello@ouriva.app](mailto:hello@ouriva.app).

@@ -1,0 +1,56 @@
+# ============================================================
+# Ouriva — Docker Compose (All-in-One Example)
+# ============================================================
+# This file runs both the app and a PostgreSQL database on a
+# single server. Ideal for getting started quickly.
+#
+# Quick start:
+#   1. Copy this file:
+#        cp docker-compose.example.yml docker-compose.yml
+#   2. Change the passwords below (search for CHANGE_ME)
+#   3. Run:
+#        docker compose up -d
+#   4. Run migrations on first start:
+#        docker compose exec app npx prisma migrate deploy
+#   5. Open http://localhost:3000
+#
+# For HTTPS, put a reverse proxy (Caddy recommended) in front:
+#   https://caddyserver.com/docs/quick-starts/reverse-proxy
+# ============================================================
+
+services:
+  app:
+    image: ghcr.io/your-org/ouriva:latest  # or build: . to build locally
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://ouriva:CHANGE_ME_APP_PASSWORD@db:5432/ouriva
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ouriva
+      POSTGRES_USER: ouriva
+      POSTGRES_PASSWORD: CHANGE_ME_APP_PASSWORD
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ouriva -d ouriva"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:

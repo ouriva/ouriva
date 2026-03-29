@@ -1,6 +1,6 @@
-# Contributing to Spendtinel
+# Contributing to Ouriva
 
-Thank you for considering a contribution to Spendtinel.
+Thank you for considering a contribution to Ouriva.
 
 ## Contributor License Agreement
 

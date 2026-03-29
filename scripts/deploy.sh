@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ============================================================
-# Spendtinel — Deploy Script
+# Ouriva — Deploy Script
 # ============================================================
 # Builds the Docker image on your Mac, runs production database
 # migrations, transfers the image to the Raspberry Pi, and
@@ -66,7 +66,7 @@ done
 # current branch (e.g. "v1.0.0"). If no tags exist, the script
 # exits with an error prompting you to create one.
 
-IMAGE_NAME="spendtinel"
+IMAGE_NAME="ouriva"
 VERSION=$(git -C "${PROJECT_DIR}" describe --tags --abbrev=0 2>/dev/null || true)
 
 if [ -z "${VERSION}" ]; then
@@ -102,7 +102,7 @@ if [ "${TAG_COMMIT}" != "${HEAD_COMMIT}" ]; then
   fi
 fi
 
-echo "=== Spendtinel Deploy — ${VERSION} ==="
+echo "=== Ouriva Deploy — ${VERSION} ==="
 echo ""
 
 # ----------------------------------------------------------
@@ -157,8 +157,8 @@ echo ""
 # ----------------------------------------------------------
 echo "[3/6] Exporting Docker image..."
 # Save both tags so the Pi has version + latest
-docker save "${IMAGE_NAME}:${VERSION}" "${IMAGE_NAME}:latest" | gzip > /tmp/spendtinel-image.tar.gz
-IMAGE_SIZE=$(du -h /tmp/spendtinel-image.tar.gz | cut -f1)
+docker save "${IMAGE_NAME}:${VERSION}" "${IMAGE_NAME}:latest" | gzip > /tmp/ouriva-image.tar.gz
+IMAGE_SIZE=$(du -h /tmp/ouriva-image.tar.gz | cut -f1)
 echo "      Image saved (${IMAGE_SIZE})."
 echo ""
 
@@ -166,7 +166,7 @@ echo ""
 # Step 4: Transfer to the Raspberry Pi
 # ----------------------------------------------------------
 echo "[4/6] Transferring image to Raspberry Pi..."
-scp /tmp/spendtinel-image.tar.gz "${PI_SSH}:/tmp/spendtinel-image.tar.gz"
+scp /tmp/ouriva-image.tar.gz "${PI_SSH}:/tmp/ouriva-image.tar.gz"
 echo "      Transfer complete."
 echo ""
 
@@ -176,8 +176,8 @@ echo ""
 echo "[5/6] Loading image and restarting app on Pi..."
 ssh "${PI_SSH}" bash -s << REMOTE_COMMANDS
   echo "      Loading Docker image..."
-  docker load < /tmp/spendtinel-image.tar.gz
-  rm /tmp/spendtinel-image.tar.gz
+  docker load < /tmp/ouriva-image.tar.gz
+  rm /tmp/ouriva-image.tar.gz
 
   echo "      Restarting app..."
   cd "${PI_APP_DIR}" && docker compose up -d
@@ -185,7 +185,7 @@ ssh "${PI_SSH}" bash -s << REMOTE_COMMANDS
 REMOTE_COMMANDS
 
 # Clean up local temp file
-rm /tmp/spendtinel-image.tar.gz
+rm /tmp/ouriva-image.tar.gz
 
 # ----------------------------------------------------------
 # Step 6: Verify
@@ -193,7 +193,7 @@ rm /tmp/spendtinel-image.tar.gz
 echo ""
 echo "[6/6] Verifying deployment..."
 sleep 3
-ssh "${PI_SSH}" "docker ps --filter name=spendtinel --format 'table {{.Image}}\t{{.Status}}\t{{.Ports}}'"
+ssh "${PI_SSH}" "docker ps --filter name=ouriva --format 'table {{.Image}}\t{{.Status}}\t{{.Ports}}'"
 
 echo ""
 echo "=== Deploy complete! Version: ${VERSION} ==="

@@ -22,7 +22,7 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   BarChart3,
-  Wallet,
+  Target,
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -52,7 +52,7 @@ export function BottomNav() {
     {
       label: t("budget"),
       href: "/budget",
-      icon: Wallet,
+      icon: Target,
     },
     {
       label: t("settings"),

@@ -1,4 +1,4 @@
-# Spendtinel — Feature Roadmap
+# Ouriva — Feature Roadmap
 
 Prioritized list of planned features. Ordered by impact vs effort within each tier.
 
@@ -154,6 +154,6 @@ Use cases:
 - "Am I on track with my budget this month?"
 - "Create an expense for the 45 EUR dinner yesterday"
 
-This would make Spendtinel the first personal finance app with AI agent support. Strong differentiator for the developer/early-adopter audience. Build on the existing REST API — the MCP server is essentially a wrapper that translates natural language tool calls into API requests.
+This would make Ouriva the first personal finance app with AI agent support. Strong differentiator for the developer/early-adopter audience. Build on the existing REST API — the MCP server is essentially a wrapper that translates natural language tool calls into API requests.
 
 When WebMCP (browser-based MCP) matures, this can be extended to allow agents to interact through the web UI directly.

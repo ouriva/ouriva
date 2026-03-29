@@ -19,7 +19,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Plus } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Landmark, Plus } from "lucide-react";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -163,7 +163,14 @@ export function DashboardContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t(getGreetingKey())}</h1>
-          <p className="text-sm text-muted-foreground">{getMonthYear(locale)}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">{getMonthYear(locale)}</p>
+            {!isLoading && monthly && monthly.net > 0 && (
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                {t("onTrack")}
+              </span>
+            )}
+          </div>
         </div>
         <Button variant="outline" size="sm" asChild>
           <Link href="/transactions/new">
@@ -173,11 +180,27 @@ export function DashboardContent() {
         </Button>
       </div>
 
+      {/* ── Empty state — shown when no accounts exist yet ───────────────── */}
+      {!isLoading && balances.length === 0 && (
+        <div className="rounded-2xl border-2 border-dashed p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+            <Landmark className="h-7 w-7 text-primary" />
+          </div>
+          <h2 className="text-lg font-semibold">{t("emptyTitle")}</h2>
+          <p className="mx-auto mt-1.5 max-w-[260px] text-sm text-muted-foreground">
+            {t("emptySubtitle")}
+          </p>
+          <Button className="mt-5" asChild>
+            <Link href="/settings/accounts">{t("emptyAddAccount")}</Link>
+          </Button>
+        </div>
+      )}
+
       {/* ── 2. Net Worth Hero ────────────────────────────────────────────── */}
       {isLoading ? (
         <Skeleton className="h-28 w-full rounded-2xl" />
       ) : balances.length > 0 ? (
-        <div className="rounded-2xl bg-gradient-to-br from-zinc-800 to-zinc-950 p-5 text-white shadow-lg">
+        <div className="rounded-2xl bg-gradient-to-br from-zinc-800 to-amber-950 p-5 text-white shadow-lg">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
             {t("netWorth")}
           </p>

@@ -1,5 +1,5 @@
 # ============================================================
-# Spendtinel — Dev Database (Local Docker)
+# Ouriva — Dev Database (Local Docker)
 # ============================================================
 # Runs a PostgreSQL instance on your Mac for development.
 # No SSH tunnels needed — the database runs locally.
@@ -10,9 +10,9 @@
 #   Reset:    docker compose -f docker-compose.dev.yml down -v
 #             (the -v flag deletes the volume, wiping all data)
 #   Logs:     docker compose -f docker-compose.dev.yml logs -f
-#   psql:     docker exec -it spendtinel-db psql -U budget_app_dev -d personal_finance_dev
+#   psql:     docker exec -it ouriva-db psql -U budget_app_dev -d personal_finance_dev
 #
-# Data is persisted in a Docker volume (spendtinel_dev_data).
+# Data is persisted in a Docker volume (ouriva_dev_data).
 # Stopping the container does NOT delete your data. Only
 # `down -v` removes the volume and wipes the database.
 # ============================================================
@@ -20,7 +20,7 @@
 services:
   db:
     image: postgres:17-alpine
-    container_name: spendtinel-db
+    container_name: ouriva-db
     ports:
       # Expose on port 5432 (default PostgreSQL port)
       - "5432:5432"
@@ -35,7 +35,7 @@ services:
     volumes:
       # Named volume — persists data across container restarts.
       # Docker manages the storage location automatically.
-      - spendtinel_dev_data:/var/lib/postgresql/data
+      - ouriva_dev_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U budget_app_dev -d personal_finance_dev"]
       interval: 10s
@@ -43,4 +43,4 @@ services:
       retries: 5
 
 volumes:
-  spendtinel_dev_data:
+  ouriva_dev_data:

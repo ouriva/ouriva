@@ -48,7 +48,11 @@
     "recent": "Recentes",
     "viewAll": "Ver todas",
     "noTransactions": "Sem transações ainda",
-    "addTransaction": "Adicionar"
+    "addTransaction": "Adicionar",
+    "emptyTitle": "Comece a gerir as suas finanças",
+    "emptySubtitle": "Adicione a sua primeira conta para ver os seus saldos, acompanhar despesas e construir o seu quadro financeiro.",
+    "emptyAddAccount": "Adicionar conta",
+    "onTrack": "No caminho certo"
   },
   "transactions": {
     "pageTitle": "Transações",
