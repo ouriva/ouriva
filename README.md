@@ -1,6 +1,6 @@
 # Ouriva
 
-[![CI](https://github.com/your-org/ouriva/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/ouriva/actions/workflows/ci.yml)
+[![CI](https://github.com/ouriva/ouriva/actions/workflows/ci.yml/badge.svg)](https://github.com/ouriva/ouriva/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
 > Privacy-first personal finance tracking. Your data stays on your server.
@@ -33,7 +33,7 @@ Ouriva is a mobile-first PWA for tracking multi-currency bank accounts, categori
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-org/ouriva.git
+git clone https://github.com/ouriva/ouriva.git
 cd ouriva
 ```
 
