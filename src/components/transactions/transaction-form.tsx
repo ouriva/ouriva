@@ -215,8 +215,14 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     loadData();
   }, []);
 
-  // Form submission handler
-  async function onSubmit(data: CreateTransactionInput) {
+  // Form submission handler.
+  // The form generic is CreateTransactionFormInput (pre-coercion / z.input types)
+  // so TypeScript sees e.g. date as unknown. The zodResolver has already run Zod
+  // validation and coercion by the time this function is called, so the values
+  // are actually the post-coercion CreateTransactionInput shape at runtime.
+  // We cast here to get correct types for the API payload.
+  async function onSubmit(rawData: CreateTransactionFormInput) {
+    const data = rawData as unknown as CreateTransactionInput;
     setIsSubmitting(true);
     try {
       const url = isEditing
