@@ -83,7 +83,12 @@ export function SettingsItemForm({
   }
 
   return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+    <Sheet open={isOpen} onOpenChange={(open) => {
+      setIsOpen(open);
+      // Always reset to the current prop values when opening so the form
+      // shows fresh data even if initialValues changed since last mount.
+      if (open) setValues(initialValues || {});
+    }}>
       <SheetTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">

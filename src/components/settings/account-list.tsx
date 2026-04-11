@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -63,33 +63,34 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [accountTypes, setAccountTypes] = useState<AccountType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const [accRes, curRes, typeRes] = await Promise.all([
-      fetch("/api/accounts?all=true"),
-      fetch("/api/currencies"),
-      fetch("/api/account-types"),
-    ]);
-
-    if (accRes.ok) {
-      const data = await accRes.json();
-      setAccounts(data.data);
-    }
-    if (curRes.ok) {
-      const data = await curRes.json();
-      setCurrencies(data.data);
-    }
-    if (typeRes.ok) {
-      const data = await typeRes.json();
-      setAccountTypes(data.data);
-    }
-    setIsLoading(false);
-  }, []);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let cancelled = false;
+    async function load() {
+      const [accRes, curRes, typeRes] = await Promise.all([
+        fetch("/api/accounts?all=true"),
+        fetch("/api/currencies"),
+        fetch("/api/account-types"),
+      ]);
+      if (cancelled) return;
+      if (accRes.ok) {
+        const data = await accRes.json();
+        setAccounts(data.data);
+      }
+      if (curRes.ok) {
+        const data = await curRes.json();
+        setCurrencies(data.data);
+      }
+      if (typeRes.ok) {
+        const data = await typeRes.json();
+        setAccountTypes(data.data);
+      }
+      setIsLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [refreshKey]);
 
   async function toggleActive(account: Account) {
     await fetch(`/api/accounts/${account.id}`, {
@@ -97,7 +98,7 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !account.isActive }),
     });
-    fetchData();
+    setRefreshKey((k) => k + 1);
   }
 
   // Move the active account at `activeIndex` one position up or down.
@@ -142,7 +143,7 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
         <AccountForm
           currencies={currencies}
           accountTypes={accountTypes}
-          onSuccess={fetchData}
+          onSuccess={() => setRefreshKey((k) => k + 1)}
         />
       </div>
 
@@ -196,7 +197,7 @@ export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
                 currencies={currencies}
                 accountTypes={accountTypes}
                 account={account}
-                onSuccess={fetchData}
+                onSuccess={() => setRefreshKey((k) => k + 1)}
                 trigger={
                   <Button variant="ghost" size="sm">
                     <Pencil className="mr-1 h-4 w-4" />

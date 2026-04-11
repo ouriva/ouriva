@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,24 +78,28 @@ export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesL
   const [rules, setRules]           = useState<CategoryRule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const [rulesRes, catRes] = await Promise.all([
-      fetch("/api/category-rules"),
-      fetch("/api/categories"),
-    ]);
-    if (rulesRes.ok) setRules((await rulesRes.json()).data);
-    if (catRes.ok)   setCategories((await catRes.json()).data);
-    setIsLoading(false);
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const [rulesRes, catRes] = await Promise.all([
+        fetch("/api/category-rules"),
+        fetch("/api/categories"),
+      ]);
+      if (cancelled) return;
+      if (rulesRes.ok) setRules((await rulesRes.json()).data);
+      if (catRes.ok)   setCategories((await catRes.json()).data);
+      setIsLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [refreshKey]);
 
   async function deleteRule(id: string) {
     if (!confirm(t("deleteConfirm"))) return;
     await fetch(`/api/category-rules/${id}`, { method: "DELETE" });
-    fetchData();
+    setRefreshKey((k) => k + 1);
   }
 
   if (isLoading) {
@@ -116,7 +120,7 @@ export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesL
             <p className="text-sm text-muted-foreground">{pageDescription}</p>
           )}
         </div>
-        <RuleForm categories={categories} onSuccess={fetchData} />
+        <RuleForm categories={categories} onSuccess={() => setRefreshKey((k) => k + 1)} />
       </div>
 
       {/* Rules list */}
@@ -153,7 +157,7 @@ export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesL
                   <RuleForm
                     categories={categories}
                     rule={rule}
-                    onSuccess={fetchData}
+                    onSuccess={() => setRefreshKey((k) => k + 1)}
                     trigger={
                       <Button variant="ghost" size="sm">
                         <Pencil className="mr-1 h-4 w-4" />

@@ -130,6 +130,10 @@ export const transactionQuerySchema = z.object({
 // --- Inferred types ---
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
+// Form input type: uses z.input to capture pre-coercion types (e.g. date as string).
+// The HTML date input produces a "yyyy-MM-dd" string; z.coerce.date() handles
+// the conversion to Date on submit. The form itself works with strings.
+export type CreateTransactionFormInput = z.input<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type TransactionQuery = z.infer<typeof transactionQuerySchema>;
 export type SplitEntry = z.infer<typeof splitEntrySchema>;

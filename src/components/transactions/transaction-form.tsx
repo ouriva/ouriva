@@ -23,9 +23,11 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { type Path } from "react-hook-form";
 import {
   createTransactionSchema,
   type CreateTransactionInput,
+  type CreateTransactionFormInput,
   type SplitEntry,
 } from "@/validators/transaction";
 import { Button } from "@/components/ui/button";
@@ -118,13 +120,13 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     setValue,      // programmatically set a field's value
     control,       // passed to useFieldArray to share form state
     formState: { errors }, // validation errors per field
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } = useForm<CreateTransactionInput>({
-    resolver: zodResolver(createTransactionSchema) as any,
+  } = useForm<CreateTransactionFormInput>({
+    resolver: zodResolver(createTransactionSchema),
     // Date is formatted as yyyy-MM-dd string for <input type="date">.
-    // Cast needed because the Zod schema types date as Date, but
+    // CreateTransactionFormInput uses z.input types (pre-coercion), so
+    // date is string | number | Date here, matching what the input produces.
     // z.coerce.date() handles the string→Date conversion on submit.
-    defaultValues: (initialData
+    defaultValues: initialData
       ? {
           ...initialData,
           date: format(initialData.date, "yyyy-MM-dd"),
@@ -142,7 +144,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
           categoryId: undefined,
           exchangeRate: undefined,
           splits: [],
-        }) as any,
+        },
   });
 
   // useFieldArray manages the dynamic list of split rows.
@@ -164,6 +166,15 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
     !!defaultCurrency &&
     !!selectedAccount &&
     selectedAccount.currency.code !== defaultCurrency.code;
+
+  // When the account switches back to the default currency, clear any
+  // leftover exchange rate value so it doesn't fail Zod validation.
+  useEffect(() => {
+    if (!showExchangeRate) {
+      setValue("exchangeRate" as Path<CreateTransactionFormInput>, undefined);
+    }
+  }, [showExchangeRate, setValue]);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const splitValues = watch("splits" as any) as { categoryId: string; amount: number }[] | undefined;
 
@@ -305,13 +316,13 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   function handleToggleSplitMode() {
     if (!isSplitMode) {
       // Entering split mode — seed with 2 empty rows to guide the user
-      setValue("splits" as any, [
+      setValue("splits" as Path<CreateTransactionFormInput>, [
         { categoryId: "", amount: 0 },
         { categoryId: "", amount: 0 },
-      ] as any);
+      ]);
     } else {
       // Leaving split mode — clear the splits array
-      setValue("splits" as any, [] as any);
+      setValue("splits" as Path<CreateTransactionFormInput>, []);
     }
     setIsSplitMode((prev) => !prev);
   }
@@ -447,7 +458,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             inputMode="decimal"
             placeholder={t("exchangeRatePlaceholder")}
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            {...register("exchangeRate" as any, { valueAsNumber: true })}
+            {...register("exchangeRate" as any, { setValueAs: (v: string) => v === "" ? undefined : Number(v) })}
             className="mt-2 tabular-nums"
           />
           <p className="mt-1 text-xs text-muted-foreground">
@@ -482,7 +493,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                   <CategorySelect
                     value={(splitValues?.[index]?.categoryId) || ""}
                     onChange={(v) =>
-                      setValue(`splits.${index}.categoryId` as any, v as any)
+                      setValue(`splits.${index}.categoryId` as Path<CreateTransactionFormInput>, v)
                     }
                     placeholder="Category"
                   />
@@ -495,7 +506,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                   min="0.01"
                   inputMode="decimal"
                   placeholder="0.00"
-                  {...register(`splits.${index}.amount` as any, {
+                  {...register(`splits.${index}.amount` as Path<CreateTransactionFormInput>, {
                     valueAsNumber: true,
                   })}
                   className="w-28 tabular-nums"
@@ -521,7 +532,7 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
               variant="outline"
               size="sm"
               className="w-full"
-              onClick={() => appendSplit({ categoryId: "", amount: 0 } as any)}
+              onClick={() => appendSplit({ categoryId: "", amount: 0 })}
             >
               <Plus className="mr-2 h-4 w-4" />
               {t("addCategoryButton")}

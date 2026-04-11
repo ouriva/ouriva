@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,20 +53,22 @@ export function SimpleSettingsList({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const res = await fetch(apiEndpoint);
-    if (res.ok) {
-      const data = await res.json();
-      setItems(data.data);
-    }
-    setIsLoading(false);
-  }, [apiEndpoint]);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let cancelled = false;
+    async function load() {
+      const res = await fetch(apiEndpoint);
+      if (cancelled) return;
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data.data);
+      }
+      setIsLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [apiEndpoint, refreshKey]);
 
   async function handleSetDefault(id: string) {
     if (!setDefaultAction) return;
@@ -76,7 +78,7 @@ export function SimpleSettingsList({
       alert(error.error?.message || tCommon("failedToSetDefault"));
       return;
     }
-    fetchData();
+    setRefreshKey((k) => k + 1);
   }
 
   async function handleDelete(id: string) {
@@ -88,7 +90,7 @@ export function SimpleSettingsList({
       alert(error.error?.message || tCommon("failedToDelete"));
       return;
     }
-    fetchData();
+    setRefreshKey((k) => k + 1);
   }
 
   if (isLoading) {
@@ -112,7 +114,7 @@ export function SimpleSettingsList({
           title={title}
           fields={fields}
           apiEndpoint={apiEndpoint}
-          onSuccess={fetchData}
+          onSuccess={() => setRefreshKey((k) => k + 1)}
           trigger={
             <Button variant="outline" size="sm">
               <Plus className="mr-2 h-4 w-4" />
@@ -171,7 +173,7 @@ export function SimpleSettingsList({
                   initialValues={initialValues}
                   apiEndpoint={apiEndpoint}
                   itemId={item.id}
-                  onSuccess={fetchData}
+                  onSuccess={() => setRefreshKey((k) => k + 1)}
                   trigger={
                     <Button variant="ghost" size="sm">
                       {tCommon("edit")}

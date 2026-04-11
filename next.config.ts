@@ -31,6 +31,7 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  devIndicators: false,
   // Silence the "webpack config with no turbopack config" error.
   // Serwist injects a webpack config for building the service worker,
   // but dev mode uses Turbopack (where Serwist is disabled anyway).

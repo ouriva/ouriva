@@ -16,7 +16,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -315,20 +315,22 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
   const [isLoading,        setIsLoading]        = useState(true);
   const [expanded,         setExpanded]         = useState<Set<string>>(new Set());
   const [editingCategory,  setEditingCategory]  = useState<Category | null>(null);
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const res = await fetch("/api/categories?all=true");
-    if (res.ok) {
-      const data = await res.json();
-      setCategories(data.data);
-    }
-    setIsLoading(false);
-  }, []);
+  const [refreshKey,       setRefreshKey]       = useState(0);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    let cancelled = false;
+    async function load() {
+      const res = await fetch("/api/categories?all=true");
+      if (cancelled) return;
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.data);
+      }
+      setIsLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [refreshKey]);
 
   function toggleExpand(id: string) {
     setExpanded((prev) => {
@@ -374,7 +376,7 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
             title={t("categoryFormTitle")}
             fields={nameField}
             apiEndpoint="/api/categories"
-            onSuccess={fetchData}
+            onSuccess={() => setRefreshKey((k) => k + 1)}
           />
         </div>
 
@@ -445,7 +447,7 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
                     fields={nameField}
                     initialValues={{ parentId: parent.id }}
                     apiEndpoint="/api/categories"
-                    onSuccess={fetchData}
+                    onSuccess={() => setRefreshKey((k) => k + 1)}
                     trigger={
                       <Button variant="ghost" size="icon" className="h-8 w-8">
                         <Plus className="h-4 w-4" />
@@ -496,7 +498,7 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
         <CategoryEditSheet
           category={editingCategory}
           isGroupDefault={(editingCategory.children?.length ?? 0) > 0}
-          onSave={fetchData}
+          onSave={() => setRefreshKey((k) => k + 1)}
           onClose={() => setEditingCategory(null)}
         />
       )}
