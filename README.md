@@ -63,6 +63,20 @@ docker compose up -d
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## Security
+
+Ouriva is designed as a **single-user, self-hosted application with no built-in authentication**. All API routes are accessible to anyone who can reach the server.
+
+This is intentional: the app is meant to run on your own server, behind your own access controls. It is not designed to be exposed directly to the public internet.
+
+**Before exposing Ouriva to the internet, you must add an authentication layer.** Recommended options:
+
+- **Reverse proxy with HTTP Basic Auth** (e.g. Nginx or Caddy) — simplest option for a single user
+- **VPN** (e.g. Tailscale or WireGuard) — access your server privately without opening any ports
+- **SSO/forward auth** (e.g. Authelia, Authentik) — if you run other self-hosted services
+
+Running Ouriva without any access control on a public IP will expose your financial data to anyone.
+
 ## Development Setup
 
 ### Prerequisites
