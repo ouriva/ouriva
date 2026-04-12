@@ -40,7 +40,7 @@ cd ouriva
 ### 2. Configure environment
 
 ```bash
-cp .env.example .env
+cp .env.production.example .env
 ```
 
 Edit `.env` and set your `DATABASE_URL`:

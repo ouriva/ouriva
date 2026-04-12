@@ -17,6 +17,7 @@
 
 services:
   app:
+    build: .
     image: ouriva:latest
     ports:
       - "3000:3000"
