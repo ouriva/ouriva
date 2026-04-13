@@ -116,7 +116,7 @@ export function AnnualBarChart({
         >
           {sharedAxes}
           <Tooltip
-            formatter={(value: number | string | (number | string)[] | undefined) =>
+            formatter={(value: number | string | (number | string)[] | readonly (string | number)[] | undefined) =>
               [`€${formatAmount(Number(value ?? 0), locale)}`, categoryData.name] as [string, string]
             }
             contentStyle={TOOLTIP_STYLE}
@@ -150,7 +150,7 @@ export function AnnualBarChart({
       >
         {sharedAxes}
         <Tooltip
-          formatter={(value: number | string | (number | string)[] | undefined, name: number | string | undefined) =>
+          formatter={(value: number | string | (number | string)[] | readonly (string | number)[] | undefined, name: number | string | undefined) =>
             [
               `€${formatAmount(Number(value ?? 0), locale)}`,
               name == null
