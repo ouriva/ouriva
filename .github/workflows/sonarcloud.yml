@@ -1,0 +1,46 @@
+name: SonarCloud
+
+# SonarCloud analyses source code for bugs, code smells, duplication,
+# and security hotspots. Results appear on sonarcloud.io and as PR
+# annotations (quality gate pass/fail).
+#
+# Runs on:
+#   - Every push to main
+#   - Every pull request targeting main
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # Disable shallow clone — SonarCloud needs full git history to
+          # accurately compute new vs existing issues and blame annotations.
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
