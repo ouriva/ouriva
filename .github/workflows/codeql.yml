@@ -8,8 +8,8 @@ name: CodeQL
 # Runs on:
 #   - Every push to main
 #   - Every pull request targeting main
-#   - Weekly on Sundays at 02:00 UTC (catches newly published query updates
-#     even when no code has changed)
+#   - Weekly on Fridays at 01:00 UTC (catches newly published query updates
+#     even when no code has changed; Friday timing allows fixes over the weekend)
 
 on:
   push:
@@ -17,7 +17,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "0 2 * * 0"
+    - cron: "0 1 * * 5"
 
 jobs:
   analyze:
