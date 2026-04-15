@@ -1,0 +1,57 @@
+name: CodeQL
+
+# CodeQL is GitHub's static analysis engine. It compiles the TypeScript
+# source into a queryable database and runs security queries against it —
+# tracing data flow from API inputs to outputs to catch vulnerabilities
+# like SQL injection, XSS, and path traversal before they reach production.
+#
+# Runs on:
+#   - Every push to main
+#   - Every pull request targeting main
+#   - Weekly on Sundays at 02:00 UTC (catches newly published query updates
+#     even when no code has changed)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * 0"
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Required to read the repository contents
+      contents: read
+      # Required to upload CodeQL results to GitHub Security tab
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Initialise the CodeQL tooling and select the query suite.
+      # "security-extended" runs the full security query suite — broader
+      # than the default "security-and-quality" but still fast for TS/JS.
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      # CodeQL's JavaScript/TypeScript analyser does not need to compile
+      # the project — it uses its own parser. The autobuild step is
+      # included as a no-op for consistency with compiled languages.
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      # Run the queries and upload results to the GitHub Security tab.
+      # Findings appear as code scanning alerts and as PR annotations.
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
