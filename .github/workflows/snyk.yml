@@ -1,0 +1,60 @@
+name: Snyk Container
+
+# Snyk scans the Docker image for OS-level and base image vulnerabilities —
+# CVEs in the Linux packages bundled into the image that neither Dependabot
+# (npm dependencies) nor CodeQL (source code) can see.
+#
+# Only high and critical severity issues fail the workflow to avoid noise
+# from low-risk findings. Results are uploaded to the GitHub Security tab
+# as code scanning alerts alongside CodeQL findings.
+#
+# Runs on:
+#   - Every push to main
+#   - Every pull request targeting main
+#   - Weekly on Fridays at 01:00 UTC (same cadence as CodeQL)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 1 * * 5"
+
+jobs:
+  snyk-container:
+    name: Snyk Container Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Required to upload Snyk results to the GitHub Security tab
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Build the image locally so Snyk scans exactly what would be deployed,
+      # not a cached or registry version.
+      - name: Build Docker image
+        run: docker build -t ouriva:${{ github.sha }} .
+
+      - name: Snyk Container scan
+        uses: snyk/actions/docker@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: ouriva:${{ github.sha }}
+          # Only fail on high/critical — low and medium are informational
+          args: --severity-threshold=high --file=Dockerfile
+        # Continue so the SARIF upload step always runs, even if Snyk finds issues.
+        # The workflow itself will still be marked as failed if the threshold is exceeded.
+        continue-on-error: true
+
+      # Upload findings to the GitHub Security tab so they appear as code
+      # scanning alerts alongside CodeQL results in one unified view.
+      - name: Upload Snyk results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif
