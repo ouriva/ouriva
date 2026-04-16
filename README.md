@@ -7,6 +7,8 @@
 
 > Privacy-first personal finance tracking. Your data stays on your server.
 
+If Ouriva saves you time, a ⭐ on GitHub helps others find it.
+
 Ouriva is a mobile-first PWA for tracking multi-currency bank accounts, categorizing transactions, setting annual budgets, and reviewing monthly/annual summaries. Built for self-hosters who want full control over their financial data.
 
 ## Features
