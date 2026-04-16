@@ -1,6 +1,8 @@
 # Ouriva
 
 [![CI](https://github.com/ouriva/ouriva/actions/workflows/ci.yml/badge.svg)](https://github.com/ouriva/ouriva/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/ouriva/ouriva/actions/workflows/codeql.yml/badge.svg)](https://github.com/ouriva/ouriva/actions/workflows/codeql.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ouriva_ouriva&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ouriva_ouriva)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
 
 > Privacy-first personal finance tracking. Your data stays on your server.
