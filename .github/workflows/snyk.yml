@@ -55,6 +55,6 @@ jobs:
       # Upload findings to the GitHub Security tab so they appear as code
       # scanning alerts alongside CodeQL results in one unified view.
       - name: Upload Snyk results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk.sarif
