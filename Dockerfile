@@ -14,15 +14,17 @@
 # This keeps the final image small (~150MB vs ~1GB+ with full
 # node_modules and source code).
 #
-# The base image (node:20-alpine) uses Alpine Linux — a minimal
-# Linux distribution (~5MB) perfect for containers. The "alpine"
-# tag means smaller images and faster pulls.
+# The base image is node:22-alpine (Node.js LTS + Alpine Linux), pinned
+# to a specific digest rather than a mutable tag. A supply chain attack
+# on Docker Hub (e.g. the March 2026 Trivy compromise) that pushed a
+# malicious image under the same tag would produce a different hash —
+# the build would refuse to run, protecting the CI/CD environment.
 # ============================================================
 
 # ------------------------------------
 # Stage 1: Install dependencies
 # ------------------------------------
-FROM node:20-alpine AS deps
+FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS deps
 
 # Set working directory inside the container
 WORKDIR /app
@@ -39,7 +41,7 @@ RUN npm ci
 # ------------------------------------
 # Stage 2: Build the application
 # ------------------------------------
-FROM node:20-alpine AS builder
+FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS builder
 
 WORKDIR /app
 
@@ -64,9 +66,19 @@ RUN npm run build
 # ------------------------------------
 # Stage 3: Production runner
 # ------------------------------------
-FROM node:20-alpine AS runner
+FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS runner
 
 WORKDIR /app
+
+# Remove npm and npx — the production image only runs `node server.js`
+# and never calls npm at runtime. Removing them eliminates the entire
+# npm dependency tree (minimatch, brace-expansion, tar, picomatch, etc.)
+# from the attack surface without affecting the running application.
+# This is the "distroless by hand" approach: keep the Node runtime,
+# strip everything not needed in production.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx
 
 # Run as non-root for security. If the app is compromised,
 # the attacker has minimal system access.

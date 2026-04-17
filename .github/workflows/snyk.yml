@@ -41,6 +41,7 @@ jobs:
         run: docker build -t ouriva:${{ github.sha }} .
 
       - name: Snyk Container scan
+        id: snyk
         uses: snyk/actions/docker@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -48,13 +49,23 @@ jobs:
           image: ouriva:${{ github.sha }}
           # Only fail on high/critical — low and medium are informational
           args: --severity-threshold=high --file=Dockerfile
-        # Continue so the SARIF upload step always runs, even if Snyk finds issues.
-        # The workflow itself will still be marked as failed if the threshold is exceeded.
+        # continue-on-error allows the SARIF upload step to always run so
+        # findings reach the Security tab even when the threshold is exceeded.
+        # A separate step below re-raises the failure after uploading.
         continue-on-error: true
 
       # Upload findings to the GitHub Security tab so they appear as code
       # scanning alerts alongside CodeQL results in one unified view.
+      # Skipped when snyk.sarif is absent (e.g. Docker build failed before
+      # Snyk ran and had a chance to write the file).
       - name: Upload Snyk results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('snyk.sarif') != ''
         with:
           sarif_file: snyk.sarif
+
+      # Re-raise the Snyk failure AFTER uploading results so the PR is
+      # blocked when high/critical vulnerabilities are found.
+      - name: Fail if Snyk found high/critical vulnerabilities
+        if: steps.snyk.outcome == 'failure'
+        run: exit 1
