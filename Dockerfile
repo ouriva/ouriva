@@ -70,6 +70,13 @@ FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a
 
 WORKDIR /app
 
+# Upgrade npm to fix vulnerabilities in its bundled dependencies
+# (brace-expansion ReDoS via minimatch, picomatch ReDoS via node-gyp).
+# The npm version shipped with node:22-alpine contains these CVEs —
+# upgrading npm replaces the bundled copies with patched versions.
+# Pinned to a specific version for reproducible builds.
+RUN npm install -g npm@11.6.4
+
 # Run as non-root for security. If the app is compromised,
 # the attacker has minimal system access.
 RUN addgroup --system --gid 1001 nodejs && \
