@@ -9,7 +9,7 @@
 
 "use client";
 
-import { ArrowDownLeft, ArrowUpRight, AlertTriangle, CircleDot, Split } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, TriangleAlert, CircleDot, Split } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
@@ -100,7 +100,7 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
           <p className="text-sm text-muted-foreground">
             {isUncategorized ? (
               <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                <AlertTriangle className="h-3.5 w-3.5" />
+                <TriangleAlert className="h-3.5 w-3.5" />
                 {t("uncategorizedLabel")}
               </span>
             ) : isSplit ? (

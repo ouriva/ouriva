@@ -12,7 +12,7 @@
 
 import { useTranslations, useLocale } from "next-intl";
 import { formatAmount } from "@/lib/formatters";
-import { AlertTriangle } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -93,7 +93,7 @@ export function CategoryBreakdown({
                       "inline-flex items-center gap-1 text-amber-600 dark:text-amber-400"
                   )}
                 >
-                  {isUncategorized && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
+                  {isUncategorized && <TriangleAlert className="h-3.5 w-3.5 shrink-0" />}
                   {category.name}
                 </span>
                 <div className="flex shrink-0 items-baseline gap-1.5">

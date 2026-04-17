@@ -15,7 +15,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { TriangleAlert, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLocale, useTranslations } from "next-intl";
 import { formatAmount } from "@/lib/formatters";
@@ -136,7 +136,7 @@ export function AnnualCategoryTable({
                       )}
                       {category.id === "__uncategorized__" ? (
                         <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                          <AlertTriangle className="h-3.5 w-3.5" />
+                          <TriangleAlert className="h-3.5 w-3.5" />
                           {category.name}
                         </span>
                       ) : (
