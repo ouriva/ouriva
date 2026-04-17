@@ -23,3 +23,12 @@ updates:
     schedule:
       interval: "weekly"
       day: "friday"
+
+  # Docker base image
+  # Tracks the node:22-alpine digest in the Dockerfile and opens a PR
+  # whenever a new image is published — keeping the pinned digest current.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "friday"
