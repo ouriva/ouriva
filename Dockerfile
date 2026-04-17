@@ -70,12 +70,15 @@ FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a
 
 WORKDIR /app
 
-# Upgrade npm to fix vulnerabilities in its bundled dependencies
-# (brace-expansion ReDoS via minimatch, picomatch ReDoS via node-gyp).
-# The npm version shipped with node:22-alpine contains these CVEs —
-# upgrading npm replaces the bundled copies with patched versions.
-# Pinned to a specific version for reproducible builds.
-RUN npm install -g npm@11.6.4
+# Remove npm and npx — the production image only runs `node server.js`
+# and never calls npm at runtime. Removing them eliminates the entire
+# npm dependency tree (minimatch, brace-expansion, tar, picomatch, etc.)
+# from the attack surface without affecting the running application.
+# This is the "distroless by hand" approach: keep the Node runtime,
+# strip everything not needed in production.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx
 
 # Run as non-root for security. If the app is compromised,
 # the attacker has minimal system access.
