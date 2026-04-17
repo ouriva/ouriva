@@ -7,6 +7,32 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.21.0] — 2026-04-17
+
+### Changed
+- Docker base image upgraded from Node 20 to **Node 22 LTS** (Alpine), supported until April 2027
+- Production container no longer ships npm or npx — reduced runtime attack surface
+- Updated Next.js from 16.2.3 to 16.2.4
+- Updated lucide-react to 1.x
+- Updated shadcn to 4.3.0
+
+### Security
+- Added CodeQL static analysis to CI (runs on every push and pull request to `main`)
+- Added SonarCloud code quality and security scanning to CI
+- Added Snyk container vulnerability scanning to CI with results published to the GitHub Security tab
+- Resolved transitive CVEs in `brace-expansion` and `@hono/node-server` via package overrides
+- Docker base image pinned by digest to guard against supply chain attacks on mutable tags
+
+---
+
+## [1.20.1] — 2026-04-01
+
+### Fixed
+- TypeScript errors surfaced by the production build type-check
+- CI lint errors that prevented clean builds
+
+---
+
 ## [1.19.0] — 2026-03-28
 
 ### Added
