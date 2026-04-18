@@ -146,6 +146,73 @@ function FilterChip({
   );
 }
 
+// ─── Module-scope helpers ─────────────────────────────────────────────────────
+
+// Builds a stable URLSearchParams string from the current filter state.
+// Extracted to module scope so the useMemo wrapper in TransactionList
+// doesn't need to house control flow, reducing cognitive complexity.
+function buildFilterParams(
+  urlSearch: string,
+  type: string | undefined,
+  accountId: string | undefined,
+  categoryId: string | undefined,
+  startDate: string,
+  endDate: string,
+  needsReview: boolean
+): string {
+  const params = new URLSearchParams();
+  if (urlSearch) params.set("search", urlSearch);
+  if (type) params.set("type", type);
+  if (accountId) params.set("accountId", accountId);
+  if (categoryId) params.set("categoryId", categoryId);
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+  if (needsReview) params.set("needsReview", "true");
+  return params.toString();
+}
+
+// Builds the CSV export URL from the current filter state.
+function buildExportUrl(
+  type: string | undefined,
+  accountId: string | undefined,
+  categoryId: string | undefined,
+  startDate: string,
+  endDate: string,
+  needsReview: boolean,
+  urlSearch: string
+): string {
+  const params = new URLSearchParams();
+  if (type) params.set("type", type);
+  if (accountId) params.set("accountId", accountId);
+  if (categoryId) params.set("categoryId", categoryId);
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+  if (needsReview) params.set("needsReview", "true");
+  if (urlSearch) params.set("search", urlSearch);
+  const qs = params.toString();
+  return `/api/transactions/export${qs ? `?${qs}` : ""}`;
+}
+
+// Groups transactions by their date key (YYYY-MM-DD) and returns sorted keys.
+function groupByDate(transactions: TransactionWithRelations[]): {
+  grouped: Record<string, TransactionWithRelations[]>;
+  sortedDates: string[];
+} {
+  const grouped = transactions.reduce<Record<string, TransactionWithRelations[]>>(
+    (acc, tx) => {
+      const key = tx.date.split("T")[0];
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(tx);
+      return acc;
+    },
+    {}
+  );
+  const sortedDates = Object.keys(grouped).sort(
+    (a, b) => new Date(b).getTime() - new Date(a).getTime()
+  );
+  return { grouped, sortedDates };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TransactionList() {
@@ -240,17 +307,10 @@ export function TransactionList() {
   // Memoised so the string reference is stable when nothing changed.
   // This is the key that identifies a unique filter combination —
   // when it changes, we reset to page 1 and clear the accumulated list.
-  const filterParams = useMemo(() => {
-    const params = new URLSearchParams();
-    if (urlSearch) params.set("search", urlSearch);
-    if (type) params.set("type", type);
-    if (accountId) params.set("accountId", accountId);
-    if (categoryId) params.set("categoryId", categoryId);
-    if (startDate) params.set("startDate", startDate);
-    if (endDate) params.set("endDate", endDate);
-    if (needsReview) params.set("needsReview", "true");
-    return params.toString();
-  }, [urlSearch, type, accountId, categoryId, startDate, endDate, needsReview]);
+  const filterParams = useMemo(
+    () => buildFilterParams(urlSearch, type, accountId, categoryId, startDate, endDate, needsReview),
+    [urlSearch, type, accountId, categoryId, startDate, endDate, needsReview]
+  );
 
   // ── Fetch transactions ──────────────────────────────────────────────────
   // fetchPage fetches a single page and either replaces or appends the list.
@@ -305,18 +365,10 @@ export function TransactionList() {
 
   // Build the export URL from the current filter state.
   // The export endpoint accepts the same params as the list endpoint.
-  const exportUrl = useMemo(() => {
-    const params = new URLSearchParams();
-    if (type) params.set("type", type);
-    if (accountId) params.set("accountId", accountId);
-    if (categoryId) params.set("categoryId", categoryId);
-    if (startDate) params.set("startDate", startDate);
-    if (endDate) params.set("endDate", endDate);
-    if (needsReview) params.set("needsReview", "true");
-    if (urlSearch) params.set("search", urlSearch);
-    const qs = params.toString();
-    return `/api/transactions/export${qs ? `?${qs}` : ""}`;
-  }, [type, accountId, categoryId, startDate, endDate, needsReview, urlSearch]);
+  const exportUrl = useMemo(
+    () => buildExportUrl(type, accountId, categoryId, startDate, endDate, needsReview, urlSearch),
+    [type, accountId, categoryId, startDate, endDate, needsReview, urlSearch]
+  );
 
   function clearFilters() {
     setSearch("");
@@ -327,18 +379,7 @@ export function TransactionList() {
   const childCategories = categories.filter((c) => c.parentId);
 
   // Group transactions by date key (YYYY-MM-DD)
-  const grouped = allTransactions.reduce<Record<string, typeof allTransactions>>(
-    (acc, tx) => {
-      const key = tx.date.split("T")[0];
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(tx);
-      return acc;
-    },
-    {}
-  );
-  const sortedDates = Object.keys(grouped).sort(
-    (a, b) => new Date(b).getTime() - new Date(a).getTime()
-  );
+  const { grouped, sortedDates } = groupByDate(allTransactions);
 
   const hasMore = pagination ? loadedPage < pagination.totalPages : false;
 

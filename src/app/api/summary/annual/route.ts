@@ -19,6 +19,13 @@ type CategoryEntry = {
   children: Map<string, { id: string; name: string; total: number; months: number[] }>;
 };
 
+// Category shape returned by Prisma's `include: { parent: true }`.
+type TxCategory = {
+  id: string;
+  name: string;
+  parent: { id: string; name: string } | null;
+} | null;
+
 function effectiveAmount(
   tx: {
     amount: { toString(): string };
@@ -30,6 +37,64 @@ function effectiveAmount(
   if (!defaultCurrency) return Number(tx.amount);
   if (tx.fromAccount.currency.code === defaultCurrency.code) return Number(tx.amount);
   return tx.baseCurrencyAmount ? Number(tx.baseCurrencyAmount) : Number(tx.amount);
+}
+
+// Accumulates a transaction's amount into the correct category entry,
+// including per-month buckets. Rolls child categories up to their parent;
+// groups uncategorised transactions under "__uncategorized__".
+function updateCategoryMap(
+  targetMap: Map<string, CategoryEntry>,
+  category: TxCategory,
+  amount: number,
+  monthIndex: number
+): void {
+  if (!category) {
+    const uncatKey = "__uncategorized__";
+    if (!targetMap.has(uncatKey)) {
+      targetMap.set(uncatKey, {
+        id: uncatKey,
+        name: "Uncategorized",
+        total: 0,
+        months: new Array(12).fill(0),
+        children: new Map(),
+      });
+    }
+    const uncat = targetMap.get(uncatKey)!;
+    uncat.total += amount;
+    uncat.months[monthIndex] += amount;
+    return;
+  }
+
+  const parentCategory = category.parent ?? category;
+  const isChild = !!category.parent;
+
+  if (!targetMap.has(parentCategory.id)) {
+    targetMap.set(parentCategory.id, {
+      id: parentCategory.id,
+      name: parentCategory.name,
+      total: 0,
+      months: new Array(12).fill(0),
+      children: new Map(),
+    });
+  }
+
+  const parent = targetMap.get(parentCategory.id)!;
+  parent.total += amount;
+  parent.months[monthIndex] += amount;
+
+  if (isChild) {
+    if (!parent.children.has(category.id)) {
+      parent.children.set(category.id, {
+        id: category.id,
+        name: category.name,
+        total: 0,
+        months: new Array(12).fill(0),
+      });
+    }
+    const child = parent.children.get(category.id)!;
+    child.total += amount;
+    child.months[monthIndex] += amount;
+  }
 }
 
 function mapToSortedArray(map: Map<string, CategoryEntry>) {
@@ -121,56 +186,8 @@ export async function GET(request: NextRequest) {
         bucketTotals[bucket ?? "unclassified"] += amount;
       }
 
-      // Category breakdown for both expenses and income
       const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
-
-      if (tx.category) {
-        const parentCategory = tx.category.parent || tx.category;
-        const isChild = !!tx.category.parent;
-
-        if (!targetMap.has(parentCategory.id)) {
-          targetMap.set(parentCategory.id, {
-            id: parentCategory.id,
-            name: parentCategory.name,
-            total: 0,
-            months: new Array(12).fill(0),
-            children: new Map(),
-          });
-        }
-
-        const parent = targetMap.get(parentCategory.id)!;
-        parent.total += amount;
-        parent.months[monthIndex] += amount;
-
-        if (isChild) {
-          if (!parent.children.has(tx.category.id)) {
-            parent.children.set(tx.category.id, {
-              id: tx.category.id,
-              name: tx.category.name,
-              total: 0,
-              months: new Array(12).fill(0),
-            });
-          }
-          const child = parent.children.get(tx.category.id)!;
-          child.total += amount;
-          child.months[monthIndex] += amount;
-        }
-      } else {
-        // Uncategorized — group under a special bucket
-        const uncatKey = "__uncategorized__";
-        if (!targetMap.has(uncatKey)) {
-          targetMap.set(uncatKey, {
-            id: uncatKey,
-            name: "Uncategorized",
-            total: 0,
-            months: new Array(12).fill(0),
-            children: new Map(),
-          });
-        }
-        const uncat = targetMap.get(uncatKey)!;
-        uncat.total += amount;
-        uncat.months[monthIndex] += amount;
-      }
+      updateCategoryMap(targetMap, tx.category, amount, monthIndex);
     }
 
     // Round all values and convert maps to arrays
