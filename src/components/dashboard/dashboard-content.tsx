@@ -71,6 +71,112 @@ interface RecentTransaction {
   } | null;
 }
 
+const TX_CONFIG = {
+  INCOME: {
+    icon: ArrowDownLeft,
+    color: "text-emerald-600 dark:text-emerald-400",
+    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+    amountColor: "text-emerald-600 dark:text-emerald-400",
+    sign: "+",
+  },
+  EXPENSE: {
+    icon: ArrowUpRight,
+    color: "text-red-600 dark:text-red-400",
+    bgColor: "bg-red-100 dark:bg-red-900/30",
+    amountColor: "",
+    sign: "−",
+  },
+} as const;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+interface RecentTransactionRowProps {
+  tx: RecentTransaction;
+  isLast: boolean;
+  locale: string;
+}
+
+function RecentTransactionRow({ tx, isLast, locale }: RecentTransactionRowProps) {
+  const config = TX_CONFIG[tx.type as keyof typeof TX_CONFIG] ?? TX_CONFIG.EXPENSE;
+  const categoryLabel = tx.category?.parent?.name ?? tx.category?.name ?? null;
+  const description = tx.description ?? categoryLabel ?? (tx.type === "INCOME" ? "Income" : "Transaction");
+  const subtext = [tx.fromAccount.name, formatTxDate(tx.date)].filter(Boolean).join(" · ");
+
+  return (
+    <Link href={`/transactions/${tx.id}`} className="block">
+      <div className={cn("flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted", !isLast && "border-b")}>
+        <CategoryIcon
+          icon={tx.category?.icon}
+          color={tx.category?.color}
+          fallback={config.icon}
+          fallbackBg={config.bgColor}
+          fallbackColor={config.color}
+          size="sm"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{description}</p>
+          <p className="truncate text-xs text-muted-foreground">{subtext}</p>
+        </div>
+        <span className={cn("text-sm font-semibold tabular-nums", config.amountColor)}>
+          {config.sign}
+          {tx.fromAccount.currency.symbol}
+          {formatAmount(parseFloat(tx.amount), locale)}
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+interface SpendingMeterProps {
+  monthly: MonthlySummary;
+  locale: string;
+}
+
+function SpendingMeter({ monthly, locale }: SpendingMeterProps) {
+  const t = useTranslations("dashboard");
+  const spentPct = monthly.totalIncome > 0
+    ? (monthly.totalExpense / monthly.totalIncome) * 100
+    : 0;
+  const barColor = spentPct > 100 ? "bg-red-500" : spentPct > 80 ? "bg-amber-500" : "bg-emerald-500";
+  const symbol = monthly.currencySymbol ?? "";
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 p-4">
+        <div className="flex justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("income")}</p>
+            <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+              {symbol}{formatAmount(monthly.totalIncome, locale)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("expenses")}</p>
+            <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+              {symbol}{formatAmount(monthly.totalExpense, locale)}
+            </p>
+          </div>
+        </div>
+        {monthly.totalIncome > 0 && (
+          <div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className={cn("h-full rounded-full transition-all duration-500", barColor)} style={{ width: `${Math.min(spentPct, 100)}%` }} />
+            </div>
+            <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
+              <span>{t("pctSpent", { pct: formatPercent(spentPct, 0, locale) })}</span>
+              <span className={cn("font-semibold", monthly.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+                {monthly.net >= 0
+                  ? t("saved", { symbol, amount: formatAmount(monthly.net, locale) })
+                  : t("over", { symbol, amount: formatAmount(Math.abs(monthly.net), locale) })}
+              </span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getGreetingKey(): "goodMorning" | "goodAfternoon" | "goodEvening" {
@@ -143,18 +249,6 @@ export function DashboardContent() {
 
   // Flatten all accounts across currency groups for the scroll strip
   const allAccounts = balances.flatMap((g) => g.accounts);
-
-  // Spending meter derived values — safe when income is zero
-  const spentPct =
-    monthly && monthly.totalIncome > 0
-      ? (monthly.totalExpense / monthly.totalIncome) * 100
-      : 0;
-  const barColor =
-    spentPct > 100
-      ? "bg-red-500"
-      : spentPct > 80
-      ? "bg-amber-500"
-      : "bg-emerald-500";
 
   return (
     <div className="space-y-5">
@@ -283,56 +377,7 @@ export function DashboardContent() {
               </Link>
             </Button>
           </div>
-          <Card>
-            <CardContent className="space-y-3 p-4">
-              {/* Income / Expense row */}
-              <div className="flex justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t("income")}
-                  </p>
-                  <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {monthly.currencySymbol ?? ""}{formatAmount(monthly.totalIncome, locale)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {t("expenses")}
-                  </p>
-                  <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                    {monthly.currencySymbol ?? ""}{formatAmount(monthly.totalExpense, locale)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Spending progress bar (only shown when there's income to compare against) */}
-              {monthly.totalIncome > 0 && (
-                <div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn("h-full rounded-full transition-all duration-500", barColor)}
-                      style={{ width: `${Math.min(spentPct, 100)}%` }}
-                    />
-                  </div>
-                  <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-                    <span>{t("pctSpent", { pct: formatPercent(spentPct, 0, locale) })}</span>
-                    <span
-                      className={cn(
-                        "font-semibold",
-                        monthly.net >= 0
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-red-600 dark:text-red-400"
-                      )}
-                    >
-                      {monthly.net >= 0
-                        ? t("saved", { symbol: monthly.currencySymbol ?? "", amount: formatAmount(monthly.net, locale) })
-                        : t("over", { symbol: monthly.currencySymbol ?? "", amount: formatAmount(Math.abs(monthly.net), locale) })}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <SpendingMeter monthly={monthly} locale={locale} />
         </section>
       ) : null}
 
@@ -367,61 +412,14 @@ export function DashboardContent() {
           <Card>
             {/* p-0 on CardContent so rows control their own padding */}
             <CardContent className="p-0">
-              {recentTx.map((tx, i) => {
-                const isIncome = tx.type === "INCOME";
-                const config = isIncome
-                  ? { icon: ArrowDownLeft, color: "text-emerald-600 dark:text-emerald-400", bgColor: "bg-emerald-100 dark:bg-emerald-900/30", amountColor: "text-emerald-600 dark:text-emerald-400", sign: "+" }
-                  : { icon: ArrowUpRight,  color: "text-red-600 dark:text-red-400",         bgColor: "bg-red-100 dark:bg-red-900/30",         amountColor: "",                                       sign: "−" };
-
-                const categoryLabel = tx.category
-                  ? tx.category.parent
-                    ? tx.category.parent.name
-                    : tx.category.name
-                  : null;
-
-                const description =
-                  tx.description ?? categoryLabel ?? (isIncome ? "Income" : "Transaction");
-                const subtext = [tx.fromAccount.name, formatTxDate(tx.date)]
-                  .filter(Boolean)
-                  .join(" · ");
-
-                return (
-                  <Link
-                    href={`/transactions/${tx.id}`}
-                    key={tx.id}
-                    className="block"
-                  >
-                    <div
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 transition-colors active:bg-muted",
-                        i < recentTx.length - 1 && "border-b"
-                      )}
-                    >
-                      <CategoryIcon
-                        icon={tx.category?.icon}
-                        color={tx.category?.color}
-                        fallback={config.icon}
-                        fallbackBg={config.bgColor}
-                        fallbackColor={config.color}
-                        size="sm"
-                      />
-
-                      {/* Description + subtext */}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{description}</p>
-                        <p className="truncate text-xs text-muted-foreground">{subtext}</p>
-                      </div>
-
-                      {/* Amount */}
-                      <span className={cn("text-sm font-semibold tabular-nums", config.amountColor)}>
-                        {config.sign}
-                        {tx.fromAccount.currency.symbol}
-                        {formatAmount(parseFloat(tx.amount), locale)}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {recentTx.map((tx, i) => (
+                <RecentTransactionRow
+                  key={tx.id}
+                  tx={tx}
+                  isLast={i === recentTx.length - 1}
+                  locale={locale}
+                />
+              ))}
             </CardContent>
           </Card>
         ) : (

@@ -14,11 +14,11 @@ import { z } from "zod/v4";
 // Each split assigns a category and amount to a portion of the parent total.
 
 const splitEntrySchema = z.object({
-  categoryId: z.string().uuid("Invalid category"),
+  categoryId: z.string().uuid({ message: "Invalid category" }),
   amount: z
     .number()
-    .positive("Split amount must be positive")
-    .multipleOf(0.01, "Split amount can have at most 2 decimal places"),
+    .positive({ message: "Split amount must be positive" })
+    .multipleOf(0.01, { message: "Split amount can have at most 2 decimal places" }),
 });
 
 // --- Shared fields ---
@@ -28,8 +28,8 @@ const splitEntrySchema = z.object({
 const baseTransactionFields = {
   amount: z
     .number()
-    .positive("Amount must be positive")
-    .multipleOf(0.01, "Amount can have at most 2 decimal places"),
+    .positive({ message: "Amount must be positive" })
+    .multipleOf(0.01, { message: "Amount can have at most 2 decimal places" }),
   description: z.string().max(255).optional(),
   friendlyName: z.string().max(255).optional(),
   notes: z.string().max(1000).optional(),
@@ -87,15 +87,15 @@ function validateSplits(
 const incomeBase = z.object({
   type: z.literal("INCOME"),
   ...baseTransactionFields,
-  fromAccountId: z.string().uuid("Invalid account"),
-  categoryId: z.string().uuid("Invalid category").optional(),
+  fromAccountId: z.string().uuid({ message: "Invalid account" }),
+  categoryId: z.string().uuid({ message: "Invalid category" }).optional(),
 });
 
 const expenseBase = z.object({
   type: z.literal("EXPENSE"),
   ...baseTransactionFields,
-  fromAccountId: z.string().uuid("Invalid account"),
-  categoryId: z.string().uuid("Invalid category").optional(),
+  fromAccountId: z.string().uuid({ message: "Invalid account" }),
+  categoryId: z.string().uuid({ message: "Invalid category" }).optional(),
 });
 
 // --- Exported schemas ---

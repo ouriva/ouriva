@@ -9,6 +9,46 @@ import { prisma } from "@/lib/prisma";
 import { getExcludedCategoryIds } from "@/lib/settings";
 import { getDefaultCurrency } from "@/lib/default-currency";
 
+type DefaultCurrency = { code: string } | null;
+
+type CategoryEntry = {
+  id: string;
+  name: string;
+  total: number;
+  months: number[];
+  children: Map<string, { id: string; name: string; total: number; months: number[] }>;
+};
+
+function effectiveAmount(
+  tx: {
+    amount: { toString(): string };
+    baseCurrencyAmount: { toString(): string } | null;
+    fromAccount: { currency: { code: string } };
+  },
+  defaultCurrency: DefaultCurrency
+): number {
+  if (!defaultCurrency) return Number(tx.amount);
+  if (tx.fromAccount.currency.code === defaultCurrency.code) return Number(tx.amount);
+  return tx.baseCurrencyAmount ? Number(tx.baseCurrencyAmount) : Number(tx.amount);
+}
+
+function mapToSortedArray(map: Map<string, CategoryEntry>) {
+  return Array.from(map.values())
+    .map((cat) => ({
+      ...cat,
+      total: Math.round(cat.total * 100) / 100,
+      months: cat.months.map((m) => Math.round(m * 100) / 100),
+      children: Array.from(cat.children.values())
+        .map((c) => ({
+          ...c,
+          total: Math.round(c.total * 100) / 100,
+          months: c.months.map((m) => Math.round(m * 100) / 100),
+        }))
+        .sort((a, b) => b.total - a.total),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const yearParam = request.nextUrl.searchParams.get("year");
@@ -46,12 +86,6 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    function effectiveAmount(tx: { amount: { toString(): string }; baseCurrencyAmount: { toString(): string } | null; fromAccount: { currency: { code: string } } }): number {
-      if (!defaultCurrency) return Number(tx.amount);
-      if (tx.fromAccount.currency.code === defaultCurrency.code) return Number(tx.amount);
-      return tx.baseCurrencyAmount ? Number(tx.baseCurrencyAmount) : Number(tx.amount);
-    }
-
     // Build monthly breakdown (12 months)
     const months = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
@@ -60,13 +94,6 @@ export async function GET(request: NextRequest) {
     }));
 
     // Build category breakdown — separate maps for expenses and income
-    type CategoryEntry = {
-      id: string;
-      name: string;
-      total: number;
-      months: number[];
-      children: Map<string, { id: string; name: string; total: number; months: number[] }>;
-    };
     const categoryMap = new Map<string, CategoryEntry>();
     const incomeCategoryMap = new Map<string, CategoryEntry>();
 
@@ -78,7 +105,7 @@ export async function GET(request: NextRequest) {
     const bucketTotals = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
 
     for (const tx of transactions) {
-      const amount = effectiveAmount(tx);
+      const amount = effectiveAmount(tx, defaultCurrency);
       // tx.date is a Date object; getMonth() returns 0-11
       const monthIndex = new Date(tx.date).getMonth();
 
@@ -153,23 +180,6 @@ export async function GET(request: NextRequest) {
       expense: Math.round(m.expense * 100) / 100,
       net: Math.round((m.income - m.expense) * 100) / 100,
     }));
-
-    function mapToSortedArray(map: Map<string, CategoryEntry>) {
-      return Array.from(map.values())
-        .map((cat) => ({
-          ...cat,
-          total: Math.round(cat.total * 100) / 100,
-          months: cat.months.map((m) => Math.round(m * 100) / 100),
-          children: Array.from(cat.children.values())
-            .map((c) => ({
-              ...c,
-              total: Math.round(c.total * 100) / 100,
-              months: c.months.map((m) => Math.round(m * 100) / 100),
-            }))
-            .sort((a, b) => b.total - a.total),
-        }))
-        .sort((a, b) => b.total - a.total);
-    }
 
     return NextResponse.json({
       year,

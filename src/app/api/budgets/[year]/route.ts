@@ -202,6 +202,99 @@ function buildGroupsFromUnion(
   return buildGroupsFromSeeds(seeds, budgetMap, flatActualMap, isIncome);
 }
 
+// ─── Data helpers ─────────────────────────────────────────────────────────────
+
+type TransactionWithCategory = {
+  amount: unknown;
+  category: { id: string; name: string; parent?: { id: string; name: string } | null } | null;
+};
+
+function buildExpenseActualMap(
+  transactions: TransactionWithCategory[]
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const tx of transactions) {
+    if (!tx.category) continue;
+    map.set(tx.category.id, (map.get(tx.category.id) ?? 0) + Number(tx.amount));
+  }
+  return map;
+}
+
+function buildIncomeActualMap(
+  transactions: TransactionWithCategory[]
+): Map<string, { total: number; name?: string; parentId?: string; parentName?: string }> {
+  const map = new Map<string, { total: number; name?: string; parentId?: string; parentName?: string }>();
+  for (const tx of transactions) {
+    if (!tx.category) continue;
+    const id = tx.category.id;
+    const entry = map.get(id) ?? {
+      total: 0,
+      name: tx.category.name,
+      parentId: tx.category.parent?.id,
+      parentName: tx.category.parent?.name,
+    };
+    entry.total += Number(tx.amount);
+    map.set(id, entry);
+  }
+  return map;
+}
+
+type BudgetWithCategory = {
+  categoryId: string;
+  type: string;
+  amount: unknown;
+  note?: string | null;
+  category: {
+    name: string;
+    parent?: { id: string; name: string } | null;
+    children: { id: string }[];
+  };
+};
+
+function buildBudgetMaps(budgets: BudgetWithCategory[]): {
+  expenseBudgetMap: Map<string, { amount: number; note: string | null }>;
+  incomeBudgetMap: Map<string, { amount: number; note: string | null; parentId?: string; parentName?: string; name?: string }>;
+} {
+  const expenseBudgetMap = new Map<string, { amount: number; note: string | null }>();
+  const incomeBudgetMap = new Map<string, { amount: number; note: string | null; parentId?: string; parentName?: string; name?: string }>();
+
+  for (const b of budgets) {
+    if (b.type === "INCOME") {
+      incomeBudgetMap.set(b.categoryId, {
+        amount: Number(b.amount),
+        note: b.note ?? null,
+        name: b.category.name,
+        parentId: b.category.parent?.id,
+        parentName: b.category.parent?.name,
+      });
+    } else {
+      expenseBudgetMap.set(b.categoryId, { amount: Number(b.amount), note: b.note ?? null });
+    }
+  }
+
+  return { expenseBudgetMap, incomeBudgetMap };
+}
+
+function netOffReimbursements(
+  actualExpenseMap: Map<string, number>,
+  actualIncomeMap: Map<string, { total: number }>,
+  incomeTransactions: TransactionWithCategory[],
+  expenseBudgetMap: Map<string, { amount: number; note: string | null }>
+): void {
+  for (const tx of incomeTransactions) {
+    if (!tx.category) continue;
+    const catId = tx.category.id;
+    if (actualExpenseMap.has(catId) || expenseBudgetMap.has(catId)) {
+      actualExpenseMap.set(catId, (actualExpenseMap.get(catId) ?? 0) - Number(tx.amount));
+      const incEntry = actualIncomeMap.get(catId);
+      if (incEntry) {
+        incEntry.total -= Number(tx.amount);
+        if (incEntry.total <= 0) actualIncomeMap.delete(catId);
+      }
+    }
+  }
+}
+
 // ─── Route ────────────────────────────────────────────────────────────────────
 
 export async function GET(
@@ -284,41 +377,11 @@ export async function GET(
       }));
 
     // ── Actual maps — no rollup to parent ────────────────────────────────
-    const actualExpenseMap = new Map<string, number>();
-    for (const tx of expenseTransactions) {
-      if (!tx.category) continue;
-      actualExpenseMap.set(tx.category.id, (actualExpenseMap.get(tx.category.id) ?? 0) + Number(tx.amount));
-    }
-
-    const actualIncomeMap = new Map<string, { total: number; parentId?: string; parentName?: string; name?: string }>();
-    for (const tx of incomeTransactions) {
-      if (!tx.category) continue;
-      const id   = tx.category.id;
-      const entry = actualIncomeMap.get(id) ?? {
-        total: 0, name: tx.category.name,
-        parentId: tx.category.parent?.id, parentName: tx.category.parent?.name,
-      };
-      entry.total += Number(tx.amount);
-      actualIncomeMap.set(id, entry);
-    }
+    const actualExpenseMap = buildExpenseActualMap(expenseTransactions);
+    const actualIncomeMap  = buildIncomeActualMap(incomeTransactions);
 
     // ── Budget maps ───────────────────────────────────────────────────────
-    const expenseBudgetMap = new Map<string, { amount: number; note: string | null }>();
-    const incomeBudgetMap  = new Map<string, { amount: number; note: string | null; parentId?: string; parentName?: string; name?: string }>();
-
-    for (const b of budgets) {
-      if (b.type === "INCOME") {
-        incomeBudgetMap.set(b.categoryId, {
-          amount:     Number(b.amount),
-          note:       b.note ?? null,
-          name:       b.category.name,
-          parentId:   b.category.parent?.id,
-          parentName: b.category.parent?.name,
-        });
-      } else {
-        expenseBudgetMap.set(b.categoryId, { amount: Number(b.amount), note: b.note ?? null });
-      }
-    }
+    const { expenseBudgetMap, incomeBudgetMap } = buildBudgetMaps(budgets);
 
     // ── Net off reimbursements — income in expense categories ─────────────
     // Income transactions assigned to an expense category (e.g. an insurance
@@ -329,22 +392,7 @@ export async function GET(
     // A category is "in expense context" when it has expense transactions or
     // an expense budget target. Pure income categories (salary, freelance)
     // are untouched.
-    for (const tx of incomeTransactions) {
-      if (!tx.category) continue;
-      const catId = tx.category.id;
-      if (actualExpenseMap.has(catId) || expenseBudgetMap.has(catId)) {
-        // Reduce expense actual (may go negative if reimbursement > expense)
-        actualExpenseMap.set(catId, (actualExpenseMap.get(catId) ?? 0) - Number(tx.amount));
-        // Remove from income actual so it doesn't show on the income tab
-        const incEntry = actualIncomeMap.get(catId);
-        if (incEntry) {
-          incEntry.total -= Number(tx.amount);
-          if (incEntry.total <= 0) {
-            actualIncomeMap.delete(catId);
-          }
-        }
-      }
-    }
+    netOffReimbursements(actualExpenseMap, actualIncomeMap, incomeTransactions, expenseBudgetMap);
 
     // ── Build grouped category lists ──────────────────────────────────────
     // Expense: seeded from all active leaf categories

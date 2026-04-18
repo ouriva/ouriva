@@ -4,7 +4,7 @@
 import { z } from "zod/v4";
 
 export const createCategorySchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
+  name: z.string().min(1, { message: "Name is required" }).max(100),
   parentId: z.string().uuid().optional(),
 });
 
