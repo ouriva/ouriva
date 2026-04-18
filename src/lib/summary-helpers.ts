@@ -56,8 +56,6 @@ export function updateCategoryMap(
   amount: number,
   monthIndex?: number
 ): void {
-  const withMonths = monthIndex !== undefined;
-
   if (!category) {
     const uncatKey = "__uncategorized__";
     if (!targetMap.has(uncatKey)) {
@@ -65,14 +63,13 @@ export function updateCategoryMap(
         id: uncatKey,
         name: "Uncategorized",
         total: 0,
-        ...(withMonths && { months: new Array(12).fill(0) }),
+        ...(monthIndex !== undefined && { months: new Array(12).fill(0) }),
         children: new Map(),
       });
     }
     const uncat = targetMap.get(uncatKey)!;
     uncat.total += amount;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    if (withMonths) uncat.months![monthIndex!] += amount;
+    if (monthIndex !== undefined) uncat.months![monthIndex] += amount;
     return;
   }
 
@@ -84,15 +81,14 @@ export function updateCategoryMap(
       id: parentCategory.id,
       name: parentCategory.name,
       total: 0,
-      ...(withMonths && { months: new Array(12).fill(0) }),
+      ...(monthIndex !== undefined && { months: new Array(12).fill(0) }),
       children: new Map(),
     });
   }
 
   const parent = targetMap.get(parentCategory.id)!;
   parent.total += amount;
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  if (withMonths) parent.months![monthIndex!] += amount;
+  if (monthIndex !== undefined) parent.months![monthIndex] += amount;
 
   if (isChild) {
     if (!parent.children.has(category.id)) {
@@ -100,12 +96,11 @@ export function updateCategoryMap(
         id: category.id,
         name: category.name,
         total: 0,
-        ...(withMonths && { months: new Array(12).fill(0) }),
+        ...(monthIndex !== undefined && { months: new Array(12).fill(0) }),
       });
     }
     const child = parent.children.get(category.id)!;
     child.total += amount;
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    if (withMonths) child.months![monthIndex!] += amount;
+    if (monthIndex !== undefined) child.months![monthIndex] += amount;
   }
 }
