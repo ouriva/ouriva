@@ -32,6 +32,11 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   reactCompiler: true,
   devIndicators: false,
+  // read-excel-file/node pulls in unzipper, which has an optional
+  // @aws-sdk/client-s3 peer dep that webpack can't resolve at build
+  // time. Marking it external tells Next.js to skip bundling it and
+  // let Node.js require it at runtime — correct for a server-only lib.
+  serverExternalPackages: ["read-excel-file"],
   // Silence the "webpack config with no turbopack config" error.
   // Serwist injects a webpack config for building the service worker,
   // but dev mode uses Turbopack (where Serwist is disabled anyway).

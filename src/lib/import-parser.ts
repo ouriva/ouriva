@@ -8,7 +8,7 @@
 // see import-ref.ts.
 
 import Papa from "papaparse"
-import readXlsxFile from "read-excel-file"
+import { readSheet as readXlsxFile } from "read-excel-file/node"
 
 export type ParsedFile = {
   headers: string[]
@@ -81,12 +81,7 @@ async function parseXlsx(
   buffer: Buffer,
   skipRows: number
 ): Promise<ParsedFile> {
-  // read-excel-file expects an ArrayBuffer in newer versions
-  const arrayBuffer = buffer.buffer.slice(
-    buffer.byteOffset,
-    buffer.byteOffset + buffer.byteLength
-  ) as ArrayBuffer
-  const sheetRows = await readXlsxFile(arrayBuffer)
+  const sheetRows = await readXlsxFile(buffer)
   const allRows = sheetRows.slice(skipRows)
   if (allRows.length === 0) {
     return { headers: [], rows: [] }
