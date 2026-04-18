@@ -27,6 +27,10 @@ Ouriva is a mobile-first PWA for tracking multi-currency bank accounts, categori
 - **Dark mode** — Respects system preference, toggleable in-app
 - **i18n** — English and Portuguese (European) included
 
+## Releases
+
+Always deploy from a [tagged release](https://github.com/ouriva/ouriva/releases). The `main` branch is the active development branch and may contain inconsistencies between unreleased changes.
+
 ## Quick Start (Docker)
 
 ### Prerequisites
