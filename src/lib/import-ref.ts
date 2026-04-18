@@ -150,23 +150,28 @@ function sha256Fallback(bytes: Uint8Array): string {
     for (let i = 16; i < 64; i++) {
       const s0 = rr(w[i - 15], 7) ^ rr(w[i - 15], 18) ^ (w[i - 15] >>> 3)
       const s1 = rr(w[i - 2], 17) ^ rr(w[i - 2], 19) ^ (w[i - 2] >>> 10)
-      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0
+      // NOSONAR: `| 0` is not a truncation shortcut here — it performs ToInt32 wrapping,
+      // which is mandatory for correct 32-bit modular arithmetic in SHA-256 (FIPS 180-4).
+      // Math.trunc() cannot replace it: it only strips fractions; it does not wrap overflow
+      // into the 32-bit signed range, which would produce incorrect digests.
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0 // NOSONAR
     }
 
     let [a, b, c, d, e, f, g, h] = [h0, h1, h2, h3, h4, h5, h6, h7]
     for (let i = 0; i < 64; i++) {
       const S1 = rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)
       const ch = (e & f) ^ (~e & g)
-      const t1 = (h + S1 + ch + K[i] + w[i]) | 0
+      const t1 = (h + S1 + ch + K[i] + w[i]) | 0 // NOSONAR
       const S0 = rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)
       const maj = (a & b) ^ (a & c) ^ (b & c)
-      const t2 = (S0 + maj) | 0
-      h = g; g = f; f = e; e = (d + t1) | 0
-      d = c; c = b; b = a; a = (t1 + t2) | 0
+      const t2 = (S0 + maj) | 0 // NOSONAR
+      h = g; g = f; f = e; e = (d + t1) | 0 // NOSONAR
+      d = c; c = b; b = a; a = (t1 + t2) | 0 // NOSONAR
     }
 
-    h0 = (h0 + a) | 0; h1 = (h1 + b) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0
-    h4 = (h4 + e) | 0; h5 = (h5 + f) | 0; h6 = (h6 + g) | 0; h7 = (h7 + h) | 0
+    // NOSONAR: same ToInt32 wrapping rationale as above — required by SHA-256 spec
+    h0 = (h0 + a) | 0; h1 = (h1 + b) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0 // NOSONAR
+    h4 = (h4 + e) | 0; h5 = (h5 + f) | 0; h6 = (h6 + g) | 0; h7 = (h7 + h) | 0 // NOSONAR
   }
 
   return [h0, h1, h2, h3, h4, h5, h6, h7]
