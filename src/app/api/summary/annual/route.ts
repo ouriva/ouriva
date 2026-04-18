@@ -8,41 +8,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getExcludedCategoryIds } from "@/lib/settings";
 import { getDefaultCurrency } from "@/lib/default-currency";
-
-type DefaultCurrency = { code: string } | null;
-
-type CategoryEntry = {
-  id: string;
-  name: string;
-  total: number;
-  months: number[];
-  children: Map<string, { id: string; name: string; total: number; months: number[] }>;
-};
-
-function effectiveAmount(
-  tx: {
-    amount: { toString(): string };
-    baseCurrencyAmount: { toString(): string } | null;
-    fromAccount: { currency: { code: string } };
-  },
-  defaultCurrency: DefaultCurrency
-): number {
-  if (!defaultCurrency) return Number(tx.amount);
-  if (tx.fromAccount.currency.code === defaultCurrency.code) return Number(tx.amount);
-  return tx.baseCurrencyAmount ? Number(tx.baseCurrencyAmount) : Number(tx.amount);
-}
+import { type CategoryEntry, effectiveAmount, updateCategoryMap } from "@/lib/summary-helpers";
 
 function mapToSortedArray(map: Map<string, CategoryEntry>) {
   return Array.from(map.values())
     .map((cat) => ({
       ...cat,
       total: Math.round(cat.total * 100) / 100,
-      months: cat.months.map((m) => Math.round(m * 100) / 100),
+      months: (cat.months ?? []).map((m) => Math.round(m * 100) / 100),
       children: Array.from(cat.children.values())
         .map((c) => ({
           ...c,
           total: Math.round(c.total * 100) / 100,
-          months: c.months.map((m) => Math.round(m * 100) / 100),
+          months: (c.months ?? []).map((m) => Math.round(m * 100) / 100),
         }))
         .sort((a, b) => b.total - a.total),
     }))
@@ -121,56 +99,8 @@ export async function GET(request: NextRequest) {
         bucketTotals[bucket ?? "unclassified"] += amount;
       }
 
-      // Category breakdown for both expenses and income
       const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
-
-      if (tx.category) {
-        const parentCategory = tx.category.parent || tx.category;
-        const isChild = !!tx.category.parent;
-
-        if (!targetMap.has(parentCategory.id)) {
-          targetMap.set(parentCategory.id, {
-            id: parentCategory.id,
-            name: parentCategory.name,
-            total: 0,
-            months: new Array(12).fill(0),
-            children: new Map(),
-          });
-        }
-
-        const parent = targetMap.get(parentCategory.id)!;
-        parent.total += amount;
-        parent.months[monthIndex] += amount;
-
-        if (isChild) {
-          if (!parent.children.has(tx.category.id)) {
-            parent.children.set(tx.category.id, {
-              id: tx.category.id,
-              name: tx.category.name,
-              total: 0,
-              months: new Array(12).fill(0),
-            });
-          }
-          const child = parent.children.get(tx.category.id)!;
-          child.total += amount;
-          child.months[monthIndex] += amount;
-        }
-      } else {
-        // Uncategorized — group under a special bucket
-        const uncatKey = "__uncategorized__";
-        if (!targetMap.has(uncatKey)) {
-          targetMap.set(uncatKey, {
-            id: uncatKey,
-            name: "Uncategorized",
-            total: 0,
-            months: new Array(12).fill(0),
-            children: new Map(),
-          });
-        }
-        const uncat = targetMap.get(uncatKey)!;
-        uncat.total += amount;
-        uncat.months[monthIndex] += amount;
-      }
+      updateCategoryMap(targetMap, tx.category, amount, monthIndex);
     }
 
     // Round all values and convert maps to arrays

@@ -41,6 +41,39 @@ const DATE_FORMATS = [
 
 type AmountMode = "single" | "split";
 
+// ─── Module-scope helpers ─────────────────────────────────────────────────────
+
+// Returns the set of column indices that are currently mapped, used to
+// highlight those columns in the preview table.
+function buildHighlightedColumns(columnMap: ColumnMap, amountMode: AmountMode): Set<number> {
+  const cols = new Set<number>();
+  cols.add(columnMap.date);
+  cols.add(columnMap.description);
+  if (amountMode === "single" && columnMap.amount !== undefined) {
+    cols.add(columnMap.amount);
+  }
+  if (amountMode === "split") {
+    if (columnMap.debitAmount !== undefined) cols.add(columnMap.debitAmount);
+    if (columnMap.creditAmount !== undefined) cols.add(columnMap.creditAmount);
+  }
+  if (columnMap.reference !== undefined) cols.add(columnMap.reference);
+  return cols;
+}
+
+// Returns true when all required columns are mapped and no two mapped
+// columns share the same index.
+function validateColumnMap(columnMap: ColumnMap, amountMode: AmountMode): boolean {
+  const mapped = [columnMap.date, columnMap.description];
+  if (amountMode === "single") {
+    if (columnMap.amount === undefined) return false;
+    mapped.push(columnMap.amount);
+  } else {
+    if (columnMap.debitAmount === undefined || columnMap.creditAmount === undefined) return false;
+    mapped.push(columnMap.debitAmount, columnMap.creditAmount);
+  }
+  return new Set(mapped).size === mapped.length;
+}
+
 interface StepColumnMappingProps {
   state: ImportState;
   onComplete: (columnMap: ColumnMap, dateFormat: string) => void;
@@ -96,33 +129,10 @@ export function StepColumnMapping({
   }));
 
   // Track which columns are mapped (for highlighting in preview)
-  const highlightedColumns = new Set<number>();
-  highlightedColumns.add(columnMap.date);
-  highlightedColumns.add(columnMap.description);
-  if (amountMode === "single" && columnMap.amount !== undefined) {
-    highlightedColumns.add(columnMap.amount);
-  }
-  if (amountMode === "split") {
-    if (columnMap.debitAmount !== undefined) highlightedColumns.add(columnMap.debitAmount);
-    if (columnMap.creditAmount !== undefined) highlightedColumns.add(columnMap.creditAmount);
-  }
-  if (columnMap.reference !== undefined) {
-    highlightedColumns.add(columnMap.reference);
-  }
+  const highlightedColumns = buildHighlightedColumns(columnMap, amountMode);
 
   // Validation: all required columns must be mapped and distinct
-  const isValid = (() => {
-    const mapped = [columnMap.date, columnMap.description];
-    if (amountMode === "single") {
-      if (columnMap.amount === undefined) return false;
-      mapped.push(columnMap.amount);
-    } else {
-      if (columnMap.debitAmount === undefined || columnMap.creditAmount === undefined) return false;
-      mapped.push(columnMap.debitAmount, columnMap.creditAmount);
-    }
-    // Check all mapped columns are unique
-    return new Set(mapped).size === mapped.length;
-  })();
+  const isValid = validateColumnMap(columnMap, amountMode);
 
   function handleAmountModeChange(mode: AmountMode) {
     setAmountMode(mode);

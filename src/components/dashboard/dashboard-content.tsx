@@ -177,6 +177,47 @@ function SpendingMeter({ monthly, locale }: SpendingMeterProps) {
   );
 }
 
+// ─── Data hook ───────────────────────────────────────────────────────────────
+
+// Encapsulates all data fetching for the dashboard so DashboardContent
+// only contains layout and rendering logic. Keeping the async work in a
+// hook also makes the component easier to test in isolation.
+function useDashboardData() {
+  const [balancesData, setBalancesData] = useState<BalancesData | null>(null);
+  const [monthly, setMonthly] = useState<MonthlySummary | null>(null);
+  const [recentTx, setRecentTx] = useState<RecentTransaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchAll() {
+      setIsLoading(true);
+      try {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+
+        const [balRes, monthRes, txRes] = await Promise.all([
+          fetch("/api/accounts/balances"),
+          fetch(`/api/summary/monthly?year=${year}&month=${month}`),
+          fetch("/api/transactions?limit=5"),
+        ]);
+
+        if (balRes.ok) setBalancesData(await balRes.json());
+        if (monthRes.ok) setMonthly(await monthRes.json());
+        if (txRes.ok) {
+          const data = await txRes.json();
+          setRecentTx(data.data);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchAll();
+  }, []);
+
+  return { balancesData, monthly, recentTx, isLoading };
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getGreetingKey(): "goodMorning" | "goodAfternoon" | "goodEvening" {
@@ -211,37 +252,7 @@ function formatTxDate(dateStr: string): string {
 export function DashboardContent() {
   const t = useTranslations("dashboard");
   const locale = useLocale();
-  const [balancesData, setBalancesData] = useState<BalancesData | null>(null);
-  const [monthly, setMonthly] = useState<MonthlySummary | null>(null);
-  const [recentTx, setRecentTx] = useState<RecentTransaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchAll() {
-      setIsLoading(true);
-      try {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-
-        const [balRes, monthRes, txRes] = await Promise.all([
-          fetch("/api/accounts/balances"),
-          fetch(`/api/summary/monthly?year=${year}&month=${month}`),
-          fetch("/api/transactions?limit=5"),
-        ]);
-
-        if (balRes.ok) setBalancesData(await balRes.json());
-        if (monthRes.ok) setMonthly(await monthRes.json());
-        if (txRes.ok) {
-          const data = await txRes.json();
-          setRecentTx(data.data);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    fetchAll();
-  }, []);
+  const { balancesData, monthly, recentTx, isLoading } = useDashboardData();
 
   const balances = balancesData?.byCurrency ?? [];
   const aggregatedTotal = balancesData?.aggregatedTotal ?? null;

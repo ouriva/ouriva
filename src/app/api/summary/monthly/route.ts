@@ -13,6 +13,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getExcludedCategoryIds } from "@/lib/settings";
 import { getDefaultCurrency } from "@/lib/default-currency";
+import { type CategoryEntry, effectiveAmount, updateCategoryMap } from "@/lib/summary-helpers";
+
+function mapToSortedArray(map: Map<string, CategoryEntry>) {
+  return Array.from(map.values())
+    .map((cat) => ({
+      ...cat,
+      children: Array.from(cat.children.values()).sort((a, b) => b.total - a.total),
+    }))
+    .sort((a, b) => b.total - a.total);
+}
+
+// ─── Route ────────────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
   try {
@@ -56,16 +68,6 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // When a default currency is set, use baseCurrencyAmount for transactions
-    // that have been converted (account currency ≠ default). Fall back to
-    // amount for transactions already in the default currency.
-    function effectiveAmount(tx: { amount: { toString(): string }; baseCurrencyAmount: { toString(): string } | null; fromAccount: { currency: { code: string } } }): number {
-      if (!defaultCurrency) return Number(tx.amount);
-      if (tx.fromAccount.currency.code === defaultCurrency.code) return Number(tx.amount);
-      return tx.baseCurrencyAmount ? Number(tx.baseCurrencyAmount) : Number(tx.amount);
-    }
-
-    // Calculate totals
     let totalIncome = 0;
     let totalExpense = 0;
 
@@ -77,17 +79,11 @@ export async function GET(request: NextRequest) {
     // We group by PARENT category — if a transaction has a child
     // category, we roll it up to the parent.
     // Two separate maps: one for expenses, one for income.
-    type CategoryEntry = {
-      id: string;
-      name: string;
-      total: number;
-      children: Map<string, { id: string; name: string; total: number }>;
-    };
     const categoryMap = new Map<string, CategoryEntry>();
     const incomeCategoryMap = new Map<string, CategoryEntry>();
 
     for (const tx of transactions) {
-      const amount = effectiveAmount(tx);
+      const amount = effectiveAmount(tx, defaultCurrency);
 
       if (tx.type === "INCOME") {
         totalIncome += amount;
@@ -99,60 +95,8 @@ export async function GET(request: NextRequest) {
         bucketTotals[bucket ?? "unclassified"] += amount;
       }
 
-      // Build category breakdown for both expenses and income
       const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
-
-      if (tx.category) {
-        const parentCategory = tx.category.parent || tx.category;
-        const isChild = !!tx.category.parent;
-
-        if (!targetMap.has(parentCategory.id)) {
-          targetMap.set(parentCategory.id, {
-            id: parentCategory.id,
-            name: parentCategory.name,
-            total: 0,
-            children: new Map(),
-          });
-        }
-
-        const parent = targetMap.get(parentCategory.id)!;
-        parent.total += amount;
-
-        if (isChild) {
-          if (!parent.children.has(tx.category.id)) {
-            parent.children.set(tx.category.id, {
-              id: tx.category.id,
-              name: tx.category.name,
-              total: 0,
-            });
-          }
-          parent.children.get(tx.category.id)!.total += amount;
-        }
-      } else {
-        // Uncategorized — group under a special bucket
-        const uncatKey = "__uncategorized__";
-        if (!targetMap.has(uncatKey)) {
-          targetMap.set(uncatKey, {
-            id: uncatKey,
-            name: "Uncategorized",
-            total: 0,
-            children: new Map(),
-          });
-        }
-        targetMap.get(uncatKey)!.total += amount;
-      }
-    }
-
-    // Convert maps to sorted arrays
-    function mapToSortedArray(map: Map<string, CategoryEntry>) {
-      return Array.from(map.values())
-        .map((cat) => ({
-          ...cat,
-          children: Array.from(cat.children.values()).sort(
-            (a, b) => b.total - a.total
-          ),
-        }))
-        .sort((a, b) => b.total - a.total);
+      updateCategoryMap(targetMap, tx.category, amount);
     }
 
     return NextResponse.json({

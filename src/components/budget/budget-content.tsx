@@ -337,6 +337,56 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
   );
 }
 
+// ─── Budget group item ────────────────────────────────────────────────────────
+// Renders a single budget group: either a parent header with editable child
+// rows, or a standalone leaf row. Extracted from BudgetContent to reduce
+// cognitive complexity (S3776).
+
+interface BudgetGroupItemProps {
+  group: BudgetGroup;
+  type: "EXPENSE" | "INCOME";
+  edits: Record<string, number>;
+  noteEdits: Record<string, string>;
+  onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+}
+
+function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNoteChange }: Readonly<BudgetGroupItemProps>) {
+  if (group.children.length > 0) {
+    return (
+      <div key={group.groupId}>
+        <GroupHeader group={group} />
+        {group.children.map((cat) => {
+          const key = editKey(type, cat.categoryId);
+          return (
+            <CategoryRow
+              key={cat.categoryId}
+              category={cat}
+              editedBudget={edits[key] ?? cat.budgeted}
+              note={key in noteEdits ? noteEdits[key] : cat.note}
+              onChange={(v) => onAmountChange(type, cat.categoryId, v)}
+              onNoteChange={(v) => onNoteChange(type, cat.categoryId, v)}
+              isChild
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  const key = editKey(type, group.groupId);
+  return (
+    <CategoryRow
+      key={group.groupId}
+      category={{ ...group, categoryId: group.groupId, categoryName: group.groupName }}
+      editedBudget={edits[key] ?? group.budgeted}
+      note={key in noteEdits ? noteEdits[key] : group.note}
+      onChange={(v) => onAmountChange(type, group.groupId, v)}
+      onNoteChange={(v) => onNoteChange(type, group.groupId, v)}
+    />
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function BudgetContent() {
@@ -405,44 +455,6 @@ export function BudgetContent() {
     } finally {
       setIsSaving(false);
     }
-  }
-
-  // Render a group: either a parent header + indented children, or a standalone leaf row.
-  function renderGroup(group: BudgetGroup, type: "EXPENSE" | "INCOME") {
-    if (group.children.length > 0) {
-      return (
-        <div key={group.groupId}>
-          <GroupHeader group={group} />
-          {group.children.map((cat) => {
-            const key = editKey(type, cat.categoryId);
-            return (
-              <CategoryRow
-                key={cat.categoryId}
-                category={cat}
-                editedBudget={edits[key] ?? cat.budgeted}
-                note={key in noteEdits ? noteEdits[key] : cat.note}
-                onChange={(v) => handleChange(type, cat.categoryId, v)}
-                onNoteChange={(v) => handleNoteChange(type, cat.categoryId, v)}
-                isChild
-              />
-            );
-          })}
-        </div>
-      );
-    }
-
-    // Standalone leaf — render directly as an editable row
-    const key = editKey(type, group.groupId);
-    return (
-      <CategoryRow
-        key={group.groupId}
-        category={{ ...group, categoryId: group.groupId, categoryName: group.groupName }}
-        editedBudget={edits[key] ?? group.budgeted}
-        note={key in noteEdits ? noteEdits[key] : group.note}
-        onChange={(v) => handleChange(type, group.groupId, v)}
-        onNoteChange={(v) => handleNoteChange(type, group.groupId, v)}
-      />
-    );
   }
 
   return (
@@ -536,7 +548,17 @@ export function BudgetContent() {
                 </div>
               ) : (
                 <div className="divide-y overflow-hidden rounded-lg border">
-                  {data.expense.groups.map((g) => renderGroup(g, "EXPENSE"))}
+                  {data.expense.groups.map((g) => (
+                    <BudgetGroupItem
+                      key={g.groupId}
+                      group={g}
+                      type="EXPENSE"
+                      edits={edits}
+                      noteEdits={noteEdits}
+                      onAmountChange={handleChange}
+                      onNoteChange={handleNoteChange}
+                    />
+                  ))}
                 </div>
               )}
             </TabsContent>
@@ -548,7 +570,17 @@ export function BudgetContent() {
                 </div>
               ) : (
                 <div className="divide-y overflow-hidden rounded-lg border">
-                  {data.income.groups.map((g) => renderGroup(g, "INCOME"))}
+                  {data.income.groups.map((g) => (
+                    <BudgetGroupItem
+                      key={g.groupId}
+                      group={g}
+                      type="INCOME"
+                      edits={edits}
+                      noteEdits={noteEdits}
+                      onAmountChange={handleChange}
+                      onNoteChange={handleNoteChange}
+                    />
+                  ))}
                 </div>
               )}
             </TabsContent>

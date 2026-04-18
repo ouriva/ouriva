@@ -22,6 +22,63 @@ import { prisma } from "@/lib/prisma";
 import { getDefaultCurrency } from "@/lib/default-currency";
 import { fetchTodayRate } from "@/lib/exchange-rate";
 
+// ─── Module-scope helpers ─────────────────────────────────────────────────────
+
+// Builds a map of accountId → running balance by applying all transactions
+// on top of each account's initial balance.
+function buildBalanceMap(
+  accounts: { id: string; initialBalance: unknown }[],
+  transactions: { type: string; amount: unknown; fromAccountId: string }[]
+): Map<string, number> {
+  const balanceMap = new Map<string, number>();
+
+  for (const account of accounts) {
+    balanceMap.set(account.id, Number(account.initialBalance));
+  }
+
+  for (const tx of transactions) {
+    const current = balanceMap.get(tx.fromAccountId);
+    if (current === undefined) continue;
+    const amount = Number(tx.amount);
+    if (tx.type === "INCOME") {
+      balanceMap.set(tx.fromAccountId, current + amount);
+    } else if (tx.type === "EXPENSE") {
+      balanceMap.set(tx.fromAccountId, current - amount);
+    }
+  }
+
+  return balanceMap;
+}
+
+// Groups accounts by currency code and accumulates running totals per group.
+function buildCurrencyGroups(
+  accountsWithBalances: { id: string; name: string; balance: number; currency: { id: string; code: string; symbol: string }; accountType: { id: string; name: string } }[]
+) {
+  const byCurrency = new Map<
+    string,
+    { code: string; symbol: string; accounts: typeof accountsWithBalances; total: number }
+  >();
+
+  for (const account of accountsWithBalances) {
+    const key = account.currency.code;
+    if (!byCurrency.has(key)) {
+      byCurrency.set(key, {
+        code: account.currency.code,
+        symbol: account.currency.symbol,
+        accounts: [],
+        total: 0,
+      });
+    }
+    const group = byCurrency.get(key)!;
+    group.accounts.push(account);
+    group.total = Math.round((group.total + account.balance) * 100) / 100;
+  }
+
+  return byCurrency;
+}
+
+// ─── Route ────────────────────────────────────────────────────────────────────
+
 export async function GET() {
   try {
     const [defaultCurrency, accounts, transactions] = await Promise.all([
@@ -46,31 +103,7 @@ export async function GET() {
     ]);
 
     // Build a balance map: accountId → running balance
-    const balanceMap = new Map<string, number>();
-
-    // Start with initial balances
-    for (const account of accounts) {
-      balanceMap.set(account.id, Number(account.initialBalance));
-    }
-
-    // Apply each transaction
-    for (const tx of transactions) {
-      const amount = Number(tx.amount);
-
-      if (tx.type === "INCOME") {
-        // Income goes INTO the fromAccount
-        const current = balanceMap.get(tx.fromAccountId);
-        if (current !== undefined) {
-          balanceMap.set(tx.fromAccountId, current + amount);
-        }
-      } else if (tx.type === "EXPENSE") {
-        // Expense goes OUT OF the fromAccount
-        const current = balanceMap.get(tx.fromAccountId);
-        if (current !== undefined) {
-          balanceMap.set(tx.fromAccountId, current - amount);
-        }
-      }
-    }
+    const balanceMap = buildBalanceMap(accounts, transactions);
 
     // Build response: accounts with computed balances, grouped by currency
     const accountsWithBalances = accounts.map((account) => ({
@@ -89,25 +122,7 @@ export async function GET() {
     }));
 
     // Group by currency for the dashboard display
-    const byCurrency = new Map<
-      string,
-      { code: string; symbol: string; accounts: typeof accountsWithBalances; total: number }
-    >();
-
-    for (const account of accountsWithBalances) {
-      const key = account.currency.code;
-      if (!byCurrency.has(key)) {
-        byCurrency.set(key, {
-          code: account.currency.code,
-          symbol: account.currency.symbol,
-          accounts: [],
-          total: 0,
-        });
-      }
-      const group = byCurrency.get(key)!;
-      group.accounts.push(account);
-      group.total = Math.round((group.total + account.balance) * 100) / 100;
-    }
+    const byCurrency = buildCurrencyGroups(accountsWithBalances);
 
     // Compute aggregated total in default currency using today's exchange rates.
     // Each currency group converts its total to the default currency.
