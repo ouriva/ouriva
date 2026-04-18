@@ -79,6 +79,37 @@ interface BudgetData {
   };
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function editKey(type: "EXPENSE" | "INCOME", categoryId: string): string {
+  return `${type}:${categoryId}`;
+}
+
+// Flatten a group list to leaf-level budget entries, applying any pending edits.
+function collectLeaves(
+  groups: BudgetGroup[],
+  type: "EXPENSE" | "INCOME",
+  edits: Record<string, number>,
+  noteEdits: Record<string, string>
+): { categoryId: string; type: "EXPENSE" | "INCOME"; amount: number; note?: string }[] {
+  return groups.flatMap((g) => {
+    const leaves: BudgetCategory[] =
+      g.children.length > 0
+        ? g.children
+        : [{ ...g, categoryId: g.groupId, categoryName: g.groupName }];
+
+    return leaves.map((c) => {
+      const key = editKey(type, c.categoryId);
+      return {
+        categoryId: c.categoryId,
+        type,
+        amount: edits[key] ?? c.budgeted,
+        note: key in noteEdits ? noteEdits[key] : c.note ?? undefined,
+      };
+    });
+  });
+}
+
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
 function BudgetSkeleton() {
@@ -324,9 +355,6 @@ export function BudgetContent() {
   // Note edits — same key scheme
   const [noteEdits, setNoteEdits] = useState<Record<string, string>>({});
 
-  const editKey = (type: "EXPENSE" | "INCOME", categoryId: string) =>
-    `${type}:${categoryId}`;
-
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setEdits({});
@@ -357,29 +385,9 @@ export function BudgetContent() {
     if (!data) return;
     setIsSaving(true);
     try {
-      // Collect leaf-level entries (children of groups, or standalone groups)
-      function collectLeaves(groups: BudgetGroup[], type: "EXPENSE" | "INCOME") {
-        return groups.flatMap((g) => {
-          const leaves: BudgetCategory[] =
-            g.children.length > 0
-              ? g.children
-              : [{ ...g, categoryId: g.groupId, categoryName: g.groupName }];
-
-          return leaves.map((c) => {
-            const key = editKey(type, c.categoryId);
-            return {
-              categoryId: c.categoryId,
-              type,
-              amount: edits[key] ?? c.budgeted,
-              note:   key in noteEdits ? noteEdits[key] : c.note ?? undefined,
-            };
-          });
-        });
-      }
-
       const budgets = [
-        ...collectLeaves(data.expense.groups, "EXPENSE"),
-        ...collectLeaves(data.income.groups,  "INCOME"),
+        ...collectLeaves(data.expense.groups, "EXPENSE", edits, noteEdits),
+        ...collectLeaves(data.income.groups, "INCOME", edits, noteEdits),
       ];
 
       const res = await fetch("/api/budgets", {

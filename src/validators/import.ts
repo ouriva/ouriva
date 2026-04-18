@@ -76,7 +76,7 @@ export type ExecuteImportInput = z.infer<typeof executeImportSchema>;
 // Profiles store column mappings so users don't re-map every time.
 
 export const createImportProfileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
+  name: z.string().min(1, { message: "Name is required" }).max(100),
   fileType: z.enum(["csv", "xlsx"]),
   columnMap: columnMapSchema,
   dateFormat: z.string().default("yyyy-MM-dd"),

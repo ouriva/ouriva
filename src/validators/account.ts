@@ -4,10 +4,10 @@
 import { z } from "zod/v4";
 
 export const createAccountSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
+  name: z.string().min(1, { message: "Name is required" }).max(100),
   initialBalance: z.number().default(0),
-  currencyId: z.string().uuid("Invalid currency"),
-  accountTypeId: z.string().uuid("Invalid account type"),
+  currencyId: z.string().uuid({ message: "Invalid currency" }),
+  accountTypeId: z.string().uuid({ message: "Invalid account type" }),
 });
 
 export const updateAccountSchema = createAccountSchema.partial().extend({
