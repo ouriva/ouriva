@@ -351,7 +351,7 @@ interface BudgetGroupItemProps {
   onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
 }
 
-function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNoteChange }: BudgetGroupItemProps) {
+function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNoteChange }: Readonly<BudgetGroupItemProps>) {
   if (group.children.length > 0) {
     return (
       <div key={group.groupId}>
