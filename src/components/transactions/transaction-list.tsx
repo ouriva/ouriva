@@ -13,7 +13,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TransactionCard } from "./transaction-card";
 import { Button } from "@/components/ui/button";
@@ -213,6 +213,57 @@ function groupByDate(transactions: TransactionWithRelations[]): {
   return { grouped, sortedDates };
 }
 
+// Applies a map of key→value updates to an existing URLSearchParams string,
+// optionally resetting the page. Returns the new params string.
+// Extracted to module scope to simplify the updateParams callback inside
+// TransactionList (reduces cognitive complexity, S3776).
+function applyParamUpdates(
+  current: string,
+  updates: Record<string, string | undefined>,
+  resetPage: boolean
+): string {
+  const params = new URLSearchParams(current);
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined && value !== "") {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+  }
+  if (resetPage) params.delete("page");
+  return params.toString();
+}
+
+// ─── Filter dropdowns hook ────────────────────────────────────────────────────
+// Fetches the accounts and categories lists once on mount so the filter
+// panel dropdowns are populated. Extracted to reduce cognitive complexity
+// in TransactionList (S3776).
+
+function useFilterDropdowns() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    async function loadFilterData() {
+      const [accountsRes, categoriesRes] = await Promise.all([
+        fetch("/api/accounts"),
+        fetch("/api/categories"),
+      ]);
+      if (accountsRes.ok) {
+        const data = await accountsRes.json();
+        setAccounts(data.data || data);
+      }
+      if (categoriesRes.ok) {
+        const data = await categoriesRes.json();
+        setCategories(data.data || data);
+      }
+    }
+    loadFilterData();
+  }, []);
+
+  return { accounts, categories };
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TransactionList() {
@@ -240,8 +291,7 @@ export function TransactionList() {
   );
 
   // Reference data for filter dropdowns
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { accounts, categories } = useFilterDropdowns();
 
   // Transaction data — accumulated across pages for "load more"
   const [allTransactions, setAllTransactions] = useState<TransactionWithRelations[]>([]);
@@ -255,38 +305,11 @@ export function TransactionList() {
   // updateParams rebuilds the URL search params with the given changes.
   const updateParams = useCallback(
     (updates: Record<string, string | undefined>, resetPage = true) => {
-      const params = new URLSearchParams(searchParams.toString());
-      Object.entries(updates).forEach(([key, value]) => {
-        if (value !== undefined && value !== "") {
-          params.set(key, value);
-        } else {
-          params.delete(key);
-        }
-      });
-      if (resetPage) params.delete("page");
-      router.push(`/transactions?${params.toString()}`);
+      const qs = applyParamUpdates(searchParams.toString(), updates, resetPage);
+      router.push(`/transactions?${qs}`);
     },
     [searchParams, router]
   );
-
-  // ── Load filter dropdowns ───────────────────────────────────────────────
-  useEffect(() => {
-    async function loadFilterData() {
-      const [accountsRes, categoriesRes] = await Promise.all([
-        fetch("/api/accounts"),
-        fetch("/api/categories"),
-      ]);
-      if (accountsRes.ok) {
-        const data = await accountsRes.json();
-        setAccounts(data.data || data);
-      }
-      if (categoriesRes.ok) {
-        const data = await categoriesRes.json();
-        setCategories(data.data || data);
-      }
-    }
-    loadFilterData();
-  }, []);
 
   // ── Search debounce ─────────────────────────────────────────────────────
   useEffect(() => {

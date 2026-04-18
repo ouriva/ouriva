@@ -387,19 +387,14 @@ function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNote
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Data hook ───────────────────────────────────────────────────────────────
+// Encapsulates all state and mutation logic so BudgetContent only contains
+// layout and rendering. Extracted to reduce cognitive complexity (S3776).
 
-export function BudgetContent() {
-  const t = useTranslations("budget");
-  const locale = useLocale();
-  const searchParams = useSearchParams();
-  const now = new Date();
-  const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
-
+function useBudgetData(year: number) {
   const [data, setData] = useState<BudgetData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
   // Budget amount edits keyed as "EXPENSE:categoryId" or "INCOME:categoryId"
   const [edits, setEdits] = useState<Record<string, number>>({});
   // Note edits — same key scheme
@@ -439,23 +434,35 @@ export function BudgetContent() {
         ...collectLeaves(data.expense.groups, "EXPENSE", edits, noteEdits),
         ...collectLeaves(data.income.groups, "INCOME", edits, noteEdits),
       ];
-
       const res = await fetch("/api/budgets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ year, budgets }),
       });
-
       if (res.ok) {
         await fetchData();
       } else {
-        const error = await res.json();
-        alert(error.error?.message || "Failed to save budgets");
+        const err = await res.json();
+        alert(err.error?.message || "Failed to save budgets");
       }
     } finally {
       setIsSaving(false);
     }
   }
+
+  return { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export function BudgetContent() {
+  const t = useTranslations("budget");
+  const locale = useLocale();
+  const searchParams = useSearchParams();
+  const now = new Date();
+  const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
+
+  const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave } = useBudgetData(year);
 
   return (
     <div className="space-y-6">

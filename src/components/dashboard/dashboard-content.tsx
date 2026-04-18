@@ -218,6 +218,62 @@ function useDashboardData() {
   return { balancesData, monthly, recentTx, isLoading };
 }
 
+// ─── Net Worth Hero ───────────────────────────────────────────────────────────
+// Dark gradient card showing the aggregated net worth (or per-currency totals
+// when no default currency is set). Extracted from DashboardContent to reduce
+// cognitive complexity (S3776).
+
+interface NetWorthHeroProps {
+  balances: CurrencyGroup[];
+  aggregatedTotal: number | null;
+  defaultCurrency: { code: string; symbol: string } | null;
+  locale: string;
+}
+
+function NetWorthHero({ balances, aggregatedTotal, defaultCurrency, locale }: Readonly<NetWorthHeroProps>) {
+  const t = useTranslations("dashboard");
+
+  return (
+    <div className="rounded-2xl bg-gradient-to-br from-zinc-800 to-amber-950 p-5 text-white shadow-lg">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+        {t("netWorth")}
+      </p>
+      {aggregatedTotal !== null && defaultCurrency ? (
+        <div className="mt-2">
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-bold tabular-nums">
+              {defaultCurrency.symbol}{formatAmount(aggregatedTotal, locale)}
+            </span>
+            <span className="text-sm text-zinc-500">{defaultCurrency.code}</span>
+          </div>
+          {/* Per-currency breakdown shown as smaller secondary lines when more than one currency */}
+          {balances.length > 1 && (
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
+              {balances.map((group) => (
+                <span key={group.code} className="text-xs text-zinc-400 tabular-nums">
+                  {formatCurrency(group.total, group.code, locale)} {group.code}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        // Single currency or no default set — show each currency on its own line
+        <div className="mt-2 space-y-0.5">
+          {balances.map((group) => (
+            <div key={group.code} className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold tabular-nums">
+                {formatCurrency(group.total, group.code, locale)}
+              </span>
+              <span className="text-sm text-zinc-500">{group.code}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function getGreetingKey(): "goodMorning" | "goodAfternoon" | "goodEvening" {
@@ -305,44 +361,12 @@ export function DashboardContent() {
       {isLoading ? (
         <Skeleton className="h-28 w-full rounded-2xl" />
       ) : balances.length > 0 ? (
-        <div className="rounded-2xl bg-gradient-to-br from-zinc-800 to-amber-950 p-5 text-white shadow-lg">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
-            {t("netWorth")}
-          </p>
-          {/* Aggregated total in default currency — shown when multi-currency */}
-          {aggregatedTotal !== null && defaultCurrency ? (
-            <div className="mt-2">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold tabular-nums">
-                  {defaultCurrency.symbol}{formatAmount(aggregatedTotal, locale)}
-                </span>
-                <span className="text-sm text-zinc-500">{defaultCurrency.code}</span>
-              </div>
-              {/* Per-currency breakdown shown as smaller secondary lines when more than one currency */}
-              {balances.length > 1 && (
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
-                  {balances.map((group) => (
-                    <span key={group.code} className="text-xs text-zinc-400 tabular-nums">
-                      {formatCurrency(group.total, group.code, locale)} {group.code}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            // Single currency or no default set — show each currency on its own line
-            <div className="mt-2 space-y-0.5">
-              {balances.map((group) => (
-                <div key={group.code} className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold tabular-nums">
-                    {formatCurrency(group.total, group.code, locale)}
-                  </span>
-                  <span className="text-sm text-zinc-500">{group.code}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <NetWorthHero
+          balances={balances}
+          aggregatedTotal={aggregatedTotal}
+          defaultCurrency={defaultCurrency}
+          locale={locale}
+        />
       ) : null}
 
       {/* ── 3. Account Horizontal Scroll ─────────────────────────────────── */}
