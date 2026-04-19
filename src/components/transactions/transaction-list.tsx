@@ -234,6 +234,65 @@ function applyParamUpdates(
   return params.toString();
 }
 
+// ─── Transaction data hook ───────────────────────────────────────────────────
+// Manages fetching, pagination, and load-more for the transaction list.
+// Extracted from TransactionList to reduce cognitive complexity (S3776):
+// fetchPage contains the bulk of the branching logic.
+
+function useTransactionData(filterParams: string) {
+  const [allTransactions, setAllTransactions] = useState<TransactionWithRelations[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
+  const [loadedPage, setLoadedPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPage = useCallback(
+    async (page: number, append: boolean) => {
+      if (append) setIsLoadingMore(true);
+      else { setIsLoading(true); setError(null); }
+
+      try {
+        const url = `/api/transactions?${filterParams}&page=${page}`;
+        const res = await fetch(url);
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error?.message || "Failed to fetch");
+        }
+        const result = await res.json();
+        if (append) {
+          setAllTransactions((prev) => [...prev, ...result.data]);
+        } else {
+          setAllTransactions(result.data);
+          setLoadedPage(1);
+        }
+        setPagination(result.pagination);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+      } finally {
+        if (append) setIsLoadingMore(false);
+        else setIsLoading(false);
+      }
+    },
+    [filterParams]
+  );
+
+  useEffect(() => {
+    setAllTransactions([]);
+    fetchPage(1, false);
+  }, [fetchPage]);
+
+  async function loadMore() {
+    const nextPage = loadedPage + 1;
+    setLoadedPage(nextPage);
+    await fetchPage(nextPage, true);
+  }
+
+  const hasMore = pagination ? loadedPage < pagination.totalPages : false;
+
+  return { allTransactions, isLoading, isLoadingMore, error, loadMore, hasMore };
+}
+
 // ─── Filter dropdowns hook ────────────────────────────────────────────────────
 // Fetches the accounts and categories lists once on mount so the filter
 // panel dropdowns are populated. Extracted to reduce cognitive complexity
@@ -293,14 +352,6 @@ export function TransactionList() {
   // Reference data for filter dropdowns
   const { accounts, categories } = useFilterDropdowns();
 
-  // Transaction data — accumulated across pages for "load more"
-  const [allTransactions, setAllTransactions] = useState<TransactionWithRelations[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [loadedPage, setLoadedPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   // ── Filter param helper ─────────────────────────────────────────────────
   // updateParams rebuilds the URL search params with the given changes.
   const updateParams = useCallback(
@@ -327,67 +378,18 @@ export function TransactionList() {
   }, [search, searchParams, router]);
 
   // ── Build filter query string ────────────────────────────────────────────
-  // Memoised so the string reference is stable when nothing changed.
-  // This is the key that identifies a unique filter combination —
-  // when it changes, we reset to page 1 and clear the accumulated list.
   const filterParams = useMemo(
     () => buildFilterParams(urlSearch, type, accountId, categoryId, startDate, endDate, needsReview),
     [urlSearch, type, accountId, categoryId, startDate, endDate, needsReview]
   );
 
-  // ── Fetch transactions ──────────────────────────────────────────────────
-  // fetchPage fetches a single page and either replaces or appends the list.
-  const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
-      if (append) setIsLoadingMore(true);
-      else { setIsLoading(true); setError(null); }
-
-      try {
-        const url = `/api/transactions?${filterParams}&page=${page}`;
-        const res = await fetch(url);
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error?.message || "Failed to fetch");
-        }
-        const result = await res.json();
-
-        if (append) {
-          setAllTransactions((prev) => [...prev, ...result.data]);
-        } else {
-          setAllTransactions(result.data);
-          setLoadedPage(1);
-        }
-        setPagination(result.pagination);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        if (append) setIsLoadingMore(false);
-        else setIsLoading(false);
-      }
-    },
-    [filterParams]
-  );
-
-  // When filters change, reset and fetch page 1.
-  // fetchPage is stable while filterParams is unchanged, so this only
-  // runs when the actual filter values change.
-  useEffect(() => {
-    setAllTransactions([]);
-    fetchPage(1, false);
-  }, [fetchPage]);
-
-  async function loadMore() {
-    const nextPage = loadedPage + 1;
-    setLoadedPage(nextPage);
-    await fetchPage(nextPage, true);
-  }
+  // ── Transaction data ─────────────────────────────────────────────────────
+  const { allTransactions, isLoading, isLoadingMore, error, loadMore, hasMore } = useTransactionData(filterParams);
 
   // ── Derived UI data ─────────────────────────────────────────────────────
 
   const activeFilterCount = [accountId, categoryId, startDate, endDate, needsReview].filter(Boolean).length;
 
-  // Build the export URL from the current filter state.
-  // The export endpoint accepts the same params as the list endpoint.
   const exportUrl = useMemo(
     () => buildExportUrl(type, accountId, categoryId, startDate, endDate, needsReview, urlSearch),
     [type, accountId, categoryId, startDate, endDate, needsReview, urlSearch]
@@ -401,10 +403,7 @@ export function TransactionList() {
   const parentCategories = categories.filter((c) => !c.parentId);
   const childCategories = categories.filter((c) => c.parentId);
 
-  // Group transactions by date key (YYYY-MM-DD)
   const { grouped, sortedDates } = groupByDate(allTransactions);
-
-  const hasMore = pagination ? loadedPage < pagination.totalPages : false;
 
   // ── Render ──────────────────────────────────────────────────────────────
 

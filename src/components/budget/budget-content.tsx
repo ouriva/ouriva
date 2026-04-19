@@ -387,6 +387,142 @@ function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNote
   );
 }
 
+// ─── Stat cards ──────────────────────────────────────────────────────────────
+// The 2+1 summary card grid at the top of the budget page. Extracted from
+// BudgetContent to reduce cognitive complexity (S3776).
+
+interface BudgetStatCardsProps {
+  data: BudgetData;
+  locale: string;
+}
+
+function BudgetStatCards({ data, locale }: Readonly<BudgetStatCardsProps>) {
+  const t = useTranslations("budget");
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="py-0">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("budgetedIncome")}
+            </p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+              €{formatAmount(data.income.totalBudgeted, locale)}
+            </p>
+            <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
+              {t("received", { amount: `€${formatAmount(data.income.totalActual, locale)}` })}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="py-0">
+          <CardContent className="p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("budgetedExpenses")}
+            </p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+              €{formatAmount(data.expense.totalBudgeted, locale)}
+            </p>
+            <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
+              {t("spent", { amount: `€${formatAmount(data.expense.totalActual, locale)}` })}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="py-0">
+        <CardContent className="p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {t("budgetBalance")}
+          </p>
+          <p
+            className={cn(
+              "mt-1 text-xl font-bold tabular-nums",
+              data.budgetBalance >= 0
+                ? "text-emerald-600 dark:text-emerald-400"
+                : "text-red-600 dark:text-red-400"
+            )}
+          >
+            €{formatAmount(data.budgetBalance, locale)}
+          </p>
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
+            {data.budgetBalance >= 0 ? t("planViable") : t("planNotViable")}
+          </p>
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+// ─── Category tabs ────────────────────────────────────────────────────────────
+// Expense / income tab switcher with the editable group rows. Extracted from
+// BudgetContent to reduce cognitive complexity (S3776).
+
+interface BudgetCategoryTabsProps {
+  data: BudgetData;
+  edits: Record<string, number>;
+  noteEdits: Record<string, string>;
+  onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  year: number;
+}
+
+function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChange, year }: Readonly<BudgetCategoryTabsProps>) {
+  const t = useTranslations("budget");
+  return (
+    <Tabs defaultValue="expenses">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
+        <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="expenses" className="mt-4">
+        {data.expense.groups.length === 0 ? (
+          <div className="rounded-lg border p-8 text-center text-muted-foreground">
+            {t("noExpenseCategories")}
+          </div>
+        ) : (
+          <div className="divide-y overflow-hidden rounded-lg border">
+            {data.expense.groups.map((g) => (
+              <BudgetGroupItem
+                key={g.groupId}
+                group={g}
+                type="EXPENSE"
+                edits={edits}
+                noteEdits={noteEdits}
+                onAmountChange={onAmountChange}
+                onNoteChange={onNoteChange}
+              />
+            ))}
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="income" className="mt-4">
+        {data.income.groups.length === 0 ? (
+          <div className="rounded-lg border p-8 text-center text-muted-foreground">
+            {t("noIncomeCategories", { year })}
+          </div>
+        ) : (
+          <div className="divide-y overflow-hidden rounded-lg border">
+            {data.income.groups.map((g) => (
+              <BudgetGroupItem
+                key={g.groupId}
+                group={g}
+                type="INCOME"
+                edits={edits}
+                noteEdits={noteEdits}
+                onAmountChange={onAmountChange}
+                onNoteChange={onNoteChange}
+              />
+            ))}
+          </div>
+        )}
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 // ─── Data hook ───────────────────────────────────────────────────────────────
 // Encapsulates all state and mutation logic so BudgetContent only contains
 // layout and rendering. Extracted to reduce cognitive complexity (S3776).
@@ -488,110 +624,17 @@ export function BudgetContent() {
       ) : data ? (
         <>
           {/* ── Stat cards — 2+1 layout ─────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="py-0">
-              <CardContent className="p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("budgetedIncome")}
-                </p>
-                <p className="mt-1 text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
-                  €{formatAmount(data.income.totalBudgeted, locale)}
-                </p>
-                <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
-                  {t("received", { amount: `€${formatAmount(data.income.totalActual, locale)}` })}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="py-0">
-              <CardContent className="p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("budgetedExpenses")}
-                </p>
-                <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                  €{formatAmount(data.expense.totalBudgeted, locale)}
-                </p>
-                <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
-                  {t("spent", { amount: `€${formatAmount(data.expense.totalActual, locale)}` })}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card className="py-0">
-            <CardContent className="p-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("budgetBalance")}
-              </p>
-              <p
-                className={cn(
-                  "mt-1 text-xl font-bold tabular-nums",
-                  data.budgetBalance >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-red-600 dark:text-red-400"
-                )}
-              >
-                €{formatAmount(data.budgetBalance, locale)}
-              </p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">
-                {data.budgetBalance >= 0
-                  ? t("planViable")
-                  : t("planNotViable")}
-              </p>
-            </CardContent>
-          </Card>
+          <BudgetStatCards data={data} locale={locale} />
 
           {/* ── Category tabs ────────────────────────────────────────── */}
-          <Tabs defaultValue="expenses">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
-              <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="expenses" className="mt-4">
-              {data.expense.groups.length === 0 ? (
-                <div className="rounded-lg border p-8 text-center text-muted-foreground">
-                  {t("noExpenseCategories")}
-                </div>
-              ) : (
-                <div className="divide-y overflow-hidden rounded-lg border">
-                  {data.expense.groups.map((g) => (
-                    <BudgetGroupItem
-                      key={g.groupId}
-                      group={g}
-                      type="EXPENSE"
-                      edits={edits}
-                      noteEdits={noteEdits}
-                      onAmountChange={handleChange}
-                      onNoteChange={handleNoteChange}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="income" className="mt-4">
-              {data.income.groups.length === 0 ? (
-                <div className="rounded-lg border p-8 text-center text-muted-foreground">
-                  {t("noIncomeCategories", { year })}
-                </div>
-              ) : (
-                <div className="divide-y overflow-hidden rounded-lg border">
-                  {data.income.groups.map((g) => (
-                    <BudgetGroupItem
-                      key={g.groupId}
-                      group={g}
-                      type="INCOME"
-                      edits={edits}
-                      noteEdits={noteEdits}
-                      onAmountChange={handleChange}
-                      onNoteChange={handleNoteChange}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          <BudgetCategoryTabs
+            data={data}
+            edits={edits}
+            noteEdits={noteEdits}
+            onAmountChange={handleChange}
+            onNoteChange={handleNoteChange}
+            year={year}
+          />
 
           {/* ── Planned 50/30/20 ────────────────────────────────────── */}
           <Card className="py-0">
