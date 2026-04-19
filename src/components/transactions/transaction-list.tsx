@@ -392,6 +392,127 @@ function useTransactionData(filterParams: string) {
   return { allTransactions, isLoading, isLoadingMore, error, loadMore, hasMore };
 }
 
+// ─── Transaction list content ────────────────────────────────────────────────
+// Renders the result of a transaction fetch: skeleton, error, empty state, or
+// the actual list. Extracted from TransactionList to eliminate the deeply nested
+// ternary chain (isLoading ? error ? empty ? list) which, combined with the
+// hasMore/isLoadingMore ternaries inside, pushed cognitive complexity to 21.
+//
+// Early returns replace nested ternaries, so hasMore ? sits at nesting depth 0
+// instead of depth 3. This brings the sub-component to complexity ~8 and leaves
+// TransactionList itself with a single complexity point (S3776 fix).
+
+interface TransactionListContentProps {
+  isLoading: boolean;
+  error: string | null;
+  allTransactions: TransactionWithRelations[];
+  sortedDates: string[];
+  grouped: Record<string, TransactionWithRelations[]>;
+  isLoadingMore: boolean;
+  hasMore: boolean;
+  loadMore: () => void;
+  locale: string;
+}
+
+function TransactionListContent({
+  isLoading,
+  error,
+  allTransactions,
+  sortedDates,
+  grouped,
+  isLoadingMore,
+  hasMore,
+  loadMore,
+  locale,
+}: Readonly<TransactionListContentProps>) {
+  const t = useTranslations("transactions");
+  const tCommon = useTranslations("common");
+  const router = useRouter();
+
+  if (isLoading) return <TransactionListSkeleton />;
+
+  if (error)
+    return (
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-destructive">
+        {error}
+      </div>
+    );
+
+  if (allTransactions.length === 0)
+    return (
+      <div className="rounded-lg border p-8 text-center text-muted-foreground">
+        {t("noTransactionsFound")}
+      </div>
+    );
+
+  return (
+    <div className="space-y-5">
+      {sortedDates.map((dateKey) => {
+        const txs = grouped[dateKey];
+        const dayNet = txs.reduce((sum, tx) => {
+          const amount = parseFloat(tx.amount);
+          return tx.type === "INCOME" ? sum + amount : sum - amount;
+        }, 0);
+        return (
+          <div key={dateKey}>
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {formatGroupDate(dateKey, locale, tCommon("today"), tCommon("yesterday"))}
+              </h3>
+              <span
+                className={cn(
+                  "text-xs font-semibold tabular-nums",
+                  dayNet >= 0
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-muted-foreground"
+                )}
+              >
+                {dayNet >= 0 ? "+" : "−"}
+                {formatAmount(Math.abs(dayNet), locale)}
+              </span>
+            </div>
+            <div className="rounded-lg border bg-card">
+              {txs.map((tx, index) => (
+                <div key={tx.id}>
+                  {index > 0 && <div className="mx-3 border-t" />}
+                  <TransactionCard
+                    transaction={tx}
+                    onClick={() => router.push(`/transactions/${tx.id}`)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+
+      {hasMore ? (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={loadMore}
+          disabled={isLoadingMore}
+        >
+          {isLoadingMore ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t("loadMore")}
+            </>
+          ) : (
+            t("loadMore")
+          )}
+        </Button>
+      ) : (
+        <p className="py-2 text-center text-xs text-muted-foreground">
+          {allTransactions.length === 1
+            ? t("countSingle")
+            : t("countPlural", { count: allTransactions.length })}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Filter dropdowns hook ────────────────────────────────────────────────────
 // Fetches the accounts and categories lists once on mount so the filter
 // panel dropdowns are populated. Extracted to reduce cognitive complexity
@@ -426,7 +547,6 @@ function useFilterDropdowns() {
 
 export function TransactionList() {
   const t = useTranslations("transactions");
-  const tCommon = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -680,91 +800,17 @@ export function TransactionList() {
       )}
 
       {/* ── Transaction list ─────────────────────────────────────────────── */}
-      {isLoading ? (
-        <TransactionListSkeleton />
-      ) : error ? (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center text-destructive">
-          {error}
-        </div>
-      ) : allTransactions.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          {t("noTransactionsFound")}
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {sortedDates.map((dateKey) => {
-            const txs = grouped[dateKey];
-
-            // Compute the net total for the day to show in the header.
-            // Income is positive, expenses negative — same sign convention
-            // as the individual amounts in the cards.
-            const dayNet = txs.reduce((sum, tx) => {
-              const amount = parseFloat(tx.amount);
-              return tx.type === "INCOME" ? sum + amount : sum - amount;
-            }, 0);
-
-            return (
-              <div key={dateKey}>
-                {/* Date group header: label on left, day net on right */}
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    {formatGroupDate(dateKey, locale, tCommon("today"), tCommon("yesterday"))}
-                  </h3>
-                  <span
-                    className={cn(
-                      "text-xs font-semibold tabular-nums",
-                      dayNet >= 0
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {dayNet >= 0 ? "+" : "−"}
-                    {formatAmount(Math.abs(dayNet), locale)}
-                  </span>
-                </div>
-
-                {/* Transactions for this date inside a single rounded card */}
-                <div className="rounded-lg border bg-card">
-                  {txs.map((tx, index) => (
-                    <div key={tx.id}>
-                      {index > 0 && <div className="mx-3 border-t" />}
-                      <TransactionCard
-                        transaction={tx}
-                        onClick={() => router.push(`/transactions/${tx.id}`)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Load more / end of list */}
-          {hasMore ? (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={loadMore}
-              disabled={isLoadingMore}
-            >
-              {isLoadingMore ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t("loadMore")}
-                </>
-              ) : (
-                t("loadMore")
-              )}
-            </Button>
-          ) : (
-            <p className="py-2 text-center text-xs text-muted-foreground">
-              {allTransactions.length === 1
-                ? t("countSingle")
-                : t("countPlural", { count: allTransactions.length })}
-            </p>
-          )}
-        </div>
-      )}
+      <TransactionListContent
+        isLoading={isLoading}
+        error={error}
+        allTransactions={allTransactions}
+        sortedDates={sortedDates}
+        grouped={grouped}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        loadMore={loadMore}
+        locale={locale}
+      />
     </div>
   );
 }
