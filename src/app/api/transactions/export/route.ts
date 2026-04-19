@@ -22,12 +22,12 @@ import { Prisma } from "@/generated/prisma/client";
 
 // Escape a value for inclusion in a CSV cell.
 // Wraps in quotes if the value contains commas, quotes, or newlines.
-function csvEscape(value: string | null | undefined): string {
-  const str = value ?? "";
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-    return `"${str.replace(/"/g, '""')}"`;
+function csvEscape(value: string | null | undefined = ""): string {
+  if (!value) return "";
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
   }
-  return str;
+  return value;
 }
 
 // Build one CSV row from an array of values.

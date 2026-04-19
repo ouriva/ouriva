@@ -227,7 +227,7 @@ function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
           matchType,
           categoryId,
           friendlyName: friendlyName.trim() || null,
-          priority: parseInt(priority) || 0,
+          priority: Number.parseInt(priority) || 0,
           isActive,
         }),
       });

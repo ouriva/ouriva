@@ -29,8 +29,8 @@ export function MonthYearPicker({ mode, basePath }: MonthYearPickerProps) {
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const year = parseInt(searchParams.get("year") || String(currentYear));
-  const month = parseInt(searchParams.get("month") || String(currentMonth));
+  const year = Number.parseInt(searchParams.get("year") || String(currentYear));
+  const month = Number.parseInt(searchParams.get("month") || String(currentMonth));
 
   function navigate(newYear: number, newMonth: number) {
     const params = new URLSearchParams();
