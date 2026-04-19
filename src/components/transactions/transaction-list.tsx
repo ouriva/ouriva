@@ -234,6 +234,105 @@ function applyParamUpdates(
   return params.toString();
 }
 
+// ─── Search debounce hook ────────────────────────────────────────────────────
+// Syncs the local search input value to the URL with a 300ms delay. Extracted
+// from TransactionList: the setTimeout callback adds two levels of function
+// nesting (useEffect arrow → setTimeout arrow), making the inner if/else a
+// significant contributor to cognitive complexity (S3776).
+
+function useSearchDebounce(
+  search: string,
+  searchParams: ReturnType<typeof useSearchParams>,
+  router: ReturnType<typeof useRouter>
+) {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const currentUrlSearch = searchParams.get("search") || "";
+      if (search !== currentUrlSearch) {
+        const params = new URLSearchParams(searchParams.toString());
+        if (search) params.set("search", search);
+        else params.delete("search");
+        params.delete("page");
+        router.replace(`/transactions?${params.toString()}`);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search, searchParams, router]);
+}
+
+// ─── Active filter chips ──────────────────────────────────────────────────────
+// Renders the row of dismissable filter pills when any collapsible filter is
+// active. Each chip maps to one active filter. Extracted from TransactionList
+// to reduce cognitive complexity (S3776): the outer && plus six inner &&
+// operators each add to the parent component's score.
+
+interface ActiveFilterChipsProps {
+  accountId: string | undefined;
+  categoryId: string | undefined;
+  startDate: string;
+  endDate: string;
+  needsReview: boolean;
+  accounts: Account[];
+  categories: Category[];
+  onRemove: (updates: Record<string, string | undefined>) => void;
+}
+
+function ActiveFilterChips({
+  accountId, categoryId, startDate, endDate, needsReview,
+  accounts, categories, onRemove,
+}: Readonly<ActiveFilterChipsProps>) {
+  const t = useTranslations("transactions");
+  const count = [accountId, categoryId, startDate, endDate, needsReview].filter(Boolean).length;
+  if (count === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {accountId && (
+        <FilterChip
+          label={accounts.find((a) => a.id === accountId)?.name ?? t("filterAccount")}
+          ariaLabel={t("removeFilter", { label: accounts.find((a) => a.id === accountId)?.name ?? t("filterAccount") })}
+          onRemove={() => onRemove({ accountId: undefined })}
+        />
+      )}
+      {categoryId && categoryId !== "uncategorized" && (
+        <FilterChip
+          label={categories.find((c) => c.id === categoryId)?.name ?? t("filterCategory")}
+          ariaLabel={t("removeFilter", { label: categories.find((c) => c.id === categoryId)?.name ?? t("filterCategory") })}
+          onRemove={() => onRemove({ categoryId: undefined })}
+        />
+      )}
+      {categoryId === "uncategorized" && (
+        <FilterChip
+          label={t("uncategorized")}
+          ariaLabel={t("removeFilter", { label: t("uncategorized") })}
+          onRemove={() => onRemove({ categoryId: undefined })}
+        />
+      )}
+      {startDate && (
+        <FilterChip
+          label={`${t("filterFrom")} ${startDate}`}
+          ariaLabel={t("removeFilter", { label: `${t("filterFrom")} ${startDate}` })}
+          onRemove={() => onRemove({ startDate: undefined })}
+        />
+      )}
+      {endDate && (
+        <FilterChip
+          label={`${t("filterTo")} ${endDate}`}
+          ariaLabel={t("removeFilter", { label: `${t("filterTo")} ${endDate}` })}
+          onRemove={() => onRemove({ endDate: undefined })}
+        />
+      )}
+      {needsReview && (
+        <FilterChip
+          label={t("needsReviewOnly")}
+          ariaLabel={t("removeFilter", { label: t("needsReviewOnly") })}
+          onRemove={() => onRemove({ needsReview: undefined })}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Transaction data hook ───────────────────────────────────────────────────
 // Manages fetching, pagination, and load-more for the transaction list.
 // Extracted from TransactionList to reduce cognitive complexity (S3776):
@@ -363,19 +462,7 @@ export function TransactionList() {
   );
 
   // ── Search debounce ─────────────────────────────────────────────────────
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const currentUrlSearch = searchParams.get("search") || "";
-      if (search !== currentUrlSearch) {
-        const params = new URLSearchParams(searchParams.toString());
-        if (search) params.set("search", search);
-        else params.delete("search");
-        params.delete("page");
-        router.replace(`/transactions?${params.toString()}`);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [search, searchParams, router]);
+  useSearchDebounce(search, searchParams, router);
 
   // ── Build filter query string ────────────────────────────────────────────
   const filterParams = useMemo(
@@ -447,52 +534,16 @@ export function TransactionList() {
         </Tabs>
 
         {/* Active filter chips — only shown when collapsible filters are active */}
-        {activeFilterCount > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {accountId && (
-              <FilterChip
-                label={accounts.find((a) => a.id === accountId)?.name ?? t("filterAccount")}
-                ariaLabel={t("removeFilter", { label: accounts.find((a) => a.id === accountId)?.name ?? t("filterAccount") })}
-                onRemove={() => updateParams({ accountId: undefined })}
-              />
-            )}
-            {categoryId && categoryId !== "uncategorized" && (
-              <FilterChip
-                label={categories.find((c) => c.id === categoryId)?.name ?? t("filterCategory")}
-                ariaLabel={t("removeFilter", { label: categories.find((c) => c.id === categoryId)?.name ?? t("filterCategory") })}
-                onRemove={() => updateParams({ categoryId: undefined })}
-              />
-            )}
-            {categoryId === "uncategorized" && (
-              <FilterChip
-                label={t("uncategorized")}
-                ariaLabel={t("removeFilter", { label: t("uncategorized") })}
-                onRemove={() => updateParams({ categoryId: undefined })}
-              />
-            )}
-            {startDate && (
-              <FilterChip
-                label={`${t("filterFrom")} ${startDate}`}
-                ariaLabel={t("removeFilter", { label: `${t("filterFrom")} ${startDate}` })}
-                onRemove={() => updateParams({ startDate: undefined })}
-              />
-            )}
-            {endDate && (
-              <FilterChip
-                label={`${t("filterTo")} ${endDate}`}
-                ariaLabel={t("removeFilter", { label: `${t("filterTo")} ${endDate}` })}
-                onRemove={() => updateParams({ endDate: undefined })}
-              />
-            )}
-            {needsReview && (
-              <FilterChip
-                label={t("needsReviewOnly")}
-                ariaLabel={t("removeFilter", { label: t("needsReviewOnly") })}
-                onRemove={() => updateParams({ needsReview: undefined })}
-              />
-            )}
-          </div>
-        )}
+        <ActiveFilterChips
+          accountId={accountId}
+          categoryId={categoryId}
+          startDate={startDate}
+          endDate={endDate}
+          needsReview={needsReview}
+          accounts={accounts}
+          categories={categories}
+          onRemove={updateParams}
+        />
 
         {/* Filters toggle + clear + export */}
         <div className="flex items-center gap-2">
