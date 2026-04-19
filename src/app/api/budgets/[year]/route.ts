@@ -155,7 +155,7 @@ function buildGroupsFromSeeds(
       const percentage = g.budgeted > 0 ? Math.round((g.actual / g.budgeted) * 100) : 0;
 
       const children: LeafEntry[] = g.children
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .toSorted((a, b) => a.name.localeCompare(b.name))
         .map((c) => {
           const rem = Math.round((c.budgeted - c.actual) * 100) / 100;
           const pct = c.budgeted > 0 ? Math.round((c.actual / c.budgeted) * 100) : 0;

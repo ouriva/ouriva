@@ -99,8 +99,6 @@ export function StepColumnMapping({
   const [isSaving, setIsSaving] = useState(false);
   // Show exchange rate column selector when the import account uses a non-default currency
   const [showExchangeRateColumn, setShowExchangeRateColumn] = useState(false);
-  const [accountCurrencyCode, setAccountCurrencyCode] = useState<string | null>(null);
-  const [defaultCurrencyCode, setDefaultCurrencyCode] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkCurrencies() {
@@ -115,8 +113,6 @@ export function StepColumnMapping({
       const currencies: Array<{ code: string; isDefault: boolean }> = currenciesData?.data ?? [];
       const defCode = currencies.find((c) => c.isDefault)?.code ?? currencies[0]?.code ?? null;
 
-      setAccountCurrencyCode(accCode);
-      setDefaultCurrencyCode(defCode);
       setShowExchangeRateColumn(!!accCode && !!defCode && accCode !== defCode);
     }
     checkCurrencies();
@@ -226,7 +222,7 @@ export function StepColumnMapping({
             <Select
               value={String(columnMap.date)}
               onValueChange={(v) =>
-                setColumnMap((prev) => ({ ...prev, date: parseInt(v) }))
+                setColumnMap((prev) => ({ ...prev, date: Number.parseInt(v) }))
               }
             >
               <SelectTrigger className="mt-2">
@@ -247,7 +243,7 @@ export function StepColumnMapping({
             <Select
               value={String(columnMap.description)}
               onValueChange={(v) =>
-                setColumnMap((prev) => ({ ...prev, description: parseInt(v) }))
+                setColumnMap((prev) => ({ ...prev, description: Number.parseInt(v) }))
               }
             >
               <SelectTrigger className="mt-2">
@@ -286,7 +282,7 @@ export function StepColumnMapping({
               <Select
                 value={columnMap.amount !== undefined ? String(columnMap.amount) : ""}
                 onValueChange={(v) =>
-                  setColumnMap((prev) => ({ ...prev, amount: parseInt(v) }))
+                  setColumnMap((prev) => ({ ...prev, amount: Number.parseInt(v) }))
                 }
               >
                 <SelectTrigger className="mt-2">
@@ -311,7 +307,7 @@ export function StepColumnMapping({
                 <Select
                   value={columnMap.debitAmount !== undefined ? String(columnMap.debitAmount) : ""}
                   onValueChange={(v) =>
-                    setColumnMap((prev) => ({ ...prev, debitAmount: parseInt(v) }))
+                    setColumnMap((prev) => ({ ...prev, debitAmount: Number.parseInt(v) }))
                   }
                 >
                   <SelectTrigger className="mt-2">
@@ -331,7 +327,7 @@ export function StepColumnMapping({
                 <Select
                   value={columnMap.creditAmount !== undefined ? String(columnMap.creditAmount) : ""}
                   onValueChange={(v) =>
-                    setColumnMap((prev) => ({ ...prev, creditAmount: parseInt(v) }))
+                    setColumnMap((prev) => ({ ...prev, creditAmount: Number.parseInt(v) }))
                   }
                 >
                   <SelectTrigger className="mt-2">
@@ -357,7 +353,7 @@ export function StepColumnMapping({
               onValueChange={(v) =>
                 setColumnMap((prev) => ({
                   ...prev,
-                  reference: v === "none" ? undefined : parseInt(v),
+                  reference: v === "none" ? undefined : Number.parseInt(v),
                 }))
               }
             >
@@ -384,7 +380,7 @@ export function StepColumnMapping({
                 onValueChange={(v) =>
                   setColumnMap((prev) => ({
                     ...prev,
-                    exchangeRate: v === "none" ? undefined : parseInt(v),
+                    exchangeRate: v === "none" ? undefined : Number.parseInt(v),
                   }))
                 }
               >

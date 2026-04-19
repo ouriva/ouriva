@@ -120,7 +120,7 @@ function RecentTransactionRow({ tx, isLast, locale }: RecentTransactionRowProps)
         <span className={cn("text-sm font-semibold tabular-nums", config.amountColor)}>
           {config.sign}
           {tx.fromAccount.currency.symbol}
-          {formatAmount(parseFloat(tx.amount), locale)}
+          {formatAmount(Number.parseFloat(tx.amount), locale)}
         </span>
       </div>
     </Link>

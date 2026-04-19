@@ -68,8 +68,8 @@ export function StepConfirm({ state, onBack }: StepConfirmProps) {
         let exchangeRate: number | undefined;
         if (state.columnMap.exchangeRate !== undefined) {
           const raw = (row[state.columnMap.exchangeRate] ?? "").trim().replace(",", ".");
-          const parsed = parseFloat(raw);
-          if (isFinite(parsed) && parsed > 0) exchangeRate = parsed;
+          const parsed = Number.parseFloat(raw);
+          if (Number.isFinite(parsed) && parsed > 0) exchangeRate = parsed;
         }
 
         return {

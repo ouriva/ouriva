@@ -40,6 +40,15 @@ interface Settings {
   nonTrackedBalance: number;
 }
 
+// Set the NEXT_LOCALE cookie directly. The next-intl middleware reads
+// this cookie on every request and makes the locale available to all
+// Server Components and Client Components. A full page reload is
+// required so the server re-renders with the new locale's message bundle.
+function handleLocaleChange(newLocale: string) {
+  document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
+  window.location.reload();
+}
+
 export function GeneralSettings() {
   const t = useTranslations("generalSettings");
   const tCommon = useTranslations("common");
@@ -48,15 +57,6 @@ export function GeneralSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
-  function handleLocaleChange(newLocale: string) {
-    // Set the NEXT_LOCALE cookie directly. The next-intl middleware reads
-    // this cookie on every request and makes the locale available to all
-    // Server Components and Client Components. A full page reload is
-    // required so the server re-renders with the new locale's message bundle.
-    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
-    window.location.reload();
-  }
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);

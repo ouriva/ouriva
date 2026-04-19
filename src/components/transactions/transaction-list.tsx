@@ -450,7 +450,7 @@ function TransactionListContent({
       {sortedDates.map((dateKey) => {
         const txs = grouped[dateKey];
         const dayNet = txs.reduce((sum, tx) => {
-          const amount = parseFloat(tx.amount);
+          const amount = Number.parseFloat(tx.amount);
           return tx.type === "INCOME" ? sum + amount : sum - amount;
         }, 0);
         return (

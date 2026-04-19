@@ -30,7 +30,7 @@ export function formatCurrency(
   currencyCode: string,
   locale = "en"
 ): string {
-  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+  const numAmount = typeof amount === "string" ? Number.parseFloat(amount) : amount;
 
   // Map our short locale codes to BCP 47 tags that Intl.NumberFormat expects.
   const intlLocale = locale === "pt" ? "pt-PT" : "en-US";
@@ -54,7 +54,7 @@ export function formatDate(
   locale = "en"
 ): string {
   const dateObj = typeof date === "string" ? parseISO(date) : date;
-  if (isNaN(dateObj.getTime())) return typeof date === "string" ? date : "";
+  if (Number.isNaN(dateObj.getTime())) return typeof date === "string" ? date : "";
   return format(dateObj, pattern, { locale: DATE_LOCALES[locale] ?? enUS });
 }
 
@@ -71,7 +71,7 @@ export function formatMonthYear(date: Date | string, locale = "en"): string {
 //   formatAmount(1234.56, "en") → "1,234.56"
 //   formatAmount(1234.56, "pt") → "1.234,56"
 export function formatAmount(amount: number | string, locale = "en"): string {
-  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+  const numAmount = typeof amount === "string" ? Number.parseFloat(amount) : amount;
   const intlLocale = locale === "pt" ? "pt-PT" : "en-US";
   return new Intl.NumberFormat(intlLocale, {
     minimumFractionDigits: 2,
