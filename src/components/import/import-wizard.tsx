@@ -120,12 +120,8 @@ export function ImportWizard() {
       {step === 2 && state && (
         <StepReview
           state={state}
-          onComplete={(selectedRows, categoryIds, transactionTypes, importRefs, duplicateRefs, friendlyNames, notes, needsReview) => {
-            setState((prev) =>
-              prev
-                ? { ...prev, selectedRows, categoryIds, transactionTypes, importRefs, duplicateRefs, friendlyNames, notes, needsReview }
-                : prev
-            );
+          onComplete={(result) => {
+            setState((prev) => prev ? { ...prev, ...result } : prev);
             setStep(3);
           }}
           onBack={() => setStep(1)}

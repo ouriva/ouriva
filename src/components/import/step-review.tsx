@@ -55,18 +55,20 @@ interface ParsedRow {
   importRef: string;
 }
 
+interface ReviewResult {
+  selectedRows: boolean[];
+  categoryIds: (string | undefined)[];
+  transactionTypes: ("INCOME" | "EXPENSE")[];
+  importRefs: string[];
+  duplicateRefs: Set<string>;
+  friendlyNames: (string | undefined)[];
+  notes: (string | undefined)[];
+  needsReview: boolean[];
+}
+
 interface StepReviewProps {
   state: ImportState;
-  onComplete: (
-    selectedRows: boolean[],
-    categoryIds: (string | undefined)[],
-    transactionTypes: ("INCOME" | "EXPENSE")[],
-    importRefs: string[],
-    duplicateRefs: Set<string>,
-    friendlyNames: (string | undefined)[],
-    notes: (string | undefined)[],
-    needsReview: boolean[]
-  ) => void;
+  onComplete: (result: ReviewResult) => void;
   onBack: () => void;
 }
 
@@ -573,16 +575,16 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
           </Button>
           <Button
             onClick={() =>
-              onComplete(
+              onComplete({
                 selectedRows,
                 categoryIds,
                 transactionTypes,
-                parsedRows.map((r) => r.importRef),
+                importRefs: parsedRows.map((r) => r.importRef),
                 duplicateRefs,
                 friendlyNames,
                 notes,
-                needsReview
-              )
+                needsReview,
+              })
             }
             disabled={selectedCount === 0}
             className="flex-1"

@@ -60,10 +60,13 @@ export function FileDropzone({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onClick={() => inputRef.current?.click()}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
       className={`
         flex cursor-pointer flex-col items-center justify-center rounded-lg
         border-2 border-dashed p-8 text-center transition-colors
