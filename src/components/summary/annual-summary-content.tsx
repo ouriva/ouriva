@@ -81,7 +81,7 @@ export function AnnualSummaryContent() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const now = new Date();
-  const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
+  const year = Number.parseInt(searchParams.get("year") || String(now.getFullYear()));
 
   // For the current year, only render months up to today so the chart
   // doesn't show a flat line to zero for months that haven't happened yet.

@@ -564,8 +564,8 @@ function useBudgetData(year: number) {
   const hasEdits = Object.keys(edits).length > 0 || Object.keys(noteEdits).length > 0;
 
   function handleChange(type: "EXPENSE" | "INCOME", categoryId: string, value: string) {
-    const amount = parseFloat(value);
-    if (isNaN(amount) || amount < 0) return;
+    const amount = Number.parseFloat(value);
+    if (Number.isNaN(amount) || amount < 0) return;
     setEdits((prev) => ({ ...prev, [editKey(type, categoryId)]: amount }));
   }
 
@@ -607,7 +607,7 @@ export function BudgetContent() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const now = new Date();
-  const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
+  const year = Number.parseInt(searchParams.get("year") || String(now.getFullYear()));
 
   const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave } = useBudgetData(year);
 

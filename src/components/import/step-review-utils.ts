@@ -28,7 +28,7 @@ export function parseDate(value: string, format: string): string {
   } else {
     // Fallback: try native parsing
     const d = new Date(cleaned);
-    if (!isNaN(d.getTime())) {
+    if (!Number.isNaN(d.getTime())) {
       return d.toISOString().split("T")[0];
     }
     return cleaned;
@@ -63,5 +63,5 @@ export function parseAmount(value: string): number {
     cleaned = cleaned.replace(/,/g, "");
   }
 
-  return parseFloat(cleaned) || 0;
+  return Number.parseFloat(cleaned) || 0;
 }

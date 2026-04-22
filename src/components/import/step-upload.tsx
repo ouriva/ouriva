@@ -189,7 +189,7 @@ export function StepUpload({ onComplete }: StepUploadProps) {
               type="number"
               min="0"
               value={skipRows}
-              onChange={(e) => setSkipRows(parseInt(e.target.value) || 0)}
+              onChange={(e) => setSkipRows(Number.parseInt(e.target.value) || 0)}
               className="mt-2"
             />
             <p className="mt-1 text-xs text-muted-foreground">

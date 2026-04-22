@@ -208,7 +208,7 @@ function groupByDate(transactions: TransactionWithRelations[]): {
     },
     {}
   );
-  const sortedDates = Object.keys(grouped).sort(
+  const sortedDates = Object.keys(grouped).toSorted(
     (a, b) => new Date(b).getTime() - new Date(a).getTime()
   );
   return { grouped, sortedDates };

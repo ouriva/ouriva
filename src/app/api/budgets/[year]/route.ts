@@ -173,7 +173,7 @@ function buildGroupsFromSeeds(
         remaining, percentage, isIncome, note: g.note, children,
       };
     })
-    .sort((a, b) => a.groupName.localeCompare(b.groupName));
+    .toSorted((a, b) => a.groupName.localeCompare(b.groupName));
 }
 
 // Income groups are seeded from the union of budget+actual keys (existing behaviour).
@@ -303,9 +303,9 @@ export async function GET(
 ) {
   try {
     const { year: yearParam } = await params;
-    const year = parseInt(yearParam);
+    const year = Number.parseInt(yearParam);
 
-    if (isNaN(year)) {
+    if (Number.isNaN(year)) {
       return NextResponse.json(
         { error: { message: "Invalid year", code: "VALIDATION_ERROR" } },
         { status: 400 }
