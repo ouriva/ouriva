@@ -125,9 +125,13 @@ export function AnnualSummaryContent() {
     <div className="space-y-6">
       <MonthYearPicker mode="year" basePath="/summary/annual" />
 
-      {isLoading ? (
-        <AnnualSkeleton />
-      ) : data ? (
+      {isLoading && <AnnualSkeleton />}
+      {!isLoading && !data && (
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          {t("loadError")}
+        </div>
+      )}
+      {!isLoading && data && (
         <>
           {/* ── Stat cards — 2+1 layout ────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
@@ -240,10 +244,6 @@ export function AnnualSummaryContent() {
             </TabsContent>
           </Tabs>
         </>
-      ) : (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          {t("loadError")}
-        </div>
       )}
     </div>
   );

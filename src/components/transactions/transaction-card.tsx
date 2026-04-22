@@ -9,6 +9,7 @@
 
 "use client";
 
+import React from "react";
 import { ArrowDownLeft, ArrowUpRight, TriangleAlert, CircleDot, Split } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -61,13 +62,35 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
   const isSplit = transaction.splits.length > 0;
 
   // Single-category subtitle (only used when not a split)
-  const subtitleText = transaction.category
-    ? transaction.category.parent
-      ? `${transaction.category.parent.name} › ${transaction.category.name}`
-      : transaction.category.name
-    : t("uncategorizedLabel");
+  let subtitleText: string;
+  if (!transaction.category) {
+    subtitleText = t("uncategorizedLabel");
+  } else if (transaction.category.parent) {
+    subtitleText = `${transaction.category.parent.name} › ${transaction.category.name}`;
+  } else {
+    subtitleText = transaction.category.name;
+  }
 
   const isUncategorized = !isSplit && !transaction.category;
+
+  let categoryIndicator: React.ReactNode;
+  if (isUncategorized) {
+    categoryIndicator = (
+      <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+        <TriangleAlert className="h-3.5 w-3.5" />
+        {t("uncategorizedLabel")}
+      </span>
+    );
+  } else if (isSplit) {
+    categoryIndicator = (
+      <span className="inline-flex items-center gap-1">
+        <Split className="h-3.5 w-3.5" />
+        {t("splitBadge")}
+      </span>
+    );
+  } else {
+    categoryIndicator = subtitleText;
+  }
 
   return (
     <button
@@ -98,21 +121,7 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
             </p>
           )}
           <p className="text-sm text-muted-foreground">
-            {isUncategorized ? (
-              <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                <TriangleAlert className="h-3.5 w-3.5" />
-                {t("uncategorizedLabel")}
-              </span>
-            ) : isSplit ? (
-              // For splits, sub-rows below show the categories — just
-              // show the split indicator here to keep the header clean.
-              <span className="inline-flex items-center gap-1">
-                <Split className="h-3.5 w-3.5" />
-                {t("splitBadge")}
-              </span>
-            ) : (
-              subtitleText
-            )}
+            {categoryIndicator}
             {transaction.needsReview && (
               <>
                 <span className="mx-1">·</span>

@@ -543,7 +543,7 @@ export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
         <div className="max-h-[60vh] space-y-2 overflow-y-auto">
           {parsedRows.map((row, i) => (
             <ReviewRow
-              key={i}
+              key={row.importRef}
               index={i}
               row={row}
               isDuplicate={duplicateRefs.has(row.importRef)}

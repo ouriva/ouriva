@@ -137,7 +137,10 @@ function SpendingMeter({ monthly, locale }: SpendingMeterProps) {
   const spentPct = monthly.totalIncome > 0
     ? (monthly.totalExpense / monthly.totalIncome) * 100
     : 0;
-  const barColor = spentPct > 100 ? "bg-red-500" : spentPct > 80 ? "bg-amber-500" : "bg-emerald-500";
+  let barColor: string;
+  if (spentPct > 100) barColor = "bg-red-500";
+  else if (spentPct > 80) barColor = "bg-amber-500";
+  else barColor = "bg-emerald-500";
   const symbol = monthly.currencySymbol ?? "";
 
   return (
@@ -358,25 +361,25 @@ export function DashboardContent() {
       )}
 
       {/* ── 2. Net Worth Hero ────────────────────────────────────────────── */}
-      {isLoading ? (
-        <Skeleton className="h-28 w-full rounded-2xl" />
-      ) : balances.length > 0 ? (
+      {isLoading && <Skeleton className="h-28 w-full rounded-2xl" />}
+      {!isLoading && balances.length > 0 && (
         <NetWorthHero
           balances={balances}
           aggregatedTotal={aggregatedTotal}
           defaultCurrency={defaultCurrency}
           locale={locale}
         />
-      ) : null}
+      )}
 
       {/* ── 3. Account Horizontal Scroll ─────────────────────────────────── */}
-      {isLoading ? (
+      {isLoading && (
         <div className="flex gap-3 overflow-hidden">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-[72px] w-36 flex-none rounded-xl" />
           ))}
         </div>
-      ) : allAccounts.length > 0 ? (
+      )}
+      {!isLoading && allAccounts.length > 0 && (
         // -mx-4 px-4: bleed the scroll strip to the screen edges while keeping
         // 16px padding so the first and last cards aren't clipped.
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [&::-webkit-scrollbar]:hidden">
@@ -397,12 +400,11 @@ export function DashboardContent() {
             </div>
           ))}
         </div>
-      ) : null}
+      )}
 
       {/* ── 4. This Month Spending Meter ─────────────────────────────────── */}
-      {isLoading ? (
-        <Skeleton className="h-28 w-full rounded-xl" />
-      ) : monthly ? (
+      {isLoading && <Skeleton className="h-28 w-full rounded-xl" />}
+      {!isLoading && monthly && (
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-sm font-semibold">{t("thisMonth")}</h2>
@@ -414,7 +416,7 @@ export function DashboardContent() {
           </div>
           <SpendingMeter monthly={monthly} locale={locale} />
         </section>
-      ) : null}
+      )}
 
       {/* ── 5. Recent Transactions — compact list ────────────────────────── */}
       <section>
@@ -427,7 +429,7 @@ export function DashboardContent() {
           </Button>
         </div>
 
-        {isLoading ? (
+        {isLoading && (
           // Skeleton rows that match the transaction list shape
           <Card>
             <CardContent className="space-y-4 py-4">
@@ -443,7 +445,8 @@ export function DashboardContent() {
               ))}
             </CardContent>
           </Card>
-        ) : recentTx.length > 0 ? (
+        )}
+        {!isLoading && recentTx.length > 0 && (
           <Card>
             {/* p-0 on CardContent so rows control their own padding */}
             <CardContent className="p-0">
@@ -457,7 +460,8 @@ export function DashboardContent() {
               ))}
             </CardContent>
           </Card>
-        ) : (
+        )}
+        {!isLoading && recentTx.length === 0 && (
           <div className="rounded-lg border p-6 text-center text-muted-foreground">
             {t("noTransactions")}
           </div>

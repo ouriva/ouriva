@@ -16,12 +16,11 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CategorySelectOptions } from "@/components/ui/category-select-options";
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import Link from "next/link";
@@ -47,6 +46,36 @@ interface Settings {
 function handleLocaleChange(newLocale: string) {
   document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
   window.location.reload();
+}
+
+interface BalanceIndicatorProps {
+  balance: number;
+  zeroLabel: string;
+  nonZeroLabel: string;
+}
+
+// Defined at module scope (not inside GeneralSettings) to avoid React creating
+// a new component identity on every render (S6478).
+function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
+  const t = useTranslations("generalSettings");
+  const locale = useLocale();
+  return (
+    <div className="rounded-lg border p-4">
+      <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
+      <p
+        className={`text-2xl font-bold tabular-nums ${
+          balance === 0
+            ? "text-green-600 dark:text-green-400"
+            : "text-amber-600 dark:text-amber-400"
+        }`}
+      >
+        {formatCurrency(String(balance), "EUR", locale)}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {balance === 0 ? zeroLabel : nonZeroLabel}
+      </p>
+    </div>
+  );
 }
 
 export function GeneralSettings() {
@@ -117,34 +146,6 @@ export function GeneralSettings() {
   const parentCategories = categories.filter((c) => !c.parentId);
   const childCategories = categories.filter((c) => c.parentId);
 
-  function BalanceIndicator({
-    balance,
-    zeroLabel,
-    nonZeroLabel,
-  }: {
-    balance: number;
-    zeroLabel: string;
-    nonZeroLabel: string;
-  }) {
-    return (
-      <div className="rounded-lg border p-4">
-        <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
-        <p
-          className={`text-2xl font-bold tabular-nums ${
-            balance === 0
-              ? "text-green-600 dark:text-green-400"
-              : "text-amber-600 dark:text-amber-400"
-          }`}
-        >
-          {formatCurrency(String(balance), "EUR", locale)}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {balance === 0 ? zeroLabel : nonZeroLabel}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Language */}
@@ -183,26 +184,10 @@ export function GeneralSettings() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{tCommon("none")}</SelectItem>
-                {parentCategories.map((parent) => {
-                  const children = childCategories.filter((c) => c.parentId === parent.id);
-                  if (children.length > 0) {
-                    return (
-                      <SelectGroup key={parent.id}>
-                        <SelectLabel>{parent.name}</SelectLabel>
-                        {children.map((child) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  }
-                  return (
-                    <SelectItem key={parent.id} value={parent.id}>
-                      {parent.name}
-                    </SelectItem>
-                  );
-                })}
+                <CategorySelectOptions
+                  parentCategories={parentCategories}
+                  childCategories={childCategories}
+                />
               </SelectContent>
             </Select>
           </div>

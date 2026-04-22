@@ -149,7 +149,7 @@ export function AnnualCategoryTable({
                   </td>
                   {category.months.map((amount, i) => (
                     <td
-                      key={i}
+                      key={`month-${i}`}
                       className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                     >
                       {amount > 0 ? formatAmount(amount, locale) : "—"}
@@ -184,7 +184,7 @@ export function AnnualCategoryTable({
                       </td>
                       {child.months.map((amount, i) => (
                         <td
-                          key={i}
+                          key={`month-${i}`}
                           className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                         >
                           {amount > 0 ? formatAmount(amount, locale) : "—"}
@@ -204,7 +204,7 @@ export function AnnualCategoryTable({
               {formatAmount(grandTotal, locale)}
             </td>
             {monthlyTotals.map((amount, i) => (
-              <td key={i} className="px-3 py-2 text-right tabular-nums">
+              <td key={`month-${i}`} className="px-3 py-2 text-right tabular-nums">
                 {amount > 0 ? formatAmount(amount, locale) : "—"}
               </td>
             ))}

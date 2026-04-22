@@ -36,8 +36,11 @@ const BUCKET_CONFIG = [
     bgColor: "bg-blue-50 dark:bg-blue-950/30",
     borderColor: "border-blue-200 dark:border-blue-800",
     // Needs: lower is better — you want to stay under 50%
-    statusFn: (pct: number) =>
-      pct <= 50 ? "good" : pct <= 60 ? "warn" : "bad",
+    statusFn: (pct: number) => {
+      if (pct <= 50) return "good";
+      if (pct <= 60) return "warn";
+      return "bad";
+    },
   },
   {
     key: "WANTS" as const,
@@ -47,8 +50,11 @@ const BUCKET_CONFIG = [
     bgColor: "bg-amber-50 dark:bg-amber-950/30",
     borderColor: "border-amber-200 dark:border-amber-800",
     // Wants: lower is better — you want to stay under 30%
-    statusFn: (pct: number) =>
-      pct <= 30 ? "good" : pct <= 40 ? "warn" : "bad",
+    statusFn: (pct: number) => {
+      if (pct <= 30) return "good";
+      if (pct <= 40) return "warn";
+      return "bad";
+    },
   },
   {
     key: "SAVINGS" as const,
@@ -58,8 +64,11 @@ const BUCKET_CONFIG = [
     bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
     borderColor: "border-emerald-200 dark:border-emerald-800",
     // Savings: higher is better — you want to reach at least 20%
-    statusFn: (pct: number) =>
-      pct >= 20 ? "good" : pct >= 10 ? "warn" : "bad",
+    statusFn: (pct: number) => {
+      if (pct >= 20) return "good";
+      if (pct >= 10) return "warn";
+      return "bad";
+    },
   },
 ] as const;
 
@@ -79,10 +88,13 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
     bad: t("statusOffTrack"),
   };
 
-  const BUCKETS = BUCKET_CONFIG.map((b) => ({
-    ...b,
-    label: t(b.key === "NEEDS" ? "needs" : b.key === "WANTS" ? "wants" : "savings"),
-  }));
+  const BUCKETS = BUCKET_CONFIG.map((b) => {
+    let labelKey: "needs" | "wants" | "savings";
+    if (b.key === "NEEDS") labelKey = "needs";
+    else if (b.key === "WANTS") labelKey = "wants";
+    else labelKey = "savings";
+    return { ...b, label: t(labelKey) };
+  });
 
   if (totalIncome === 0) {
     return (
@@ -195,11 +207,9 @@ export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
                 <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                   <span>{t("pctOfIncome", { pct: formatPercent(actualPct, 1, locale) })}</span>
                   <span className={cn("font-medium", STATUS_CLASSES[status])}>
-                    {diff > 0
-                      ? t("differenceOver", { diff: formatPercent(diff, 1, locale) })
-                      : diff < 0
-                      ? t("differenceUnder", { diff: formatPercent(Math.abs(diff), 1, locale) })
-                      : t("differenceExact")}
+                    {diff > 0 && t("differenceOver", { diff: formatPercent(diff, 1, locale) })}
+                    {diff < 0 && t("differenceUnder", { diff: formatPercent(Math.abs(diff), 1, locale) })}
+                    {diff === 0 && t("differenceExact")}
                   </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
