@@ -19,9 +19,9 @@ function mapToSortedArray(map: Map<string, CategoryEntry>) {
   return Array.from(map.values())
     .map((cat) => ({
       ...cat,
-      children: Array.from(cat.children.values()).sort((a, b) => b.total - a.total),
+      children: Array.from(cat.children.values()).toSorted((a, b) => b.total - a.total),
     }))
-    .sort((a, b) => b.total - a.total);
+    .toSorted((a, b) => b.total - a.total);
 }
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -38,8 +38,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const year = parseInt(yearParam);
-    const month = parseInt(monthParam);
+    const year = Number.parseInt(yearParam);
+    const month = Number.parseInt(monthParam);
 
     // Build date range for the month.
     // Month is 1-indexed (1 = January), but JS Date uses 0-indexed.

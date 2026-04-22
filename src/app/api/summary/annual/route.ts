@@ -22,9 +22,9 @@ function mapToSortedArray(map: Map<string, CategoryEntry>) {
           total: Math.round(c.total * 100) / 100,
           months: (c.months ?? []).map((m) => Math.round(m * 100) / 100),
         }))
-        .sort((a, b) => b.total - a.total),
+        .toSorted((a, b) => b.total - a.total),
     }))
-    .sort((a, b) => b.total - a.total);
+    .toSorted((a, b) => b.total - a.total);
 }
 
 export async function GET(request: NextRequest) {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const year = parseInt(yearParam);
+    const year = Number.parseInt(yearParam);
     const startDate = new Date(year, 0, 1);  // Jan 1
     const endDate = new Date(year, 11, 31);  // Dec 31
 

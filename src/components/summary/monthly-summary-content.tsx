@@ -95,8 +95,8 @@ export function MonthlySummaryContent() {
   const t = useTranslations("summary");
   const searchParams = useSearchParams();
   const now = new Date();
-  const year = parseInt(searchParams.get("year") || String(now.getFullYear()));
-  const month = parseInt(searchParams.get("month") || String(now.getMonth() + 1));
+  const year = Number.parseInt(searchParams.get("year") || String(now.getFullYear()));
+  const month = Number.parseInt(searchParams.get("month") || String(now.getMonth() + 1));
   const MONTH_SHORT = t.raw("monthNames") as string[];
 
   const [data, setData] = useState<MonthlySummary | null>(null);

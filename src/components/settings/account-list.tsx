@@ -285,7 +285,7 @@ function AccountForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
-          initialBalance: parseFloat(initialBalance) || 0,
+          initialBalance: Number.parseFloat(initialBalance) || 0,
           currencyId,
           accountTypeId,
         }),

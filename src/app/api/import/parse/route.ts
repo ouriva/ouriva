@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const skipRows = parseInt(formData.get("skipRows") as string) || 0;
+    const skipRows = Number.parseInt(formData.get("skipRows") as string) || 0;
     const delimiter = (formData.get("delimiter") as string) || undefined;
 
     const buffer = Buffer.from(await file.arrayBuffer());
