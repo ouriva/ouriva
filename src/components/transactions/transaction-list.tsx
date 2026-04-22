@@ -96,13 +96,13 @@ function TransactionListSkeleton() {
   return (
     <div className="space-y-5">
       {[3, 2].map((rowCount, gi) => (
-        <div key={gi}>
+        <div key={`skeleton-group-${gi}`}>
           {/* Date header skeleton */}
           <Skeleton className="mb-2 h-3.5 w-28" />
           {/* Card skeleton */}
           <div className="rounded-lg border bg-card">
             {Array.from({ length: rowCount }).map((_, i) => (
-              <div key={i}>
+              <div key={`skeleton-row-${gi}-${i}`}>
                 {i > 0 && <div className="mx-3 border-t" />}
                 <div className="flex items-center gap-3 p-3">
                   <Skeleton className="h-10 w-10 flex-none rounded-full" />
@@ -190,7 +190,8 @@ function buildExportUrl(
   if (needsReview) params.set("needsReview", "true");
   if (urlSearch) params.set("search", urlSearch);
   const qs = params.toString();
-  return `/api/transactions/export${qs ? `?${qs}` : ""}`;
+  const suffix = qs ? `?${qs}` : "";
+  return `/api/transactions/export${suffix}`;
 }
 
 // Groups transactions by their date key (YYYY-MM-DD) and returns sorted keys.

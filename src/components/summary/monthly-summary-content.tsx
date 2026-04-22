@@ -131,9 +131,13 @@ export function MonthlySummaryContent() {
     <div className="space-y-6">
       <MonthYearPicker mode="month" basePath="/summary" />
 
-      {isLoading ? (
-        <MonthlySkeleton />
-      ) : data ? (
+      {isLoading && <MonthlySkeleton />}
+      {!isLoading && !data && (
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          {t("loadError")}
+        </div>
+      )}
+      {!isLoading && data && (
         <>
           {/* ── Stat cards — 2+1 layout ────────────────────────────────── */}
           {/* Row 1: Income | Expenses side by side */}
@@ -192,10 +196,6 @@ export function MonthlySummaryContent() {
             </TabsContent>
           </Tabs>
         </>
-      ) : (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          {t("loadError")}
-        </div>
       )}
     </div>
   );

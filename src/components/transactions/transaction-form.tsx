@@ -85,6 +85,62 @@ interface TransactionFormData {
   splits?: SplitEntry[];
 }
 
+interface CategorySelectProps {
+  value: string | undefined;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  parentCategories: Category[];
+  childCategories: Category[];
+}
+
+// Reusable category select rendered inside split rows and single-category mode.
+// Defined at module scope (not inside TransactionForm) to avoid React creating
+// a new component identity on every render (S6478).
+function CategorySelect({
+  value,
+  onChange,
+  placeholder,
+  parentCategories,
+  childCategories,
+}: CategorySelectProps) {
+  const t = useTranslations("transactionForm");
+  return (
+    <Select
+      value={value || "none"}
+      onValueChange={(v) => onChange(v === "none" ? "" : v)}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder={placeholder ?? t("selectCategoryPlaceholder")} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
+        {parentCategories.map((parent) => {
+          const children = childCategories.filter(
+            (c) => c.parentId === parent.id
+          );
+          if (children.length > 0) {
+            return (
+              <SelectGroup key={parent.id}>
+                <SelectLabel>{parent.name}</SelectLabel>
+                {children.map((child) => (
+                  <SelectItem key={child.id} value={child.id}>
+                    {child.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            );
+          }
+          return (
+            <SelectItem key={parent.id} value={parent.id}>
+              {parent.name}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+}
+
 interface TransactionFormProps {
   // If provided, we're editing. If not, we're creating.
   initialData?: TransactionFormData;
@@ -270,55 +326,6 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
   const parentCategories = categories.filter((c) => !c.parentId);
   const childCategories = categories.filter((c) => c.parentId);
 
-  // Reusable category select rendered inside split rows and single-category mode
-  function CategorySelect({
-    value,
-    onChange,
-    placeholder,
-  }: {
-    value: string | undefined;
-    onChange: (v: string) => void;
-    placeholder?: string;
-  }) {
-    return (
-      <Select
-        value={value || "none"}
-        onValueChange={(v) => onChange(v === "none" ? "" : v)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={placeholder ?? t("selectCategoryPlaceholder")} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
-          {parentCategories.map((parent) => {
-            const children = childCategories.filter(
-              (c) => c.parentId === parent.id
-            );
-            if (children.length > 0) {
-              // Parent with children — show as a non-selectable group header.
-              // Only the leaf children are selectable (industry-standard pattern).
-              return (
-                <SelectGroup key={parent.id}>
-                  <SelectLabel>{parent.name}</SelectLabel>
-                  {children.map((child) => (
-                    <SelectItem key={child.id} value={child.id}>
-                      {child.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              );
-            }
-            return (
-              <SelectItem key={parent.id} value={parent.id}>
-                {parent.name}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
-    );
-  }
-
   function handleToggleSplitMode() {
     if (!isSplitMode) {
       // Entering split mode — seed with 2 empty rows to guide the user
@@ -502,6 +509,8 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                       setValue(`splits.${index}.categoryId` as Path<CreateTransactionFormInput>, v)
                     }
                     placeholder="Category"
+                    parentCategories={parentCategories}
+                    childCategories={childCategories}
                   />
                 </div>
 
@@ -553,13 +562,15 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
                   : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
               )}
             >
-              {isFullyAllocated ? (
+              {isFullyAllocated && (
                 <span>{t("allAllocated", { amount: (totalCents / 100).toFixed(2) })}</span>
-              ) : remainingCents > 0 ? (
+              )}
+              {!isFullyAllocated && remainingCents > 0 && (
                 <span>
                   {t("remainingToAllocate", { amount: (remainingCents / 100).toFixed(2) })}
                 </span>
-              ) : (
+              )}
+              {!isFullyAllocated && remainingCents <= 0 && (
                 <span>
                   {t("overAllocated", { amount: (Math.abs(remainingCents) / 100).toFixed(2) })}
                 </span>
@@ -581,6 +592,8 @@ export function TransactionForm({ initialData, onSuccess }: TransactionFormProps
             <CategorySelect
               value={watch("categoryId")}
               onChange={(v) => setValue("categoryId", v === "none" ? undefined : v)}
+              parentCategories={parentCategories}
+              childCategories={childCategories}
             />
             {errors.categoryId && (
               <p className="mt-1 text-sm text-destructive">

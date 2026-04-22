@@ -199,24 +199,24 @@ function CategoryEditSheet({
                 : t("bucketLabelChild")}
             </Label>
             <div className="flex gap-2">
-              {buckets.map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setBucket(bucket === key ? null : key)}
-                  className={cn(
-                    "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                    bucket === key
-                      ? key === "NEEDS"
-                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
-                        : key === "WANTS"
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300"
-                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300"
-                      : "bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
+              {buckets.map(({ key, label }) => {
+                let activeClass: string;
+                if (key === "NEEDS") activeClass = "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300";
+                else if (key === "WANTS") activeClass = "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300";
+                else activeClass = "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300";
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setBucket(bucket === key ? null : key)}
+                    className={cn(
+                      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                      bucket === key ? activeClass : "bg-muted text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -385,6 +385,9 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
         {parents.map((parent) => {
           const isExpanded    = expanded.has(parent.id);
           const activeChildren = parent.children.filter((c) => c.isActive).length;
+          const expandIcon = isExpanded
+            ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            : <ChevronRight className="h-4 w-4 text-muted-foreground" />;
 
           return (
             <Card
@@ -407,13 +410,7 @@ export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) 
                       parent.children.length === 0 && "pointer-events-none"
                     )}
                   >
-                    {parent.children.length > 0 ? (
-                      isExpanded
-                        ? <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        : <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <div className="w-4" />
-                    )}
+                    {parent.children.length > 0 ? expandIcon : <div className="w-4" />}
                   </button>
 
                   {/* Icon circle — the tap target that opens edit */}

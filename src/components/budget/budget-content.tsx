@@ -138,21 +138,27 @@ interface GroupHeaderProps {
 function GroupHeader({ group }: GroupHeaderProps) {
   const t = useTranslations("budget");
   const locale = useLocale();
-  const remainingClass = group.isIncome
-    ? group.actual >= group.budgeted
+  let remainingClass: string;
+  if (group.isIncome) {
+    remainingClass = group.actual >= group.budgeted
       ? "text-emerald-600 dark:text-emerald-400"
-      : "text-muted-foreground"
-    : group.remaining >= 0
+      : "text-muted-foreground";
+  } else {
+    remainingClass = group.remaining >= 0
       ? "text-emerald-600 dark:text-emerald-400"
       : "text-red-600 dark:text-red-400";
+  }
 
-  const remainingLabel = group.isIncome
-    ? group.remaining > 0
+  let remainingLabel: string;
+  if (group.isIncome) {
+    remainingLabel = group.remaining > 0
       ? t("remainingToGo", { symbol: "€", amount: formatAmount(group.remaining, locale) })
-      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(group.remaining), locale) })
-    : group.remaining >= 0
+      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(group.remaining), locale) });
+  } else {
+    remainingLabel = group.remaining >= 0
       ? t("remainingLeft", { symbol: "€", amount: formatAmount(group.remaining, locale) })
       : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(group.remaining), locale) });
+  }
 
   return (
     <div className="flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5">
@@ -231,22 +237,27 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
       ? Math.round((category.actual / editedBudget) * 100)
       : 0;
 
-  const remainingClass =
-    category.isIncome
-      ? remaining <= 0
-        ? "text-emerald-600 dark:text-emerald-400"
-        : "text-muted-foreground"
-      : remaining >= 0
-        ? "text-emerald-600 dark:text-emerald-400"
-        : "text-red-600 dark:text-red-400";
+  let remainingClass: string;
+  if (category.isIncome) {
+    remainingClass = remaining <= 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-muted-foreground";
+  } else {
+    remainingClass = remaining >= 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : "text-red-600 dark:text-red-400";
+  }
 
-  const remainingLabel = category.isIncome
-    ? remaining > 0
+  let remainingLabel: string;
+  if (category.isIncome) {
+    remainingLabel = remaining > 0
       ? t("remainingToGo", { symbol: "€", amount: formatAmount(remaining, locale) })
-      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) })
-    : remaining >= 0
+      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) });
+  } else {
+    remainingLabel = remaining >= 0
       ? t("remainingLeft", { symbol: "€", amount: formatAmount(remaining, locale) })
       : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) });
+  }
 
   return (
     <div className={cn("space-y-2 py-3", isChild ? "pl-7 pr-4" : "px-4")}>
@@ -619,9 +630,13 @@ export function BudgetContent() {
         </div>
       )}
 
-      {isLoading ? (
-        <BudgetSkeleton />
-      ) : data ? (
+      {isLoading && <BudgetSkeleton />}
+      {!isLoading && !data && (
+        <div className="rounded-lg border p-8 text-center text-muted-foreground">
+          {t("failedToLoad")}
+        </div>
+      )}
+      {!isLoading && data && (
         <>
           {/* ── Stat cards — 2+1 layout ─────────────────────────────── */}
           <BudgetStatCards data={data} locale={locale} />
@@ -655,10 +670,6 @@ export function BudgetContent() {
             </CardContent>
           </Card>
         </>
-      ) : (
-        <div className="rounded-lg border p-8 text-center text-muted-foreground">
-          {t("failedToLoad")}
-        </div>
       )}
     </div>
   );

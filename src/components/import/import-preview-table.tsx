@@ -34,7 +34,7 @@ export function ImportPreviewTable({
           <tr className="border-b bg-muted/50">
             {headers.map((header, i) => (
               <th
-                key={i}
+                key={`col-${i}`}
                 className={`whitespace-nowrap px-3 py-2 text-left font-medium ${
                   highlightedColumns?.has(i) ? "bg-primary/10 text-primary" : ""
                 }`}
@@ -51,10 +51,10 @@ export function ImportPreviewTable({
         </thead>
         <tbody>
           {previewRows.map((row, rowIdx) => (
-            <tr key={rowIdx} className="border-b last:border-0">
+            <tr key={`row-${rowIdx}`} className="border-b last:border-0">
               {row.map((cell, colIdx) => (
                 <td
-                  key={colIdx}
+                  key={`cell-${colIdx}`}
                   className={`whitespace-nowrap px-3 py-1.5 ${
                     highlightedColumns?.has(colIdx) ? "bg-primary/5" : ""
                   }`}

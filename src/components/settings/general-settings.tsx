@@ -49,6 +49,36 @@ function handleLocaleChange(newLocale: string) {
   window.location.reload();
 }
 
+interface BalanceIndicatorProps {
+  balance: number;
+  zeroLabel: string;
+  nonZeroLabel: string;
+}
+
+// Defined at module scope (not inside GeneralSettings) to avoid React creating
+// a new component identity on every render (S6478).
+function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: BalanceIndicatorProps) {
+  const t = useTranslations("generalSettings");
+  const locale = useLocale();
+  return (
+    <div className="rounded-lg border p-4">
+      <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
+      <p
+        className={`text-2xl font-bold tabular-nums ${
+          balance === 0
+            ? "text-green-600 dark:text-green-400"
+            : "text-amber-600 dark:text-amber-400"
+        }`}
+      >
+        {formatCurrency(String(balance), "EUR", locale)}
+      </p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {balance === 0 ? zeroLabel : nonZeroLabel}
+      </p>
+    </div>
+  );
+}
+
 export function GeneralSettings() {
   const t = useTranslations("generalSettings");
   const tCommon = useTranslations("common");
@@ -116,34 +146,6 @@ export function GeneralSettings() {
   // Build category options grouped by parent
   const parentCategories = categories.filter((c) => !c.parentId);
   const childCategories = categories.filter((c) => c.parentId);
-
-  function BalanceIndicator({
-    balance,
-    zeroLabel,
-    nonZeroLabel,
-  }: {
-    balance: number;
-    zeroLabel: string;
-    nonZeroLabel: string;
-  }) {
-    return (
-      <div className="rounded-lg border p-4">
-        <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
-        <p
-          className={`text-2xl font-bold tabular-nums ${
-            balance === 0
-              ? "text-green-600 dark:text-green-400"
-              : "text-amber-600 dark:text-amber-400"
-          }`}
-        >
-          {formatCurrency(String(balance), "EUR", locale)}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {balance === 0 ? zeroLabel : nonZeroLabel}
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
