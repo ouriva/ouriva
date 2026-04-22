@@ -62,12 +62,12 @@ function CategoryEditSheet({
   isGroupDefault,
   onSave,
   onClose,
-}: {
+}: Readonly<{
   category: Category;
   isGroupDefault: boolean;
   onSave: () => void;
   onClose: () => void;
-}) {
+}>) {
   const t = useTranslations("categories");
   const [name,             setName]             = useState(category.name);
   const [icon,             setIcon]             = useState<string | null>(category.icon);
@@ -279,11 +279,11 @@ function SmallIconCircle({
   icon,
   color,
   size = "md",
-}: {
+}: Readonly<{
   icon: string | null;
   color: string | null;
   size?: "sm" | "md";
-}) {
+}>) {
   const IconComp   = icon ? CATEGORY_ICONS[icon] : undefined;
   const colorEntry = CATEGORY_COLORS.find((c) => c.key === color);
   const circleSize = size === "sm" ? "h-6 w-6" : "h-7 w-7";
@@ -309,7 +309,7 @@ interface CategoryTreeProps {
   pageDescription?: string;
 }
 
-export function CategoryTree({ pageTitle, pageDescription }: CategoryTreeProps) {
+export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTreeProps>) {
   const t = useTranslations("categories");
   const [categories,       setCategories]       = useState<Category[]>([]);
   const [isLoading,        setIsLoading]        = useState(true);

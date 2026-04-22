@@ -37,7 +37,7 @@ export function CategoryIcon({
   fallbackBg,
   fallbackColor,
   size = "md",
-}: CategoryIconProps) {
+}: Readonly<CategoryIconProps>) {
   const IconComponent = icon ? CATEGORY_ICONS[icon] : undefined;
   const colorEntry = color ? CATEGORY_COLORS.find((c) => c.key === color) : undefined;
 

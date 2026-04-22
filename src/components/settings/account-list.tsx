@@ -56,7 +56,7 @@ interface AccountListProps {
   pageDescription?: string;
 }
 
-export function AccountList({ pageTitle, pageDescription }: AccountListProps) {
+export function AccountList({ pageTitle, pageDescription }: Readonly<AccountListProps>) {
   const locale = useLocale();
   const t = useTranslations("accounts");
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -244,7 +244,7 @@ function AccountForm({
   account,
   onSuccess,
   trigger,
-}: AccountFormProps) {
+}: Readonly<AccountFormProps>) {
   const t = useTranslations("accounts");
   const isEditing = !!account;
   const [isOpen, setIsOpen] = useState(false);

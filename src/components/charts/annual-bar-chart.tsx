@@ -65,7 +65,7 @@ export function AnnualBarChart({
   data,
   maxMonth,
   categoryData,
-}: AnnualBarChartProps) {
+}: Readonly<AnnualBarChartProps>) {
   const { resolvedTheme } = useTheme();
   const locale = useLocale();
   const isDark = resolvedTheme === "dark";

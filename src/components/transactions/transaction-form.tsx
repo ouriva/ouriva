@@ -101,7 +101,7 @@ function CategorySelect({
   placeholder,
   parentCategories,
   childCategories,
-}: CategorySelectProps) {
+}: Readonly<CategorySelectProps>) {
   const t = useTranslations("transactionForm");
   return (
     <Select
@@ -128,7 +128,7 @@ interface TransactionFormProps {
   onSuccess?: () => void;
 }
 
-export function TransactionForm({ initialData, onSuccess }: TransactionFormProps) {
+export function TransactionForm({ initialData, onSuccess }: Readonly<TransactionFormProps>) {
   const t = useTranslations("transactionForm");
   const tCommon = useTranslations("common");
   const router = useRouter();

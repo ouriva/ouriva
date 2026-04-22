@@ -47,7 +47,7 @@ export function AnnualCategoryTable({
   emptyMessage = "No data for this year",
   selectedId,
   onSelect,
-}: AnnualCategoryTableProps) {
+}: Readonly<AnnualCategoryTableProps>) {
   const locale = useLocale();
   const t = useTranslations("summary");
   const monthLabels = t.raw("monthNames") as string[];

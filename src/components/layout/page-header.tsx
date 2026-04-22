@@ -10,7 +10,7 @@ interface PageHeaderProps {
   children?: React.ReactNode; // slot for action buttons
 }
 
-export function PageHeader({ title, description, children }: PageHeaderProps) {
+export function PageHeader({ title, description, children }: Readonly<PageHeaderProps>) {
   return (
     <div className="flex items-center justify-between">
       <div>

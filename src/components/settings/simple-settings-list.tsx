@@ -48,7 +48,7 @@ export function SimpleSettingsList({
   badgeField,
   isDefaultField,
   setDefaultAction,
-}: SimpleSettingsListProps) {
+}: Readonly<SimpleSettingsListProps>) {
   const tCommon = useTranslations("common");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [items, setItems] = useState<any[]>([]);

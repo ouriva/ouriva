@@ -53,7 +53,7 @@ export function CategoryBreakdown({
   categories,
   total,
   emptyMessage,
-}: CategoryBreakdownProps) {
+}: Readonly<CategoryBreakdownProps>) {
   const t = useTranslations("summary");
   const locale = useLocale();
   const resolvedEmptyMessage = emptyMessage ?? t("noDataPeriod");

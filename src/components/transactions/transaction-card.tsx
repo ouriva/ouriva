@@ -52,7 +52,7 @@ function splitCategoryName(
     : split.category.name;
 }
 
-export function TransactionCard({ transaction, onClick }: TransactionCardProps) {
+export function TransactionCard({ transaction, onClick }: Readonly<TransactionCardProps>) {
   const t = useTranslations("transactions");
   const locale = useLocale();
   const config = typeConfig[transaction.type];

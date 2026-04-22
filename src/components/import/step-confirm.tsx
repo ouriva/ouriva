@@ -22,7 +22,7 @@ interface StepConfirmProps {
   onBack: () => void;
 }
 
-export function StepConfirm({ state, onBack }: StepConfirmProps) {
+export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
   const t = useTranslations("import");
   const locale = useLocale();
   const router = useRouter();

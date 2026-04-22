@@ -23,7 +23,7 @@ export function ImportPreviewTable({
   rows,
   maxRows = 5,
   highlightedColumns,
-}: ImportPreviewTableProps) {
+}: Readonly<ImportPreviewTableProps>) {
   const t = useTranslations("import");
   const previewRows = rows.slice(0, maxRows);
 

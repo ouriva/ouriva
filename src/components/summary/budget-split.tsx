@@ -78,7 +78,7 @@ const STATUS_CLASSES = {
   bad: "text-red-600 dark:text-red-400",
 };
 
-export function BudgetSplit({ breakdown, totalIncome }: BudgetSplitProps) {
+export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProps>) {
   const t = useTranslations("summary");
   const locale = useLocale();
 

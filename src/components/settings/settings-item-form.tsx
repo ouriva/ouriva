@@ -45,7 +45,7 @@ export function SettingsItemForm({
   itemId,
   onSuccess,
   trigger,
-}: SettingsItemFormProps) {
+}: Readonly<SettingsItemFormProps>) {
   const tCommon = useTranslations("common");
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -148,9 +148,9 @@ export function SettingsItemForm({
 // Convenience component for edit buttons
 export function EditButton({
   onClick,
-}: {
+}: Readonly<{
   onClick?: () => void;
-}) {
+}>) {
   return (
     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClick}>
       <Pencil className="h-4 w-4" />
