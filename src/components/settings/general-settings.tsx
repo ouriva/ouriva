@@ -16,12 +16,11 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CategorySelectOptions } from "@/components/ui/category-select-options";
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import Link from "next/link";
@@ -57,7 +56,7 @@ interface BalanceIndicatorProps {
 
 // Defined at module scope (not inside GeneralSettings) to avoid React creating
 // a new component identity on every render (S6478).
-function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: BalanceIndicatorProps) {
+function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
   const t = useTranslations("generalSettings");
   const locale = useLocale();
   return (
@@ -185,26 +184,10 @@ export function GeneralSettings() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{tCommon("none")}</SelectItem>
-                {parentCategories.map((parent) => {
-                  const children = childCategories.filter((c) => c.parentId === parent.id);
-                  if (children.length > 0) {
-                    return (
-                      <SelectGroup key={parent.id}>
-                        <SelectLabel>{parent.name}</SelectLabel>
-                        {children.map((child) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  }
-                  return (
-                    <SelectItem key={parent.id} value={parent.id}>
-                      {parent.name}
-                    </SelectItem>
-                  );
-                })}
+                <CategorySelectOptions
+                  parentCategories={parentCategories}
+                  childCategories={childCategories}
+                />
               </SelectContent>
             </Select>
           </div>

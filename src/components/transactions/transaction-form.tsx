@@ -37,9 +37,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -47,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CategorySelectOptions } from "@/components/ui/category-select-options";
 
 // Types for the account and category data loaded from the API
 interface Account {
@@ -114,28 +113,10 @@ function CategorySelect({
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
-        {parentCategories.map((parent) => {
-          const children = childCategories.filter(
-            (c) => c.parentId === parent.id
-          );
-          if (children.length > 0) {
-            return (
-              <SelectGroup key={parent.id}>
-                <SelectLabel>{parent.name}</SelectLabel>
-                {children.map((child) => (
-                  <SelectItem key={child.id} value={child.id}>
-                    {child.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            );
-          }
-          return (
-            <SelectItem key={parent.id} value={parent.id}>
-              {parent.name}
-            </SelectItem>
-          );
-        })}
+        <CategorySelectOptions
+          parentCategories={parentCategories}
+          childCategories={childCategories}
+        />
       </SelectContent>
     </Select>
   );
