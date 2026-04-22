@@ -59,16 +59,14 @@ export function FileDropzone({
   }, []);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onClick={() => inputRef.current?.click()}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") inputRef.current?.click(); }}
       className={`
-        flex cursor-pointer flex-col items-center justify-center rounded-lg
+        w-full flex cursor-pointer flex-col items-center justify-center rounded-lg
         border-2 border-dashed p-8 text-center transition-colors
         ${isDragging
           ? "border-primary bg-primary/5"
@@ -99,6 +97,6 @@ export function FileDropzone({
           if (file) handleFile(file);
         }}
       />
-    </div>
+    </button>
   );
 }
