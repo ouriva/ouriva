@@ -24,9 +24,9 @@ export const metadata: Metadata = {
 
 export default async function EditTransactionPage({
   params,
-}: {
+}: Readonly<{
   params: Promise<{ id: string }>;
-}) {
+}>) {
   const { id } = await params;
   const t = await getTranslations("transactions");
 

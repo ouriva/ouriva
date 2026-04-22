@@ -29,8 +29,8 @@ export function getAmountString(row: string[], columnMap: ColumnMap): string {
     return row[columnMap.amount] ?? ""
   }
   // Split columns: return the non-empty one
-  const debit = columnMap.debitAmount !== undefined ? (row[columnMap.debitAmount] ?? "") : ""
-  const credit = columnMap.creditAmount !== undefined ? (row[columnMap.creditAmount] ?? "") : ""
+  const debit = columnMap.debitAmount === undefined ? "" : (row[columnMap.debitAmount] ?? "")
+  const credit = columnMap.creditAmount === undefined ? "" : (row[columnMap.creditAmount] ?? "")
   return debit.trim() || credit.trim() || ""
 }
 

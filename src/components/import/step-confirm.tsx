@@ -50,17 +50,17 @@ export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
         // Parse amount based on mode
         let amount: number;
         if (isSplitMode) {
-          const rawDebit = state.columnMap.debitAmount !== undefined
-            ? (row[state.columnMap.debitAmount] ?? "").trim()
-            : "";
-          const rawCredit = state.columnMap.creditAmount !== undefined
-            ? (row[state.columnMap.creditAmount] ?? "").trim()
-            : "";
+          const rawDebit = state.columnMap.debitAmount === undefined
+            ? ""
+            : (row[state.columnMap.debitAmount] ?? "").trim();
+          const rawCredit = state.columnMap.creditAmount === undefined
+            ? ""
+            : (row[state.columnMap.creditAmount] ?? "").trim();
           amount = rawDebit ? Math.abs(parseAmount(rawDebit)) : Math.abs(parseAmount(rawCredit));
         } else {
-          const rawAmount = state.columnMap.amount !== undefined
-            ? (row[state.columnMap.amount] ?? "0")
-            : "0";
+          const rawAmount = state.columnMap.amount === undefined
+            ? "0"
+            : (row[state.columnMap.amount] ?? "0");
           amount = Math.abs(parseAmount(rawAmount));
         }
 

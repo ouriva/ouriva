@@ -49,7 +49,7 @@ export function parseAmount(value: string): number {
   let cleaned = value.trim();
 
   // Remove currency symbols and whitespace
-  cleaned = cleaned.replace(/[^\d,.\-+]/g, "");
+  cleaned = cleaned.replaceAll(/[^\d,.\-+]/g, "");
 
   // Detect format: if last separator is a comma with 1-2 digits after → European
   const lastComma = cleaned.lastIndexOf(",");
@@ -57,10 +57,10 @@ export function parseAmount(value: string): number {
 
   if (lastComma > lastDot && cleaned.length - lastComma <= 3) {
     // European format: remove dots (thousands), replace comma with dot (decimal)
-    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+    cleaned = cleaned.replaceAll(".", "").replace(",", ".");
   } else {
     // US format: remove commas (thousands)
-    cleaned = cleaned.replace(/,/g, "");
+    cleaned = cleaned.replaceAll(",", "");
   }
 
   return Number.parseFloat(cleaned) || 0;

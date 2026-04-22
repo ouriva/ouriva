@@ -17,13 +17,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { type Path } from "react-hook-form";
 import {
   createTransactionSchema,
   type CreateTransactionInput,
@@ -43,7 +42,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CategorySelectOptions } from "@/components/ui/category-select-options";
 
@@ -262,8 +260,8 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     const data = rawData as unknown as CreateTransactionInput;
     setIsSubmitting(true);
     try {
-      const url = isEditing
-        ? `/api/transactions/${initialData!.id}`
+      const url = initialData?.id
+        ? `/api/transactions/${initialData.id}`
         : "/api/transactions";
       const method = isEditing ? "PUT" : "POST";
 
@@ -308,15 +306,15 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
   const childCategories = categories.filter((c) => c.parentId);
 
   function handleToggleSplitMode() {
-    if (!isSplitMode) {
+    if (isSplitMode) {
+      // Leaving split mode — clear the splits array
+      setValue("splits" as Path<CreateTransactionFormInput>, []);
+    } else {
       // Entering split mode — seed with 2 empty rows to guide the user
       setValue("splits" as Path<CreateTransactionFormInput>, [
         { categoryId: "", amount: 0 },
         { categoryId: "", amount: 0 },
       ]);
-    } else {
-      // Leaving split mode — clear the splits array
-      setValue("splits" as Path<CreateTransactionFormInput>, []);
     }
     setIsSplitMode((prev) => !prev);
   }
@@ -439,10 +437,10 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
       </div>
 
       {/* Exchange Rate — only when account currency ≠ default currency */}
-      {showExchangeRate && (
+      {showExchangeRate && selectedAccount && defaultCurrency && (
         <div>
           <Label htmlFor="exchangeRate">
-            {t("exchangeRateLabel", { from: selectedAccount!.currency.code, to: defaultCurrency!.code })}
+            {t("exchangeRateLabel", { from: selectedAccount.currency.code, to: defaultCurrency.code })}
           </Label>
           <Input
             id="exchangeRate"
@@ -456,7 +454,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
             className="mt-2 tabular-nums"
           />
           <p className="mt-1 text-xs text-muted-foreground">
-            {t("exchangeRateDescription", { from: selectedAccount!.currency.code, to: defaultCurrency!.code })}
+            {t("exchangeRateDescription", { from: selectedAccount.currency.code, to: defaultCurrency.code })}
             {" "}{t("exchangeRateHelper")}
           </p>
         </div>

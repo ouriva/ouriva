@@ -280,7 +280,7 @@ export function StepColumnMapping({
             <div>
               <Label>{t("amountColumn")}</Label>
               <Select
-                value={columnMap.amount !== undefined ? String(columnMap.amount) : ""}
+                value={columnMap.amount === undefined ? "" : String(columnMap.amount)}
                 onValueChange={(v) =>
                   setColumnMap((prev) => ({ ...prev, amount: Number.parseInt(v) }))
                 }
@@ -305,7 +305,7 @@ export function StepColumnMapping({
               <div>
                 <Label>{t("debitColumn")}</Label>
                 <Select
-                  value={columnMap.debitAmount !== undefined ? String(columnMap.debitAmount) : ""}
+                  value={columnMap.debitAmount === undefined ? "" : String(columnMap.debitAmount)}
                   onValueChange={(v) =>
                     setColumnMap((prev) => ({ ...prev, debitAmount: Number.parseInt(v) }))
                   }
@@ -325,7 +325,7 @@ export function StepColumnMapping({
               <div>
                 <Label>{t("creditColumn")}</Label>
                 <Select
-                  value={columnMap.creditAmount !== undefined ? String(columnMap.creditAmount) : ""}
+                  value={columnMap.creditAmount === undefined ? "" : String(columnMap.creditAmount)}
                   onValueChange={(v) =>
                     setColumnMap((prev) => ({ ...prev, creditAmount: Number.parseInt(v) }))
                   }
@@ -349,7 +349,7 @@ export function StepColumnMapping({
           <div>
             <Label>{t("referenceColumn")}</Label>
             <Select
-              value={columnMap.reference !== undefined ? String(columnMap.reference) : "none"}
+              value={columnMap.reference === undefined ? "none" : String(columnMap.reference)}
               onValueChange={(v) =>
                 setColumnMap((prev) => ({
                   ...prev,
@@ -376,7 +376,7 @@ export function StepColumnMapping({
             <div>
               <Label>{t("exchangeRateColumn")}</Label>
               <Select
-                value={columnMap.exchangeRate !== undefined ? String(columnMap.exchangeRate) : "none"}
+                value={columnMap.exchangeRate === undefined ? "none" : String(columnMap.exchangeRate)}
                 onValueChange={(v) =>
                   setColumnMap((prev) => ({
                     ...prev,

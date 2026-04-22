@@ -103,8 +103,8 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
             Shows the category's custom icon+color when set; falls back to the
             type arrow (green income / red expense) when not set or for splits. */}
         <CategoryIcon
-          icon={!isSplit ? transaction.category?.icon : undefined}
-          color={!isSplit ? transaction.category?.color : undefined}
+          icon={isSplit ? undefined : transaction.category?.icon}
+          color={isSplit ? undefined : transaction.category?.color}
           fallback={Icon}
           fallbackBg={config.bgColor}
           fallbackColor={config.color}

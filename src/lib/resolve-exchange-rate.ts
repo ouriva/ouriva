@@ -41,10 +41,7 @@ export async function resolveExchangeRateFields(
     return { exchangeRate: null, baseCurrencyAmount: null };
   }
 
-  const rate =
-    explicitRate !== undefined
-      ? explicitRate
-      : await fetchExchangeRate(date, accountCode, defaultCode);
+  const rate = explicitRate ?? await fetchExchangeRate(date, accountCode, defaultCode);
 
   return {
     exchangeRate: rate,

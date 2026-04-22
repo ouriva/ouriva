@@ -142,7 +142,7 @@ export async function GET() {
         })
       );
       aggregatedTotal = converted.reduce<number>(
-        (sum, val) => (val !== null ? sum + val : sum),
+        (sum, val) => (val === null ? sum : sum + val),
         0
       );
       aggregatedTotal = Math.round(aggregatedTotal * 100) / 100;

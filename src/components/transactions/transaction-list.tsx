@@ -127,11 +127,11 @@ function FilterChip({
   label,
   ariaLabel,
   onRemove,
-}: {
+}: Readonly<{
   label: string;
   ariaLabel?: string;
   onRemove: () => void;
-}) {
+}>) {
   return (
     <span className="inline-flex items-center gap-1 rounded-full border bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
       {label}
