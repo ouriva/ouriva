@@ -73,7 +73,7 @@ function categoryDisplayName(rule: CategoryRule): string {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function CategoryRulesList({ pageTitle, pageDescription }: CategoryRulesListProps) {
+export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<CategoryRulesListProps>) {
   const t = useTranslations("settings.categoryRules");
   const [rules, setRules]           = useState<CategoryRule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -192,7 +192,7 @@ interface RuleFormProps {
   trigger?: React.ReactNode;
 }
 
-function RuleForm({ categories, rule, onSuccess, trigger }: RuleFormProps) {
+function RuleForm({ categories, rule, onSuccess, trigger }: Readonly<RuleFormProps>) {
   const t = useTranslations("settings.categoryRules");
   const isEditing = !!rule;
   const [isOpen, setIsOpen]               = useState(false);

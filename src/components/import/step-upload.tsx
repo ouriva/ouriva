@@ -51,7 +51,7 @@ interface StepUploadProps {
   }) => void;
 }
 
-export function StepUpload({ onComplete }: StepUploadProps) {
+export function StepUpload({ onComplete }: Readonly<StepUploadProps>) {
   const t = useTranslations("import");
   const [file, setFile] = useState<File | null>(null);
   const [accountId, setAccountId] = useState("");

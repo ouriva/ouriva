@@ -26,7 +26,7 @@ interface DeleteTransactionButtonProps {
 
 export function DeleteTransactionButton({
   transactionId,
-}: DeleteTransactionButtonProps) {
+}: Readonly<DeleteTransactionButtonProps>) {
   const t = useTranslations("deleteTransaction");
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);

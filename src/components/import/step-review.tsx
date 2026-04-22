@@ -120,7 +120,7 @@ const ReviewRow = memo(function ReviewRow({
   onFriendlyNameChange,
   onNoteChange,
   onNeedsReviewChange,
-}: ReviewRowProps) {
+}: Readonly<ReviewRowProps>) {
   const t = useTranslations("import");
   const locale = useLocale();
   return (
@@ -246,7 +246,7 @@ const ReviewRow = memo(function ReviewRow({
 
 // ── StepReview ─────────────────────────────────────────────────────────────
 
-export function StepReview({ state, onComplete, onBack }: StepReviewProps) {
+export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewProps>) {
   const t = useTranslations("import");
   const locale = useLocale();
   const [categories, setCategories] = useState<Category[]>([]);

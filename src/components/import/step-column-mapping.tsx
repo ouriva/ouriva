@@ -84,7 +84,7 @@ export function StepColumnMapping({
   state,
   onComplete,
   onBack,
-}: StepColumnMappingProps) {
+}: Readonly<StepColumnMappingProps>) {
   const t = useTranslations("import");
   // Detect initial amount mode from existing columnMap
   const initialMode: AmountMode =

@@ -96,7 +96,7 @@ interface RecentTransactionRowProps {
   locale: string;
 }
 
-function RecentTransactionRow({ tx, isLast, locale }: RecentTransactionRowProps) {
+function RecentTransactionRow({ tx, isLast, locale }: Readonly<RecentTransactionRowProps>) {
   const config = TX_CONFIG[tx.type as keyof typeof TX_CONFIG] ?? TX_CONFIG.EXPENSE;
   const categoryLabel = tx.category?.parent?.name ?? tx.category?.name ?? null;
   const description = tx.description ?? categoryLabel ?? (tx.type === "INCOME" ? "Income" : "Transaction");
@@ -132,7 +132,7 @@ interface SpendingMeterProps {
   locale: string;
 }
 
-function SpendingMeter({ monthly, locale }: SpendingMeterProps) {
+function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
   const t = useTranslations("dashboard");
   const spentPct = monthly.totalIncome > 0
     ? (monthly.totalExpense / monthly.totalIncome) * 100

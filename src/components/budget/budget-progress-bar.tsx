@@ -20,7 +20,7 @@ interface BudgetProgressBarProps {
 export function BudgetProgressBar({
   percentage,
   inverse = false,
-}: BudgetProgressBarProps) {
+}: Readonly<BudgetProgressBarProps>) {
   let colorClass: string;
 
   if (inverse && percentage >= 100) colorClass = "bg-emerald-500";

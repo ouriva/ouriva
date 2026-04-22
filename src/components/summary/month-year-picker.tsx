@@ -20,7 +20,7 @@ interface MonthYearPickerProps {
   basePath: string;
 }
 
-export function MonthYearPicker({ mode, basePath }: MonthYearPickerProps) {
+export function MonthYearPicker({ mode, basePath }: Readonly<MonthYearPickerProps>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const t = useTranslations("summary");

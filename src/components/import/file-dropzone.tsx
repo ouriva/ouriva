@@ -25,7 +25,7 @@ interface FileDropzoneProps {
 export function FileDropzone({
   onFileSelect,
   accept = ".csv,.xlsx,.xls",
-}: FileDropzoneProps) {
+}: Readonly<FileDropzoneProps>) {
   const t = useTranslations("import");
   const [isDragging, setIsDragging] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);

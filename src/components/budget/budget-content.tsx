@@ -135,7 +135,7 @@ interface GroupHeaderProps {
   group: BudgetGroup;
 }
 
-function GroupHeader({ group }: GroupHeaderProps) {
+function GroupHeader({ group }: Readonly<GroupHeaderProps>) {
   const t = useTranslations("budget");
   const locale = useLocale();
   let remainingClass: string;
@@ -200,7 +200,7 @@ interface CategoryRowProps {
   isChild?: boolean;
 }
 
-function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild }: CategoryRowProps) {
+function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild }: Readonly<CategoryRowProps>) {
   const t = useTranslations("budget");
   const locale = useLocale();
   const [noteState, setNoteState] = useState<NoteState>("closed");

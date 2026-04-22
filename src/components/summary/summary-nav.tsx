@@ -12,7 +12,7 @@ interface SummaryNavProps {
   mode: "monthly" | "annual";
 }
 
-export async function SummaryNav({ mode }: SummaryNavProps) {
+export async function SummaryNav({ mode }: Readonly<SummaryNavProps>) {
   const t = await getTranslations("summary");
 
   return (

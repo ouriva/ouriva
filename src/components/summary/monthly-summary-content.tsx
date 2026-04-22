@@ -212,7 +212,7 @@ interface StatCardProps {
 }
 
 // Half-width card (2-col row). Delta shows as compact "↑5%" on one line.
-function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood }: StatCardProps) {
+function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood }: Readonly<StatCardProps>) {
   const locale = useLocale();
   let deltaClass = "text-muted-foreground";
   if (delta) {
@@ -251,7 +251,7 @@ interface NetStatCardProps {
 }
 
 // Full-width card. Has room for the full "↑ €120 vs Jan" delta.
-function NetStatCard({ value, prevNet, prevLabel }: NetStatCardProps) {
+function NetStatCard({ value, prevNet, prevLabel }: Readonly<NetStatCardProps>) {
   const t = useTranslations("summary");
   const locale = useLocale();
   const valueClass =
