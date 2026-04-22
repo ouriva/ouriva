@@ -25,23 +25,30 @@ export function ImportPreviewTable({
   highlightedColumns,
 }: Readonly<ImportPreviewTableProps>) {
   const t = useTranslations("import");
-  const previewRows = rows.slice(0, maxRows);
+
+  // Pre-process data with stable keys before rendering so the JSX maps
+  // don't reference the array index parameter as a React key (S6479).
+  const colDefs = headers.map((header, i) => ({ colKey: `col-${i}`, header, colIndex: i }));
+  const rowDefs = rows.slice(0, maxRows).map((row, rowIdx) => ({
+    rowKey: `row-${rowIdx}`,
+    cells: row.map((cell, colIdx) => ({ cellKey: `cell-${colIdx}`, cell, colIndex: colIdx })),
+  }));
 
   return (
     <div className="overflow-x-auto rounded-md border">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
-            {headers.map((header, i) => (
+            {colDefs.map(({ colKey, header, colIndex }) => (
               <th
-                key={`col-${i}`}
+                key={colKey}
                 className={`whitespace-nowrap px-3 py-2 text-left font-medium ${
-                  highlightedColumns?.has(i) ? "bg-primary/10 text-primary" : ""
+                  highlightedColumns?.has(colIndex) ? "bg-primary/10 text-primary" : ""
                 }`}
               >
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] text-muted-foreground">
-                    Col {i}
+                    Col {colIndex}
                   </span>
                   {header}
                 </div>
@@ -50,13 +57,13 @@ export function ImportPreviewTable({
           </tr>
         </thead>
         <tbody>
-          {previewRows.map((row, rowIdx) => (
-            <tr key={`row-${rowIdx}`} className="border-b last:border-0">
-              {row.map((cell, colIdx) => (
+          {rowDefs.map(({ rowKey, cells }) => (
+            <tr key={rowKey} className="border-b last:border-0">
+              {cells.map(({ cellKey, cell, colIndex }) => (
                 <td
-                  key={`cell-${colIdx}`}
+                  key={cellKey}
                   className={`whitespace-nowrap px-3 py-1.5 ${
-                    highlightedColumns?.has(colIdx) ? "bg-primary/5" : ""
+                    highlightedColumns?.has(colIndex) ? "bg-primary/5" : ""
                   }`}
                 >
                   {cell || <span className="text-muted-foreground">—</span>}

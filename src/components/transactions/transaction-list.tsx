@@ -95,14 +95,14 @@ function formatGroupDate(dateKey: string, locale: string, todayLabel: string, ye
 function TransactionListSkeleton() {
   return (
     <div className="space-y-5">
-      {[3, 2].map((rowCount, gi) => (
-        <div key={`skeleton-group-${gi}`}>
+      {[3, 2].map((rowCount) => (
+        <div key={rowCount}>
           {/* Date header skeleton */}
           <Skeleton className="mb-2 h-3.5 w-28" />
           {/* Card skeleton */}
           <div className="rounded-lg border bg-card">
             {Array.from({ length: rowCount }).map((_, i) => (
-              <div key={`skeleton-row-${gi}-${i}`}>
+              <div key={`skeleton-row-${rowCount}-${i}`}>
                 {i > 0 && <div className="mx-3 border-t" />}
                 <div className="flex items-center gap-3 p-3">
                   <Skeleton className="h-10 w-10 flex-none rounded-full" />

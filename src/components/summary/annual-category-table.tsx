@@ -147,12 +147,12 @@ export function AnnualCategoryTable({
                   <td className="px-3 py-2 text-right tabular-nums font-semibold">
                     {formatAmount(category.total, locale)}
                   </td>
-                  {category.months.map((amount, i) => (
+                  {monthLabels.map((monthLabel, i) => (
                     <td
-                      key={`month-${i}`}
+                      key={monthLabel}
                       className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                     >
-                      {amount > 0 ? formatAmount(amount, locale) : "—"}
+                      {category.months[i] > 0 ? formatAmount(category.months[i], locale) : "—"}
                     </td>
                   ))}
                 </tr>
@@ -182,12 +182,12 @@ export function AnnualCategoryTable({
                       <td className="px-3 py-2 text-right tabular-nums">
                         {formatAmount(child.total, locale)}
                       </td>
-                      {child.months.map((amount, i) => (
+                      {monthLabels.map((monthLabel, i) => (
                         <td
-                          key={`month-${i}`}
+                          key={monthLabel}
                           className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                         >
-                          {amount > 0 ? formatAmount(amount, locale) : "—"}
+                          {child.months[i] > 0 ? formatAmount(child.months[i], locale) : "—"}
                         </td>
                       ))}
                     </tr>
@@ -203,9 +203,9 @@ export function AnnualCategoryTable({
             <td className="px-3 py-2 text-right tabular-nums">
               {formatAmount(grandTotal, locale)}
             </td>
-            {monthlyTotals.map((amount, i) => (
-              <td key={`month-${i}`} className="px-3 py-2 text-right tabular-nums">
-                {amount > 0 ? formatAmount(amount, locale) : "—"}
+            {monthLabels.map((monthLabel, i) => (
+              <td key={monthLabel} className="px-3 py-2 text-right tabular-nums">
+                {monthlyTotals[i] > 0 ? formatAmount(monthlyTotals[i], locale) : "—"}
               </td>
             ))}
           </tr>
