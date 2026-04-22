@@ -55,9 +55,7 @@ export async function POST(request: NextRequest) {
         if (!defaultCode || !accountCode || accountCode === defaultCode) {
           return { exchangeRate: null, baseCurrencyAmount: null };
         }
-        const rate = t.exchangeRate !== undefined
-          ? t.exchangeRate
-          : await fetchExchangeRate(t.date, accountCode, defaultCode);
+        const rate = t.exchangeRate ?? await fetchExchangeRate(t.date, accountCode, defaultCode);
         return {
           exchangeRate: rate,
           baseCurrencyAmount: applyExchangeRate(Number(t.amount), rate),

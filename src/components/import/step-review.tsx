@@ -279,9 +279,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
         state.rows.map(async (row, i) => {
           const rawDate = row[state.columnMap.date] ?? "";
           const description = row[state.columnMap.description] ?? "";
-          const reference = state.columnMap.reference !== undefined
-            ? row[state.columnMap.reference]
-            : undefined;
+          const reference = state.columnMap.reference === undefined
+            ? undefined
+            : row[state.columnMap.reference];
 
           const date = parseDate(rawDate, state.dateFormat);
 
@@ -291,12 +291,12 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
 
           if (isSplitMode) {
             // Split mode: separate Debit (expense) and Credit (income) columns
-            const rawDebit = state.columnMap.debitAmount !== undefined
-              ? (row[state.columnMap.debitAmount] ?? "").trim()
-              : "";
-            const rawCredit = state.columnMap.creditAmount !== undefined
-              ? (row[state.columnMap.creditAmount] ?? "").trim()
-              : "";
+            const rawDebit = state.columnMap.debitAmount === undefined
+              ? ""
+              : (row[state.columnMap.debitAmount] ?? "").trim();
+            const rawCredit = state.columnMap.creditAmount === undefined
+              ? ""
+              : (row[state.columnMap.creditAmount] ?? "").trim();
 
             if (rawDebit) {
               amount = -Math.abs(parseAmount(rawDebit));
@@ -307,9 +307,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
             }
           } else {
             // Single column mode: sign determines type
-            const rawAmount = state.columnMap.amount !== undefined
-              ? (row[state.columnMap.amount] ?? "0")
-              : "0";
+            const rawAmount = state.columnMap.amount === undefined
+              ? "0"
+              : (row[state.columnMap.amount] ?? "0");
             amount = parseAmount(rawAmount);
             type = amount >= 0 ? "INCOME" : "EXPENSE";
           }

@@ -45,7 +45,7 @@ interface Settings {
 // required so the server re-renders with the new locale's message bundle.
 function handleLocaleChange(newLocale: string) {
   document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
-  window.location.reload();
+  globalThis.location.reload();
 }
 
 interface BalanceIndicatorProps {

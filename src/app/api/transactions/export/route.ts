@@ -25,7 +25,7 @@ import { Prisma } from "@/generated/prisma/client";
 function csvEscape(value: string | null | undefined = ""): string {
   if (!value) return "";
   if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
+    return `"${value.replaceAll('"', '""')}"`;
   }
   return value;
 }

@@ -260,9 +260,9 @@ function NetStatCard({ value, prevNet, prevLabel }: Readonly<NetStatCardProps>) 
       : "text-red-600 dark:text-red-400";
 
   const delta =
-    prevNet !== null
-      ? { diff: value - prevNet, positive: value - prevNet >= 0 }
-      : null;
+    prevNet === null
+      ? null
+      : { diff: value - prevNet, positive: value - prevNet >= 0 };
 
   return (
     <Card className="py-0">

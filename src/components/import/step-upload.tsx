@@ -99,7 +99,7 @@ export function StepUpload({ onComplete }: Readonly<StepUploadProps>) {
       const effectiveSkipRows = selectedProfile ? selectedProfile.skipRows : skipRows;
       formData.append("skipRows", String(effectiveSkipRows));
 
-      const effectiveDelimiter = selectedProfile?.delimiter || (delimiter !== "auto" ? delimiter : null);
+      const effectiveDelimiter = selectedProfile?.delimiter || (delimiter === "auto" ? null : delimiter);
       if (effectiveDelimiter) {
         formData.append("delimiter", effectiveDelimiter);
       }
@@ -119,7 +119,7 @@ export function StepUpload({ onComplete }: Readonly<StepUploadProps>) {
       // Pass the effective skipRows/delimiter so the wizard can store them
       // for later use (e.g., saving a profile in the column mapping step)
       const effectiveSkip = selectedProfile ? selectedProfile.skipRows : skipRows;
-      const effectiveDelim = selectedProfile?.delimiter || (delimiter !== "auto" ? delimiter : null);
+      const effectiveDelim = selectedProfile?.delimiter || (delimiter === "auto" ? null : delimiter);
 
       onComplete({
         fileName: data.fileName,

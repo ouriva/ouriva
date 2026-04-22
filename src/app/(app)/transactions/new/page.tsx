@@ -18,9 +18,9 @@ export const metadata: Metadata = {
 
 export default async function NewTransactionPage({
   searchParams,
-}: {
+}: Readonly<{
   searchParams: Promise<{ from?: string }>;
-}) {
+}>) {
   const { from } = await searchParams;
 
   // If a `from` id was provided, fetch the source transaction so we can
