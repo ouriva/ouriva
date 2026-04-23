@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { updateAccountSchema } from "@/validators/account";
+import { z } from "zod/v4";
 
 export async function GET(
   _request: NextRequest,
@@ -50,7 +51,7 @@ export async function PUT(
           error: {
             message: "Invalid account data",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten().fieldErrors,
+            details: z.flattenError(parsed.error).fieldErrors,
           },
         },
         { status: 400 }

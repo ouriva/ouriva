@@ -3,6 +3,7 @@
 // Single import profile operations.
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod/v4";
 import { prisma } from "@/lib/prisma";
 import { updateImportProfileSchema } from "@/validators/import";
 
@@ -46,7 +47,7 @@ export async function PUT(
           error: {
             message: "Validation failed",
             code: "VALIDATION_ERROR",
-            details: parsed.error.format(),
+            details: z.treeifyError(parsed.error),
           },
         },
         { status: 400 }

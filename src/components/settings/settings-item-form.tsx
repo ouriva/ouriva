@@ -55,7 +55,7 @@ export function SettingsItemForm({
 
   const isEditing = !!itemId;
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
 

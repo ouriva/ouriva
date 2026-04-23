@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod/v4";
 import {
   createTransactionSchema,
   transactionQuerySchema,
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
           error: {
             message: "Invalid query parameters",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten().fieldErrors,
+            details: z.flattenError(parsed.error).fieldErrors,
           },
         },
         { status: 400 }
@@ -155,7 +156,7 @@ export async function POST(request: NextRequest) {
           error: {
             message: "Invalid transaction data",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten().fieldErrors,
+            details: z.flattenError(parsed.error).fieldErrors,
           },
         },
         { status: 400 }

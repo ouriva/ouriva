@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod/v4";
 
 const updateSettingsSchema = z.object({
-  transferCategoryId: z.string().uuid().nullable().optional(),
+  transferCategoryId: z.uuid().nullable().optional(),
 });
 
 export async function GET() {
@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest) {
           error: {
             message: "Invalid settings data",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten().fieldErrors,
+            details: z.flattenError(parsed.error).fieldErrors,
           },
         },
         { status: 400 }

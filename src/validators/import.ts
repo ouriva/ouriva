@@ -58,8 +58,8 @@ export const importTransactionSchema = z.object({
   friendlyName: z.string().max(255).optional(),
   notes: z.string().max(1000).optional(),
   date: z.string(), // ISO date string, parsed server-side
-  fromAccountId: z.string().uuid(),
-  categoryId: z.string().uuid().optional(),
+  fromAccountId: z.uuid(),
+  categoryId: z.uuid().optional(),
   importRef: z.string(),
   needsReview: z.boolean().optional(),
   exchangeRate: z.number().positive().optional(),

@@ -14,7 +14,7 @@ import { z } from "zod/v4";
 // Each split assigns a category and amount to a portion of the parent total.
 
 const splitEntrySchema = z.object({
-  categoryId: z.string().uuid({ message: "Invalid category" }),
+  categoryId: z.uuid("Invalid category"),
   amount: z
     .number()
     .positive({ message: "Split amount must be positive" })
@@ -87,15 +87,15 @@ function validateSplits(
 const incomeBase = z.object({
   type: z.literal("INCOME"),
   ...baseTransactionFields,
-  fromAccountId: z.string().uuid({ message: "Invalid account" }),
-  categoryId: z.string().uuid({ message: "Invalid category" }).optional(),
+  fromAccountId: z.uuid("Invalid account"),
+  categoryId: z.uuid("Invalid category").optional(),
 });
 
 const expenseBase = z.object({
   type: z.literal("EXPENSE"),
   ...baseTransactionFields,
-  fromAccountId: z.string().uuid({ message: "Invalid account" }),
-  categoryId: z.string().uuid({ message: "Invalid category" }).optional(),
+  fromAccountId: z.uuid("Invalid account"),
+  categoryId: z.uuid("Invalid category").optional(),
 });
 
 // --- Exported schemas ---
@@ -119,8 +119,8 @@ export const transactionQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
   type: z.enum(["INCOME", "EXPENSE"]).optional(),
-  accountId: z.string().uuid().optional(),
-  categoryId: z.union([z.string().uuid(), z.literal("uncategorized")]).optional(),
+  accountId: z.uuid().optional(),
+  categoryId: z.union([z.uuid(), z.literal("uncategorized")]).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   search: z.string().optional(),

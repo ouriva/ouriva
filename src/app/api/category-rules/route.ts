@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod/v4";
 import { createCategoryRuleSchema } from "@/validators/category-rule";
 
 export async function GET() {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
           error: {
             message: "Invalid rule data",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten().fieldErrors,
+            details: z.flattenError(parsed.error).fieldErrors,
           },
         },
         { status: 400 }
