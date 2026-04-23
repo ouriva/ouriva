@@ -7,6 +7,20 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.21.1] — 2026-04-23
+
+### Fixed
+- `React.FormEvent` deprecated in React 19 — replaced with `React.SyntheticEvent<HTMLFormElement>` in settings form handlers
+- File dropzone replaced `div[role=button]` with a native `<button>` element for accessibility correctness
+- Resolved all SonarCloud Low-severity issues (negated conditions, replaceAll, Readonly props, unnecessary type assertions, nullish coalescing, globalThis, duplicate imports)
+- Replaced deprecated Zod v4 APIs (`z.string().uuid()` → `z.uuid()`, `error.flatten()` → `z.flattenError()`, `error.format()` → `z.treeifyError()`)
+- Eliminated code duplication in summary API routes and category select dropdowns — SonarCloud duplication at 0%
+
+### Security
+- Bumped `@xmldom/xmldom` to 0.8.13 (via `read-excel-file`) to resolve 4 high-severity CVEs: GHSA-2v35-w6hq-6mfw, GHSA-f6ww-3ggp-fr8h, GHSA-x6wf-f3px-wcqx, GHSA-j759-j44w-7fr8
+
+---
+
 ## [1.21.0] — 2026-04-17
 
 ### Changed
