@@ -212,7 +212,7 @@ function RuleForm({ categories, rule, onSuccess, trigger }: Readonly<RuleFormPro
     setIsActive(rule?.isActive ?? true);
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
