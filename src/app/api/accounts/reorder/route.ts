@@ -10,7 +10,7 @@ import { z } from "zod/v4";
 
 const reorderSchema = z.array(
   z.object({
-    id: z.string().uuid(),
+    id: z.uuid(),
     sortOrder: z.number().int().min(0),
   })
 );
@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest) {
           error: {
             message: "Invalid reorder data",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten(),
+            details: z.flattenError(parsed.error),
           },
         },
         { status: 400 }

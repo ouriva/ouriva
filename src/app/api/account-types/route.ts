@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createAccountTypeSchema } from "@/validators/account-type";
+import { z } from "zod/v4";
 
 export async function GET() {
   try {
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
           error: {
             message: "Invalid account type data",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten().fieldErrors,
+            details: z.flattenError(parsed.error).fieldErrors,
           },
         },
         { status: 400 }

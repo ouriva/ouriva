@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod/v4";
 import { bulkUpsertBudgetSchema } from "@/validators/budget";
 
 export async function POST(request: NextRequest) {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
           error: {
             message: "Validation failed",
             code: "VALIDATION_ERROR",
-            details: result.error.format(),
+            details: z.treeifyError(result.error),
           },
         },
         { status: 400 }

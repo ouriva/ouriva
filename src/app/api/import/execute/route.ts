@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod/v4";
 import { executeImportSchema } from "@/validators/import";
 import { getDefaultCurrency } from "@/lib/default-currency";
 import { fetchExchangeRate, applyExchangeRate } from "@/lib/exchange-rate";
@@ -27,7 +28,7 @@ export async function POST(request: NextRequest) {
           error: {
             message: "Validation failed",
             code: "VALIDATION_ERROR",
-            details: parsed.error.format(),
+            details: z.treeifyError(parsed.error),
           },
         },
         { status: 400 }

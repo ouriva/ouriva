@@ -8,6 +8,7 @@
 // was a plain object).
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod/v4";
 import { prisma } from "@/lib/prisma";
 import { updateTransactionSchema } from "@/validators/transaction";
 import { resolveExchangeRateFields } from "@/lib/resolve-exchange-rate";
@@ -92,7 +93,7 @@ export async function PUT(
           error: {
             message: "Invalid transaction data",
             code: "VALIDATION_ERROR",
-            details: parsed.error.flatten().fieldErrors,
+            details: z.flattenError(parsed.error).fieldErrors,
           },
         },
         { status: 400 }

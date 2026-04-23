@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { z } from "zod/v4";
 import { createImportProfileSchema } from "@/validators/import";
 
 export async function GET() {
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
           error: {
             message: "Validation failed",
             code: "VALIDATION_ERROR",
-            details: parsed.error.format(),
+            details: z.treeifyError(parsed.error),
           },
         },
         { status: 400 }

@@ -12,7 +12,7 @@ import { z } from "zod/v4";
 // For creating/updating a single budget entry
 export const upsertBudgetSchema = z.object({
   year: z.number().int().min(2000).max(2100),
-  categoryId: z.string().uuid(),
+  categoryId: z.uuid(),
   amount: z.number().min(0),
   type: z.enum(["EXPENSE", "INCOME"]).default("EXPENSE"),
   note: z.string().max(500).nullable().optional(),
@@ -25,7 +25,7 @@ export const bulkUpsertBudgetSchema = z.object({
   year: z.number().int().min(2000).max(2100),
   budgets: z.array(
     z.object({
-      categoryId: z.string().uuid(),
+      categoryId: z.uuid(),
       amount: z.number().min(0),
       type: z.enum(["EXPENSE", "INCOME"]).default("EXPENSE"),
       note: z.string().max(500).nullable().optional(),
