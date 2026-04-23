@@ -1,22 +1,26 @@
+// CategorySelectOptions
+// =====================
+// Renders grouped <SelectItem> / <SelectGroup> elements for a hierarchical
+// category list. Drop this inside any <SelectContent> that needs to show
+// parent → child categories. Shared between CategoryRulesList and
+// TransactionList to avoid duplicating the same 23-line map block.
+
 import {
   SelectGroup,
   SelectItem,
   SelectLabel,
 } from "@/components/ui/select";
 
-interface Category {
+interface CategoryOption {
   id: string;
   name: string;
-  parentId: string | null;
 }
 
 interface CategorySelectOptionsProps {
-  parentCategories: Category[];
-  childCategories: Category[];
+  parentCategories: CategoryOption[];
+  childCategories: (CategoryOption & { parentId: string | null })[];
 }
 
-// Renders grouped parent/child category options for use inside any <SelectContent>.
-// Does not include the "none" / "no category" option — callers add that themselves.
 export function CategorySelectOptions({
   parentCategories,
   childCategories,

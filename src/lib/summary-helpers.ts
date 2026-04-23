@@ -4,6 +4,8 @@
 // summary API routes. Centralised here to avoid duplication between
 // the two files, which have nearly identical aggregation logic.
 
+import { prisma } from "@/lib/prisma";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type DefaultCurrency = { code: string; symbol: string } | null;
@@ -103,4 +105,60 @@ export function updateCategoryMap(
     child.total += amount;
     if (monthIndex !== undefined) child.months![monthIndex] += amount;
   }
+}
+
+// ─── Bucket helpers ───────────────────────────────────────────────────────────
+
+export type BucketTotals = { NEEDS: number; WANTS: number; SAVINGS: number; unclassified: number };
+
+export function initBucketTotals(): BucketTotals {
+  return { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
+}
+
+// Accumulates `amount` into the correct bucket based on the category's
+// bucket field (or its parent's). Used by both the monthly and annual routes.
+export function addToBucket(
+  bucketTotals: BucketTotals,
+  category: { bucket?: string | null; parent?: { bucket?: string | null } | null } | null | undefined,
+  amount: number
+): void {
+  const bucket = (category?.bucket ?? category?.parent?.bucket ?? null) as
+    | "NEEDS" | "WANTS" | "SAVINGS" | null;
+  bucketTotals[bucket ?? "unclassified"] += amount;
+}
+
+export function roundBucketTotals(bt: BucketTotals) {
+  return {
+    NEEDS: Math.round(bt.NEEDS * 100) / 100,
+    WANTS: Math.round(bt.WANTS * 100) / 100,
+    SAVINGS: Math.round(bt.SAVINGS * 100) / 100,
+    unclassified: Math.round(bt.unclassified * 100) / 100,
+  };
+}
+
+// ─── Shared Prisma query ──────────────────────────────────────────────────────
+
+// Fetches all transactions for a date range, excluding split parents and
+// excluded categories. Include shape is identical for both summary routes.
+export async function fetchSummaryTransactions(
+  startDate: Date,
+  endDate: Date,
+  excludedCategoryIds: string[]
+) {
+  return prisma.transaction.findMany({
+    where: {
+      date: { gte: startDate, lte: endDate },
+      // Exclude split parents — their total is covered by their children.
+      // splits: { none: {} } means "has zero split children", which passes for
+      // regular transactions and split children but excludes split parents.
+      splits: { none: {} },
+      ...(excludedCategoryIds.length > 0 && {
+        categoryId: { notIn: excludedCategoryIds },
+      }),
+    },
+    include: {
+      category: { include: { parent: true } },
+      fromAccount: { include: { currency: true } },
+    },
+  });
 }
