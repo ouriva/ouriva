@@ -16,12 +16,11 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CategorySelectOptions } from "@/components/ui/category-select-options";
 import {
   Sheet,
   SheetContent,
@@ -213,7 +212,7 @@ function RuleForm({ categories, rule, onSuccess, trigger }: Readonly<RuleFormPro
     setIsActive(rule?.isActive ?? true);
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
@@ -307,26 +306,10 @@ function RuleForm({ categories, rule, onSuccess, trigger }: Readonly<RuleFormPro
                 <SelectValue placeholder={t("categoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                {parentCategories.map((parent) => {
-                  const children = childCategories.filter((c) => c.parentId === parent.id);
-                  if (children.length > 0) {
-                    return (
-                      <SelectGroup key={parent.id}>
-                        <SelectLabel>{parent.name}</SelectLabel>
-                        {children.map((child) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  }
-                  return (
-                    <SelectItem key={parent.id} value={parent.id}>
-                      {parent.name}
-                    </SelectItem>
-                  );
-                })}
+                <CategorySelectOptions
+                  parentCategories={parentCategories}
+                  childCategories={childCategories}
+                />
               </SelectContent>
             </Select>
           </div>

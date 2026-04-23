@@ -5,10 +5,17 @@
 // and category breakdown table.
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getExcludedCategoryIds } from "@/lib/settings";
 import { getDefaultCurrency } from "@/lib/default-currency";
-import { type CategoryEntry, effectiveAmount, updateCategoryMap } from "@/lib/summary-helpers";
+import {
+  type CategoryEntry,
+  effectiveAmount,
+  updateCategoryMap,
+  fetchSummaryTransactions,
+  initBucketTotals,
+  addToBucket,
+  roundBucketTotals,
+} from "@/lib/summary-helpers";
 
 function mapToSortedArray(map: Map<string, CategoryEntry>) {
   return Array.from(map.values())
@@ -47,22 +54,7 @@ export async function GET(request: NextRequest) {
       getDefaultCurrency(),
     ]);
 
-    const transactions = await prisma.transaction.findMany({
-      where: {
-        date: { gte: startDate, lte: endDate },
-        // Exclude split parents — their total is covered by their children.
-        // splits: { none: {} } means "has zero split children", which passes for
-        // regular transactions and split children but excludes split parents.
-        splits: { none: {} },
-        ...(excludedCategoryIds.length > 0 && {
-          categoryId: { notIn: excludedCategoryIds },
-        }),
-      },
-      include: {
-        category: { include: { parent: true } },
-        fromAccount: { include: { currency: true } },
-      },
-    });
+    const transactions = await fetchSummaryTransactions(startDate, endDate, excludedCategoryIds);
 
     // Build monthly breakdown (12 months)
     const months = Array.from({ length: 12 }, (_, i) => ({
@@ -80,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // 50/30/20 bucket breakdown — expenses only.
     // Effective bucket = category.bucket ?? parent.bucket ?? null (unclassified).
-    const bucketTotals = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
+    const bucketTotals = initBucketTotals();
 
     for (const tx of transactions) {
       const amount = effectiveAmount(tx, defaultCurrency);
@@ -93,10 +85,7 @@ export async function GET(request: NextRequest) {
       } else {
         months[monthIndex].expense += amount;
         totalExpense += amount;
-        // Effective bucket: own bucket → parent bucket → unclassified
-        const bucket = (tx.category?.bucket ?? tx.category?.parent?.bucket ?? null) as
-          | "NEEDS" | "WANTS" | "SAVINGS" | null;
-        bucketTotals[bucket ?? "unclassified"] += amount;
+        addToBucket(bucketTotals, tx.category, amount);
       }
 
       const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
@@ -121,12 +110,7 @@ export async function GET(request: NextRequest) {
       months: roundedMonths,
       categories: mapToSortedArray(categoryMap),
       incomeCategories: mapToSortedArray(incomeCategoryMap),
-      bucketBreakdown: {
-        NEEDS: Math.round(bucketTotals.NEEDS * 100) / 100,
-        WANTS: Math.round(bucketTotals.WANTS * 100) / 100,
-        SAVINGS: Math.round(bucketTotals.SAVINGS * 100) / 100,
-        unclassified: Math.round(bucketTotals.unclassified * 100) / 100,
-      },
+      bucketBreakdown: roundBucketTotals(bucketTotals),
     });
   } catch (error) {
     console.error("GET /api/summary/annual error:", error);
