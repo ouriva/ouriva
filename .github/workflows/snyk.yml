@@ -25,6 +25,9 @@ jobs:
   snyk-container:
     name: Snyk Container Scan
     runs-on: ubuntu-latest
+    # Dependabot PRs only bump dependency versions — skip Snyk to avoid
+    # burning free-plan test quota on automated dependency updates.
+    if: github.actor != 'dependabot[bot]'
 
     permissions:
       # Required to upload Snyk results to the GitHub Security tab
