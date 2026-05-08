@@ -24,7 +24,7 @@
 # ------------------------------------
 # Stage 1: Install dependencies
 # ------------------------------------
-FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS deps
+FROM node:26-alpine@sha256:e71ac5e964b9201072425d59d2e876359efa25dc96bb1768cb73295728d6e4ea AS deps
 
 # Set working directory inside the container
 WORKDIR /app
@@ -41,7 +41,7 @@ RUN npm ci
 # ------------------------------------
 # Stage 2: Build the application
 # ------------------------------------
-FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS builder
+FROM node:26-alpine@sha256:e71ac5e964b9201072425d59d2e876359efa25dc96bb1768cb73295728d6e4ea AS builder
 
 WORKDIR /app
 
@@ -66,7 +66,7 @@ RUN npm run build
 # ------------------------------------
 # Stage 3: Production runner
 # ------------------------------------
-FROM node:22-alpine@sha256:8ea2348b068a9544dae7317b4f3aafcdc032df1647bb7d768a05a5cad1a7683f AS runner
+FROM node:26-alpine@sha256:e71ac5e964b9201072425d59d2e876359efa25dc96bb1768cb73295728d6e4ea AS runner
 
 WORKDIR /app
 
