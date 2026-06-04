@@ -19,7 +19,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, Landmark, Plus } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, Landmark, Plus, TrendingUp } from "lucide-react";
 import { CategoryIcon } from "@/components/ui/category-icon";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -336,12 +336,19 @@ export function DashboardContent() {
             )}
           </div>
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/transactions/new">
-            <Plus className="mr-2 h-4 w-4" />
-            {t("addTransaction")}
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="/analytics" aria-label={t("viewAnalytics")}>
+              <TrendingUp className="h-5 w-5" />
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/transactions/new">
+              <Plus className="mr-2 h-4 w-4" />
+              {t("addTransaction")}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* ── Empty state — shown when no accounts exist yet ───────────────── */}
