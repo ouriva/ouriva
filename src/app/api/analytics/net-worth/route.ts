@@ -121,7 +121,7 @@ export async function GET(request: Request) {
         dateSet.add(txDateStr);
       }
     }
-    const sortedDates = Array.from(dateSet).sort();
+    const sortedDates = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
 
     // Single-pass: walk transactions once in date order, snapshot net
     // worth at each target date. We include ALL transactions (not just
