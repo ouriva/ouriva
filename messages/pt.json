@@ -31,7 +31,14 @@
     "transactions": "Transações",
     "summary": "Resumo",
     "budget": "Orçamento",
-    "settings": "Definições"
+    "settings": "Definições",
+    "analytics": "Análise"
+  },
+  "analytics": {
+    "netWorthLabel": "Patrimônio Líquido",
+    "noCurrency": "Defina uma moeda padrão em Definições › Moedas para ver o gráfico do seu património.",
+    "noData": "Sem dados de transações disponíveis para este período.",
+    "loadError": "Falha ao carregar os dados de análise."
   },
   "dashboard": {
     "goodMorning": "Bom dia",
@@ -52,7 +59,8 @@
     "emptyTitle": "Comece a gerir as suas finanças",
     "emptySubtitle": "Adicione a sua primeira conta para ver os seus saldos, acompanhar despesas e construir o seu quadro financeiro.",
     "emptyAddAccount": "Adicionar conta",
-    "onTrack": "No caminho certo"
+    "onTrack": "No caminho certo",
+    "viewAnalytics": "Ver análise"
   },
   "transactions": {
     "pageTitle": "Transações",
