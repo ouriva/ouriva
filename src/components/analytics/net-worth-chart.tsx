@@ -244,11 +244,11 @@ export function NetWorthChart() {
                     t("netWorthLabel"),
                   ] as [string, string]
                 }
-                labelFormatter={(label: string) => {
+                labelFormatter={(label: unknown) => {
                   try {
-                    return format(parseISO(label), "d MMM yyyy");
+                    return format(parseISO(String(label)), "d MMM yyyy");
                   } catch {
-                    return label;
+                    return String(label ?? "");
                   }
                 }}
               />
