@@ -35,7 +35,7 @@
     "analytics": "Analytics"
   },
   "analytics": {
-    "netWorthLabel": "Patrimônio Líquido",
+    "netWorthLabel": "Net Worth",
     "noCurrency": "Set a default currency in Settings › Currencies to see your net worth chart.",
     "noData": "No transaction data available for this period.",
     "loadError": "Failed to load analytics data."
