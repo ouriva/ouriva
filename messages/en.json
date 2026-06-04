@@ -31,7 +31,14 @@
     "transactions": "Transactions",
     "summary": "Summary",
     "budget": "Budget",
-    "settings": "Settings"
+    "settings": "Settings",
+    "analytics": "Analytics"
+  },
+  "analytics": {
+    "netWorthLabel": "Net Worth",
+    "noCurrency": "Set a default currency in Settings › Currencies to see your net worth chart.",
+    "noData": "No transaction data available for this period.",
+    "loadError": "Failed to load analytics data."
   },
   "dashboard": {
     "goodMorning": "Good morning",
@@ -52,7 +59,8 @@
     "emptyTitle": "Start tracking your finances",
     "emptySubtitle": "Add your first account to see your balances, track spending, and build your financial picture.",
     "emptyAddAccount": "Add account",
-    "onTrack": "On track"
+    "onTrack": "On track",
+    "viewAnalytics": "View analytics"
   },
   "transactions": {
     "pageTitle": "Transactions",
