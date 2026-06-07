@@ -204,6 +204,43 @@ function buildGroupsFromUnion(
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
+// Fetches top-level EXPENSE or INCOME transactions with their split children
+// included so the caller can flatMap parents into children.
+//
+// The transfer-category filter uses OR rather than a plain `{ not: id }` because
+// split parents have categoryId: null, and SQL evaluates NULL != 'x' as NULL
+// (not TRUE), which silently drops those rows. The OR form explicitly keeps
+// null-category rows while still excluding the transfer category.
+function fetchTopLevelTransactions(
+  startDate: Date,
+  endDate: Date,
+  type: "EXPENSE" | "INCOME",
+  transferCategoryId: string | null
+) {
+  return prisma.transaction.findMany({
+    where: {
+      date: { gte: startDate, lte: endDate },
+      type,
+      parentTransactionId: null,
+      ...(transferCategoryId && {
+        OR: [
+          { categoryId: null },
+          { categoryId: { not: transferCategoryId } },
+        ],
+      }),
+    },
+    include: {
+      category: { include: { parent: true } },
+      splits: {
+        include: { category: { include: { parent: true } } },
+        ...(transferCategoryId && {
+          where: { categoryId: { not: transferCategoryId } },
+        }),
+      },
+    },
+  });
+}
+
 type TransactionWithCategory = {
   amount: unknown;
   category: { id: string; name: string; parent?: { id: string; name: string } | null } | null;
@@ -318,7 +355,7 @@ export async function GET(
     const transferCategoryId = await getTransferCategoryId();
 
     // Fetch all active categories (for expense seed), budgets, and transactions in parallel.
-    const [allCategories, budgets, expenseTransactions, incomeTransactions] =
+    const [allCategories, budgets, expenseTransactionsRaw, incomeTransactionsRaw] =
       await Promise.all([
         // All active leaf categories — seed for expense groups
         prisma.category.findMany({
@@ -346,25 +383,18 @@ export async function GET(
             },
           },
         }),
-        prisma.transaction.findMany({
-          where: {
-            date: { gte: startDate, lte: endDate },
-            type: "EXPENSE",
-            parentTransactionId: null,
-            ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
-          },
-          include: { category: { include: { parent: true } } },
-        }),
-        prisma.transaction.findMany({
-          where: {
-            date: { gte: startDate, lte: endDate },
-            type: "INCOME",
-            parentTransactionId: null,
-            ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
-          },
-          include: { category: { include: { parent: true } } },
-        }),
+        fetchTopLevelTransactions(startDate, endDate, "EXPENSE", transferCategoryId),
+        fetchTopLevelTransactions(startDate, endDate, "INCOME", transferCategoryId),
       ]);
+
+    // Replace split parents with their children so each child's amount is
+    // attributed to its own category. Regular transactions pass through as-is.
+    const expenseTransactions = expenseTransactionsRaw.flatMap(tx =>
+      tx.splits.length > 0 ? tx.splits : [tx]
+    );
+    const incomeTransactions = incomeTransactionsRaw.flatMap(tx =>
+      tx.splits.length > 0 ? tx.splits : [tx]
+    );
 
     // ── Leaf categories for expense seed ─────────────────────────────────
     const leafCategories = allCategories
