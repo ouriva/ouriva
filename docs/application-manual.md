@@ -1377,6 +1377,8 @@ A single transaction display. Server component (no interactivity needed for disp
 
 Groups transactions by date and displays them with search, filtering, and load-more pagination.
 
+**Search matches description, display name, and amount**: The `search` query parameter is sent to `GET /api/transactions`. On the API side, if the search term parses as a valid positive number (accepting both dot `"20.01"` and comma `"20,01"` as decimal separators), an exact `amount` match is added as an additional OR condition alongside the description and friendlyName text search. Typing `"20,01"` in the search bar therefore returns all transactions whose description or display name contains that string, or whose amount equals `20.01`.
+
 **Skeleton loading**: Shows placeholder rows on first mount before data arrives, giving immediate visual feedback.
 
 **Sticky filter bar**: The filter bar has `position: sticky; top: 0` with `backdrop-blur-sm` so the frosted-glass bar stays anchored at the top as the user scrolls through a long transaction list.
