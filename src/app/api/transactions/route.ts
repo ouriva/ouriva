@@ -28,6 +28,33 @@ const transactionInclude = {
   splits: { include: { category: { include: { parent: true } } } },
 } as const;
 
+// Accepts both dot ("20.01") and comma ("20,01") as the decimal separator so
+// the search bar works regardless of the user's locale setting.
+// Returns null for anything that isn't a valid positive number.
+function parseSearchAmount(search: string): number | null {
+  const trimmed = search.trim();
+  const direct = Number(trimmed);
+  if (!isNaN(direct) && isFinite(direct) && direct > 0) return direct;
+  const withDot = Number(trimmed.replace(",", "."));
+  if (!isNaN(withDot) && isFinite(withDot) && withDot > 0) return withDot;
+  return null;
+}
+
+// Builds the OR condition for a search term: description, friendlyName,
+// and — when the term parses as a positive number — exact amount match.
+// Extracted to keep GET's cognitive complexity within SonarCloud limits.
+function buildSearchCondition(search: string): Prisma.TransactionWhereInput {
+  const orConditions: Prisma.TransactionWhereInput[] = [
+    { description: { contains: search, mode: "insensitive" } },
+    { friendlyName: { contains: search, mode: "insensitive" } },
+  ];
+  const amountValue = parseSearchAmount(search);
+  if (amountValue !== null) {
+    orConditions.push({ amount: { equals: new Prisma.Decimal(amountValue) } });
+  }
+  return { OR: orConditions };
+}
+
 // GET /api/transactions?page=1&limit=20&type=EXPENSE&startDate=2026-01-01
 export async function GET(request: NextRequest) {
   try {
@@ -75,12 +102,7 @@ export async function GET(request: NextRequest) {
     const andConditions: Prisma.TransactionWhereInput[] = [];
 
     if (search) {
-      andConditions.push({
-        OR: [
-          { description: { contains: search, mode: "insensitive" } },
-          { friendlyName: { contains: search, mode: "insensitive" } },
-        ],
-      });
+      andConditions.push(buildSearchCondition(search));
     }
     if (accountId) {
       where.fromAccountId = accountId;
