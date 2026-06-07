@@ -40,6 +40,21 @@ function parseSearchAmount(search: string): number | null {
   return null;
 }
 
+// Builds the OR condition for a search term: description, friendlyName,
+// and — when the term parses as a positive number — exact amount match.
+// Extracted to keep GET's cognitive complexity within SonarCloud limits.
+function buildSearchCondition(search: string): Prisma.TransactionWhereInput {
+  const orConditions: Prisma.TransactionWhereInput[] = [
+    { description: { contains: search, mode: "insensitive" } },
+    { friendlyName: { contains: search, mode: "insensitive" } },
+  ];
+  const amountValue = parseSearchAmount(search);
+  if (amountValue !== null) {
+    orConditions.push({ amount: { equals: new Prisma.Decimal(amountValue) } });
+  }
+  return { OR: orConditions };
+}
+
 // GET /api/transactions?page=1&limit=20&type=EXPENSE&startDate=2026-01-01
 export async function GET(request: NextRequest) {
   try {
@@ -87,14 +102,7 @@ export async function GET(request: NextRequest) {
     const andConditions: Prisma.TransactionWhereInput[] = [];
 
     if (search) {
-      const amountValue = parseSearchAmount(search);
-      andConditions.push({
-        OR: [
-          { description: { contains: search, mode: "insensitive" } },
-          { friendlyName: { contains: search, mode: "insensitive" } },
-          ...(amountValue !== null ? [{ amount: { equals: new Prisma.Decimal(amountValue) } }] : []),
-        ],
-      });
+      andConditions.push(buildSearchCondition(search));
     }
     if (accountId) {
       where.fromAccountId = accountId;
