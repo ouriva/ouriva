@@ -318,7 +318,10 @@ export async function GET(
     const transferCategoryId = await getTransferCategoryId();
 
     // Fetch all active categories (for expense seed), budgets, and transactions in parallel.
-    const [allCategories, budgets, expenseTransactions, incomeTransactions] =
+    // Transactions are fetched as top-level only (parentTransactionId: null) with their
+    // splits included. Split parents are then replaced by their children in a flatMap so
+    // each child's category and amount is attributed correctly without double-counting.
+    const [allCategories, budgets, expenseTransactionsRaw, incomeTransactionsRaw] =
       await Promise.all([
         // All active leaf categories — seed for expense groups
         prisma.category.findMany({
@@ -351,20 +354,59 @@ export async function GET(
             date: { gte: startDate, lte: endDate },
             type: "EXPENSE",
             parentTransactionId: null,
-            ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
+            // Split parents have categoryId: null. SQL's NULL != 'x' evaluates to NULL
+            // (not TRUE), so a plain `{ not: transferId }` silently drops split parents.
+            // The OR form correctly includes null-category rows while still excluding
+            // the transfer category.
+            ...(transferCategoryId && {
+              OR: [
+                { categoryId: null },
+                { categoryId: { not: transferCategoryId } },
+              ],
+            }),
           },
-          include: { category: { include: { parent: true } } },
+          include: {
+            category: { include: { parent: true } },
+            splits: {
+              include: { category: { include: { parent: true } } },
+              ...(transferCategoryId && {
+                where: { categoryId: { not: transferCategoryId } },
+              }),
+            },
+          },
         }),
         prisma.transaction.findMany({
           where: {
             date: { gte: startDate, lte: endDate },
             type: "INCOME",
             parentTransactionId: null,
-            ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
+            ...(transferCategoryId && {
+              OR: [
+                { categoryId: null },
+                { categoryId: { not: transferCategoryId } },
+              ],
+            }),
           },
-          include: { category: { include: { parent: true } } },
+          include: {
+            category: { include: { parent: true } },
+            splits: {
+              include: { category: { include: { parent: true } } },
+              ...(transferCategoryId && {
+                where: { categoryId: { not: transferCategoryId } },
+              }),
+            },
+          },
         }),
       ]);
+
+    // Replace split parents with their children so each child's amount is
+    // attributed to its own category. Regular transactions pass through as-is.
+    const expenseTransactions = expenseTransactionsRaw.flatMap(tx =>
+      tx.splits.length > 0 ? tx.splits : [tx]
+    );
+    const incomeTransactions = incomeTransactionsRaw.flatMap(tx =>
+      tx.splits.length > 0 ? tx.splits : [tx]
+    );
 
     // ── Leaf categories for expense seed ─────────────────────────────────
     const leafCategories = allCategories
