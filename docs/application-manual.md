@@ -1057,6 +1057,8 @@ Merges budget targets with actual spending. For each category:
 
 The `percentage` drives the progress bar color: green (<75%), yellow (75-100%), red (>100%).
 
+**Split transactions**: Split parents have no category of their own (`categoryId: null`). The API fetches top-level transactions with their split children included, then replaces each split parent with its children. This means each child's amount is attributed to its own category, so a single split transaction can contribute to multiple budget rows simultaneously.
+
 **Reimbursement netoff**: Income transactions assigned to an expense category (e.g. an insurance reimbursement categorised as "Health") are treated as contra-expenses. The expense `actual` = gross expenses − reimbursements in that category, giving the true out-of-pocket cost. Those same income transactions are excluded from the income tab so they are not double-counted. A category is considered "in expense context" when it has expense transactions or an expense budget target — pure income categories (salary, freelance) are unaffected.
 
 #### `POST /api/budgets` — Bulk Upsert
