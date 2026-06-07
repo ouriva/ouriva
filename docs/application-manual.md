@@ -301,6 +301,7 @@ ouriva/
 │   │   │   ├── transactions/     # Transaction CRUD + import
 │   │   │   ├── summary/          # Monthly + annual views
 │   │   │   ├── budget/           # Budget management
+│   │   │   ├── analytics/        # Analytics charts
 │   │   │   └── settings/         # Configuration pages
 │   │   └── api/                  # REST API endpoints
 │   ├── components/               # React components
@@ -312,6 +313,7 @@ ouriva/
 │   │   ├── import/               # Bank statement import wizard
 │   │   ├── summary/              # Summary-specific
 │   │   ├── budget/               # Budget-specific
+│   │   ├── analytics/            # Analytics charts + period selector
 │   │   ├── charts/               # Recharts wrappers
 │   │   └── settings/             # Settings-specific
 │   ├── lib/                      # Shared utilities
@@ -370,6 +372,7 @@ Next.js App Router uses **file-system routing** — the directory structure unde
 | `src/app/(app)/transactions/page.tsx` | `/transactions` | Transaction list |
 | `src/app/(app)/transactions/new/page.tsx` | `/transactions/new` | New transaction form |
 | `src/app/(app)/transactions/[id]/page.tsx` | `/transactions/abc123` | Edit transaction |
+| `src/app/(app)/analytics/page.tsx` | `/analytics` | Analytics charts |
 | `src/app/api/transactions/route.ts` | `GET/POST /api/transactions` | API endpoint |
 | `src/app/api/transactions/[id]/route.ts` | `GET/PUT/DELETE /api/transactions/abc123` | Single item API |
 
@@ -883,9 +886,11 @@ api/
 │   └── [id]/route.ts     → PUT (update), DELETE (hard delete)
 ├── settings/
 │   └── route.ts          → GET (read), PUT (update transfer category)
-└── summary/
-    ├── monthly/route.ts  → GET (monthly breakdown)
-    └── annual/route.ts   → GET (yearly breakdown)
+├── summary/
+│   ├── monthly/route.ts  → GET (monthly breakdown)
+│   └── annual/route.ts   → GET (yearly breakdown)
+└── analytics/
+    └── net-worth/route.ts → GET (net worth over time)
 ```
 
 ### How API Route Handlers Work
@@ -1073,6 +1078,76 @@ await prisma.$transaction(
 **`$transaction`** wraps multiple operations in a database transaction. If any operation fails, all are rolled back. This prevents partial saves.
 
 **`upsert`** = "update or insert." If a budget for this year+category exists, update it. If not, create it. This is possible because of the `@@unique([year, categoryId])` constraint.
+
+#### `GET /api/analytics/net-worth` — Net Worth Over Time
+
+Returns a time series of the user's total net worth — the sum of all account balances — sampled at each date a transaction occurred within the selected period.
+
+**Query parameters**:
+- `period` — `1m`, `3m`, `6m`, `1y` (default), or `all`
+
+**Response shape**:
+```typescript
+{
+  data: { date: string; netWorth: number }[];  // ISO date strings
+  currency: { code: string; symbol: string } | null;
+  currentNetWorth: number | null;
+}
+```
+
+**Algorithm — event-driven, single-pass**
+
+Rather than computing the balance for every calendar day (which produces thousands of data points and requires repeatedly scanning all transactions), the endpoint collects only the dates where at least one transaction occurred:
+
+```typescript
+// 1. Collect unique transaction dates within the period
+const dateSet = new Set<string>();
+allTransactions
+  .filter(tx => format(new Date(tx.date), "yyyy-MM-dd") >= startDateStr)
+  .forEach(tx => dateSet.add(format(new Date(tx.date), "yyyy-MM-dd")));
+
+// 2. Sort the dates
+const sortedDates = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+```
+
+Then a **single pass** through all transactions (sorted by date) maintains a running balance map — one entry per account — without re-scanning the full set for each target date:
+
+```typescript
+const runningBalance = new Map<string, number>(
+  accounts.map((a) => [a.id, Number(a.initialBalance)])
+);
+let txIndex = 0;
+for (const dateStr of sortedDates) {
+  // Advance pointer until we've applied all transactions up to this date
+  while (txIndex < allTransactions.length) {
+    const tx = allTransactions[txIndex];
+    const txDateStr = format(new Date(tx.date), "yyyy-MM-dd");
+    if (txDateStr > dateStr) break;
+    const current = runningBalance.get(tx.fromAccountId) ?? 0;
+    const amount = Number(tx.amount);
+    if (tx.type === "INCOME") runningBalance.set(tx.fromAccountId, current + amount);
+    else if (tx.type === "EXPENSE") runningBalance.set(tx.fromAccountId, current - amount);
+    txIndex++;
+  }
+  // Snapshot: convert all account balances to default currency and sum
+  let totalNetWorth = 0;
+  for (const account of accounts) {
+    const balance = runningBalance.get(account.id) ?? 0;
+    totalNetWorth += balance * fxRate(account.currency.code);
+  }
+  dataPoints.push({ date: dateStr, netWorth: totalNetWorth });
+}
+```
+
+**Why event-driven?** A typical user has ~300 transaction dates per year. Day-by-day would produce 365 points for `1y`, all requiring the same computation. Event-driven produces the same chart shape with far fewer points.
+
+**Why today's FX rate?** The `baseCurrencyAmount` field (set during CSV import) is not populated for manually-entered transactions. Using it would mix two different accuracy levels across the same chart. Applying today's rate consistently across all historical points is honest and matches how the dashboard balance is computed.
+
+**`Period` type**: Exported from this route file (`src/app/api/analytics/net-worth/route.ts`) and re-used by the frontend components to keep the type definition in one place:
+
+```typescript
+export type Period = "1m" | "3m" | "6m" | "1y" | "all";
+```
 
 ---
 
@@ -1603,7 +1678,9 @@ Displays:
 
 A fully redesigned home screen that fetches three APIs in parallel (balances, monthly summary, recent transactions) and renders:
 
-1. **Greeting header** — Time-of-day message ("Good morning, Fabio") plus today's date. Replaces the generic `PageHeader`.
+1. **Greeting header** — Time-of-day message ("Good morning, Fabio") plus today's date. Replaces the generic `PageHeader`. The header also contains two action buttons:
+   - A `TrendingUp` icon button (ghost, icon-only) that links to `/analytics`
+   - An "Add" outline button that links to `/transactions/new`
 2. **Hero card** — A dark gradient card showing total net worth across all accounts in the primary currency. Gives users the one number they care about at a glance.
 3. **Account strip** — A horizontally scrollable list of account cards, edge-to-edge (`-mx-4 px-4`) with the scrollbar hidden. Each card shows the account name, balance, and currency. On mobile, users swipe to see more accounts without leaving the dashboard.
 4. **Spending meter** — A progress bar showing current month's expenses as a percentage of income. Color shifts from emerald (healthy) → amber (warning at ~75%) → red (over budget) based on the spend percentage.
@@ -1631,6 +1708,60 @@ A simple color-coded bar:
 - Red (100%+): `bg-red-500`
 
 The width is capped at 100% even if the actual value exceeds it (so the bar doesn't overflow).
+
+### Analytics Components
+
+#### `NetWorthChart` (`src/components/analytics/net-worth-chart.tsx`)
+
+A client component that renders the "Net Worth" (Patrimônio Líquido) area chart. On mount and whenever the selected period changes, it fetches from `/api/analytics/net-worth?period=<value>` and renders a Recharts `AreaChart` with an amber gradient fill.
+
+**Hero value**: Above the chart, the card displays the current net worth as a large headline figure plus a delta line — `+€1,200 (+5.3%)` in emerald for growth, `−€300 (−1.2%)` in red for decline — comparing the last data point to the first within the selected period.
+
+**Skeleton states**: While loading, the hero value area shows two `Skeleton` blocks matching the shape of the headline and delta. The chart area shows a full-width skeleton rectangle.
+
+**Cancellation pattern**: The `useEffect` sets a `cancelled` flag in its cleanup function. If the component unmounts (e.g., the user navigates away) while a fetch is in flight, the `cancelled` check prevents calling `setState` on an unmounted component:
+
+```typescript
+useEffect(() => {
+  let cancelled = false;
+  async function fetchData() {
+    try {
+      const json = await fetch(...).then(r => r.json());
+      if (!cancelled) setResponse(json);  // skipped if unmounted
+    } catch {
+      if (!cancelled) setHasError(true);
+    }
+  }
+  fetchData();
+  return () => { cancelled = true; };
+}, [period]);
+```
+
+**SVG color constraint**: Recharts renders axis ticks as SVG `<text>` elements with `fill="..."` attributes. SVG presentation attributes do not process CSS custom properties — writing `fill="hsl(var(--muted-foreground))"` renders as a literal string (invisible or black). The fix is to read the resolved theme via `useTheme()` and map it to explicit HSL values:
+
+```typescript
+const { resolvedTheme } = useTheme();
+const isDark = resolvedTheme === "dark";
+const axisColor = isDark ? "hsl(240, 5%, 55%)" : "hsl(240, 5%, 45%)";
+```
+
+**X-axis tick interval**: With ~300 transaction dates per year, showing every tick would create an unreadable label overlap. The interval is computed to target roughly 6 visible labels:
+```typescript
+const tickInterval = Math.max(1, Math.floor(data.length / 6));
+```
+
+**Tooltip**: Rendered as an HTML `<div>` via `contentStyle`, so CSS custom properties work correctly for border and background colors. The `formatter` callback converts the raw number to a locale-aware currency string.
+
+#### `PeriodSelector` (`src/components/analytics/period-selector.tsx`)
+
+A reusable row of pill buttons for selecting a time period: `1M`, `3M`, `6M`, `1Y`, `ALL`. The active period gets a solid amber background; inactive periods use the muted background with hover state. Used by `NetWorthChart` and designed for reuse by future chart components.
+
+The `Period` type is imported from the API route (`src/app/api/analytics/net-worth/route.ts`) and re-exported, keeping the type definition in one authoritative place:
+
+```typescript
+import type { Period } from "@/app/api/analytics/net-worth/route";
+export type { Period };
+```
 
 ---
 
@@ -1849,6 +1980,76 @@ Despite the filename, this component is now a `LineChart` (rewritten from `BarCh
 **`maxMonth` prop** — Slices the data array to the current month for the current year, so future months with zero values don't appear as a flat trailing line.
 
 **`margin={{ left: 14 }}`** — Prevents the first X-axis label from being clipped by the SVG boundary.
+
+### Net Worth Area Chart (`net-worth-chart.tsx`)
+
+The analytics page uses a Recharts `AreaChart` to display net worth over time. It combines a gradient fill with a solid amber stroke line:
+
+```tsx
+<AreaChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 8 }}>
+  <defs>
+    <linearGradient id="netWorthGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+    </linearGradient>
+  </defs>
+  <XAxis
+    dataKey="date"
+    tickFormatter={(v) => formatXTick(v, period)}
+    tick={tickProps}
+    tickLine={false}
+    axisLine={false}
+    interval={tickInterval}
+  />
+  <YAxis
+    orientation="right"
+    tick={tickProps}
+    tickLine={false}
+    axisLine={false}
+    width={40}
+    tickFormatter={formatYTick}
+  />
+  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={...} labelFormatter={...} />
+  <Area
+    type="monotone"
+    dataKey="netWorth"
+    stroke="#f59e0b"
+    strokeWidth={2}
+    fill="url(#netWorthGradient)"
+    dot={false}
+    activeDot={{ r: 4, fill: "#f59e0b" }}
+  />
+</AreaChart>
+```
+
+**`linearGradient`** — Defined in a `<defs>` block inside the SVG. The `id` (`netWorthGradient`) is referenced by `fill="url(#netWorthGradient)"` on the `Area`. The gradient fades from 30% opacity amber at the top to fully transparent at the bottom, creating depth under the line without obscuring the x-axis.
+
+**`type="monotone"`** — Recharts' curve interpolation. `monotone` ensures the line never goes above the highest point or below the lowest between two data points. It's visually smooth without creating artificial peaks/valleys (as `basis` or `cardinal` might).
+
+**`dot={false}`** — Individual dots on every data point are disabled. With 300+ points for a 1-year view, dots would form a solid band. The `activeDot` (shown only on hover) gives precise point-on-hover feedback without visual clutter.
+
+**Y-axis compact formatting** — Raw monetary values (e.g., `1234567`) would overflow the 40px Y-axis width. A formatter compacts them:
+```typescript
+function formatYTick(v: number): string {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(0)}k`;
+  return String(Math.round(v));
+}
+```
+
+**X-axis tick format by period** — Shorter periods show day+month (`5 Mar`); longer periods abbreviate to month-only (`Mar`) or month+year (`Mar 26`) to prevent label overlap:
+```typescript
+function formatXTick(dateStr: string, period: Period): string {
+  const date = parseISO(dateStr);
+  switch (period) {
+    case "1m": case "3m": return format(date, "d MMM");
+    case "6m": case "1y": return format(date, "MMM");
+    case "all": return format(date, "MMM yy");
+  }
+}
+```
+
+**Recharts v3 `labelFormatter` type**: In Recharts v3, the tooltip's `label` argument is typed as `ReactNode`, not `string`. Passing it to `parseISO` requires an explicit cast: `parseISO(String(label))`. The `labelFormatter` is typed `(label: unknown)` to match this reality.
 
 ### Theme-Aware Colors in Recharts
 
