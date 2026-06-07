@@ -7,6 +7,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.23.1] — 2026-06-07
+
+### Fixed
+- Budget vs actual: split transactions were not counted toward category actuals. Split parents have `categoryId: null`, and the transfer-category exclusion filter (`categoryId != transferId`) silently dropped them due to SQL NULL semantics. The fix fetches split children via the `splits` relation and flatMaps them into the result so each child's amount is attributed to its own category.
+
+---
+
 ## [1.21.1] — 2026-04-23
 
 ### Fixed
