@@ -7,6 +7,31 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [1.23.2] — 2026-07-01
+
+### Security
+- Resolved 7 open Dependabot security advisories via `npm audit fix`: hono
+  4.12.22 → 4.12.27 (CORS wildcard origin reflection, path traversal,
+  AWS Lambda body limit bypass, Set-Cookie merging, Lambda@Edge header
+  dropping), @babel/core 7.29.0 → 7.29.7 (arbitrary file read via
+  sourceMappingURL), esbuild 0.28.0 → 0.28.1 (arbitrary file read in
+  dev server)
+- Removed 4 redundant npm overrides (`brace-expansion`, `qs`,
+  `ip-address`, `fast-uri`) — parent semver ranges already resolve to
+  the patched versions naturally
+
+### Changed
+- Bumped 19 minor and patch dependencies: next 16.2.6 → 16.2.10,
+  react + react-dom 19.2.6 → 19.2.7, radix-ui ^1.4.3 → ^1.6.1,
+  shadcn ^4.8.0 → ^4.12.0, react-hook-form ^7.76.0 → ^7.80.0,
+  lucide-react ^1.16.0 → ^1.23.0, recharts ^3.8.1 → ^3.9.1,
+  read-excel-file ^9.0.9 → ^9.2.0, and other minor/patch bumps
+
+### CI
+- Upgraded `actions/checkout` from v6 to v7
+
+---
+
 ## [1.23.1] — 2026-06-07
 
 ### Fixed
