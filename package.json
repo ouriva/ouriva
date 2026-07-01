@@ -54,13 +54,9 @@
     "typescript": "^6"
   },
   "overrides": {
-    "brace-expansion": "^1.1.13",
     "@hono/node-server": "^1.19.13",
     "hono": "^4.12.18",
-    "fast-uri": "^3.1.2",
-    "qs": "^6.15.2",
     "express-rate-limit": "^8.5.1",
-    "ip-address": "^10.2.0",
     "postcss": "^8.5.10"
   }
 }
