@@ -36,7 +36,7 @@
   "devDependencies": {
     "@serwist/next": "^9.5.11",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^25",
+    "@types/node": "^26",
     "@types/papaparse": "^5.5.2",
     "@types/pg": "^8.20.0",
     "@types/react": "^19",
