@@ -94,6 +94,9 @@ export function AnnualSummaryContent() {
   // null = overview (income vs expense lines).
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
+  // Tracks the active tab so selectedCategoryData can look up the right list.
+  const [activeTab, setActiveTab] = useState("overview");
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setSelectedCategoryId(null); // reset chart when year changes
@@ -107,19 +110,65 @@ export function AnnualSummaryContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Merge expense and income annual categories by ID for the "All" tab.
+  // net total = incomeTotal - expenseTotal per category.
+  // net months = incomeMonths[i] - expenseMonths[i] per month.
+  const mergedAnnualCategories = useMemo<AnnualCategoryData[]>(() => {
+    if (!data) return [];
+    const map = new Map<string, AnnualCategoryData>();
+
+    for (const cat of data.categories) {
+      const childMap = new Map<string, AnnualCategoryData["children"][number]>();
+      for (const child of cat.children) {
+        childMap.set(child.id, { id: child.id, name: child.name, total: -child.total, months: child.months.map((v) => -v) });
+      }
+      map.set(cat.id, { id: cat.id, name: cat.name, total: -cat.total, months: cat.months.map((v) => -v), children: Array.from(childMap.values()) });
+    }
+
+    for (const cat of data.incomeCategories ?? []) {
+      if (map.has(cat.id)) {
+        const entry = map.get(cat.id)!;
+        entry.total += cat.total;
+        for (let i = 0; i < 12; i++) entry.months[i] += cat.months[i];
+        const childMap = new Map(entry.children.map((c) => [c.id, c]));
+        for (const child of cat.children) {
+          if (childMap.has(child.id)) {
+            const ec = childMap.get(child.id)!;
+            ec.total += child.total;
+            for (let i = 0; i < 12; i++) ec.months[i] += child.months[i];
+          } else {
+            childMap.set(child.id, { id: child.id, name: child.name, total: child.total, months: [...child.months] });
+          }
+        }
+        entry.children = Array.from(childMap.values());
+      } else {
+        map.set(cat.id, { id: cat.id, name: cat.name, total: cat.total, months: [...cat.months], children: cat.children.map((c) => ({ ...c, months: [...c.months] })) });
+      }
+    }
+
+    return Array.from(map.values())
+      .map((cat) => ({ ...cat, children: cat.children.toSorted((a, b) => Math.abs(b.total) - Math.abs(a.total)) }))
+      .toSorted((a, b) => Math.abs(b.total) - Math.abs(a.total));
+  }, [data]);
+
   // Resolve the selected category's monthly data for the chart.
-  // Searches parent categories first, then subcategories within them.
+  // When on the "All" tab, uses merged net months so the chart reflects
+  // the same values shown in the table. Other tabs use the raw lists.
   const selectedCategoryData = useMemo(() => {
     if (!selectedCategoryId || !data) return undefined;
-    const all = [...(data.categories ?? []), ...(data.incomeCategories ?? [])];
-    const parent = all.find((c) => c.id === selectedCategoryId);
+
+    const source = activeTab === "overview"
+      ? mergedAnnualCategories
+      : [...(data.categories ?? []), ...(data.incomeCategories ?? [])];
+
+    const parent = source.find((c) => c.id === selectedCategoryId);
     if (parent) return { name: parent.name, months: parent.months };
-    for (const cat of all) {
+    for (const cat of source) {
       const child = cat.children.find((c) => c.id === selectedCategoryId);
       if (child) return { name: child.name, months: child.months };
     }
     return undefined;
-  }, [selectedCategoryId, data]);
+  }, [selectedCategoryId, data, activeTab, mergedAnnualCategories]);
 
   return (
     <div className="space-y-6">
@@ -209,14 +258,25 @@ export function AnnualSummaryContent() {
 
           {/* ── Tabs — switching tabs resets chart to overview ────────── */}
           <Tabs
-            defaultValue="expenses"
-            onValueChange={() => setSelectedCategoryId(null)}
+            defaultValue="overview"
+            onValueChange={(v) => { setSelectedCategoryId(null); setActiveTab(v); }}
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
               <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
               <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
               <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview" className="mt-4">
+              <AnnualCategoryTable
+                categories={mergedAnnualCategories}
+                emptyMessage={t("noDataPeriod")}
+                selectedId={selectedCategoryId}
+                onSelect={setSelectedCategoryId}
+                signedValues
+              />
+            </TabsContent>
 
             <TabsContent value="expenses" className="mt-4">
               <AnnualCategoryTable
