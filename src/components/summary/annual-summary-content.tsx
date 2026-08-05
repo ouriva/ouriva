@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MonthYearPicker } from "./month-year-picker";
 import { AnnualBarChart } from "@/components/charts/annual-bar-chart";
 import { AnnualCategoryTable } from "./annual-category-table";
+import { NetCategoryBreakdown } from "./net-category-breakdown";
 import { BudgetSplit } from "./budget-split";
 import { cn } from "@/lib/utils";
 
@@ -209,14 +210,23 @@ export function AnnualSummaryContent() {
 
           {/* ── Tabs — switching tabs resets chart to overview ────────── */}
           <Tabs
-            defaultValue="expenses"
+            defaultValue="overview"
             onValueChange={() => setSelectedCategoryId(null)}
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
               <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
               <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
               <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview" className="mt-4">
+              <NetCategoryBreakdown
+                expenseCategories={data.categories}
+                incomeCategories={data.incomeCategories || []}
+                totalCashflow={data.totalIncome + data.totalExpense}
+              />
+            </TabsContent>
 
             <TabsContent value="expenses" className="mt-4">
               <AnnualCategoryTable
