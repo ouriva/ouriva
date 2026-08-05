@@ -167,7 +167,7 @@ export function AnnualCategoryTable({
                       className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                     >
                       {(signedValues ? category.months[i] !== 0 : category.months[i] > 0)
-                        ? formatAmount(Math.abs(category.months[i]), locale)
+                        ? `${signedValues ? (category.months[i] >= 0 ? "+" : "−") : ""}${formatAmount(Math.abs(category.months[i]), locale)}`
                         : "—"}
                     </td>
                   ))}
@@ -214,7 +214,7 @@ export function AnnualCategoryTable({
                           className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                         >
                           {(signedValues ? child.months[i] !== 0 : child.months[i] > 0)
-                            ? formatAmount(Math.abs(child.months[i]), locale)
+                            ? `${signedValues ? (child.months[i] >= 0 ? "+" : "−") : ""}${formatAmount(Math.abs(child.months[i]), locale)}`
                             : "—"}
                         </td>
                       ))}
@@ -244,7 +244,7 @@ export function AnnualCategoryTable({
             {monthLabels.map((monthLabel, i) => (
               <td key={monthLabel} className="px-3 py-2 text-right tabular-nums">
                 {(signedValues ? monthlyTotals[i] !== 0 : monthlyTotals[i] > 0)
-                  ? formatAmount(Math.abs(monthlyTotals[i]), locale)
+                  ? `${signedValues ? (monthlyTotals[i] >= 0 ? "+" : "−") : ""}${formatAmount(Math.abs(monthlyTotals[i]), locale)}`
                   : "—"}
               </td>
             ))}
