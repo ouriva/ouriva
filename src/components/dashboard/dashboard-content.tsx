@@ -391,20 +391,23 @@ export function DashboardContent() {
         // 16px padding so the first and last cards aren't clipped.
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [&::-webkit-scrollbar]:hidden">
           {allAccounts.map((account) => (
-            <div
+            <Link
               key={account.id}
-              className="flex-none w-36 rounded-xl border bg-card p-3 shadow-sm"
+              href={`/transactions?accountId=${account.id}`}
+              className="flex-none"
             >
-              <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {account.name}
-              </p>
-              <p className="mt-1.5 truncate text-base font-bold tabular-nums">
-                {formatCurrency(account.balance, account.currency.code, locale)}
-              </p>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {account.accountType.name}
-              </p>
-            </div>
+              <div className="w-36 rounded-xl border bg-card p-3 shadow-sm transition-colors hover:border-primary active:bg-muted">
+                <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {account.name}
+                </p>
+                <p className="mt-1.5 truncate text-base font-bold tabular-nums">
+                  {formatCurrency(account.balance, account.currency.code, locale)}
+                </p>
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {account.accountType.name}
+                </p>
+              </div>
+            </Link>
           ))}
         </div>
       )}
