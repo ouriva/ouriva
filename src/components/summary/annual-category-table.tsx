@@ -43,6 +43,9 @@ interface AnnualCategoryTableProps {
   // When true: month cells show any non-zero value (including negative net amounts)
   // and the Total column is colored green (net income) or red (net expense).
   signedValues?: boolean;
+  // Number of months to divide by for the monthly average column.
+  // Pass the current month (1-12) for the current year; defaults to 12 for past years.
+  monthCount?: number;
 }
 
 export function AnnualCategoryTable({
@@ -51,6 +54,7 @@ export function AnnualCategoryTable({
   selectedId,
   onSelect,
   signedValues = false,
+  monthCount = 12,
 }: Readonly<AnnualCategoryTableProps>) {
   const locale = useLocale();
   const t = useTranslations("summary");
@@ -98,6 +102,9 @@ export function AnnualCategoryTable({
                 {m}
               </th>
             ))}
+            <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+              {t("tableMonthlyAvg")}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -167,6 +174,10 @@ export function AnnualCategoryTable({
                         : "—"}
                     </td>
                   ))}
+                  <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                    {signedValues && category.total >= 0 ? "+" : signedValues && category.total < 0 ? "−" : ""}
+                    {formatAmount(Math.abs(category.total) / monthCount, locale)}
+                  </td>
                 </tr>
 
                 {/* ── Child rows (shown when expanded) ────────────────────── */}
@@ -210,6 +221,10 @@ export function AnnualCategoryTable({
                             : "—"}
                         </td>
                       ))}
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {signedValues && child.total >= 0 ? "+" : signedValues && child.total < 0 ? "−" : ""}
+                        {formatAmount(Math.abs(child.total) / monthCount, locale)}
+                      </td>
                     </tr>
                   );
                 })}
@@ -236,6 +251,10 @@ export function AnnualCategoryTable({
                   : "—"}
               </td>
             ))}
+            <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+              {signedValues && grandTotal >= 0 ? "+" : signedValues && grandTotal < 0 ? "−" : ""}
+              {formatAmount(Math.abs(grandTotal) / monthCount, locale)}
+            </td>
           </tr>
         </tbody>
       </table>

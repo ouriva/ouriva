@@ -275,6 +275,7 @@ export function AnnualSummaryContent() {
                 selectedId={selectedCategoryId}
                 onSelect={setSelectedCategoryId}
                 signedValues
+                monthCount={maxMonth}
               />
             </TabsContent>
 
@@ -284,6 +285,7 @@ export function AnnualSummaryContent() {
                 emptyMessage={t("noExpenseDataYear")}
                 selectedId={selectedCategoryId}
                 onSelect={setSelectedCategoryId}
+                monthCount={maxMonth}
               />
             </TabsContent>
 
@@ -293,6 +295,7 @@ export function AnnualSummaryContent() {
                 emptyMessage={t("noIncomeDataYear")}
                 selectedId={selectedCategoryId}
                 onSelect={setSelectedCategoryId}
+                monthCount={maxMonth}
               />
             </TabsContent>
 
