@@ -244,6 +244,7 @@
     "thisYear": "Este ano",
     "tableCategory": "Categoria",
     "tableTotal": "Total",
+    "tableMonthlyAvg": "Média/mês",
     "monthNames": ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"],
     "fullMonthNames": ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
   },
