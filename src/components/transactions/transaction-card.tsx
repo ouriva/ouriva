@@ -73,7 +73,9 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
 
   // Single-category subtitle (only used when not a split)
   let subtitleText: string;
-  if (!transaction.category) {
+  if (transaction.type === "TRANSFER") {
+    subtitleText = t("typeLabelTransfer");
+  } else if (!transaction.category) {
     subtitleText = t("uncategorizedLabel");
   } else if (transaction.category.parent) {
     subtitleText = `${transaction.category.parent.name} › ${transaction.category.name}`;
@@ -81,7 +83,7 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
     subtitleText = transaction.category.name;
   }
 
-  const isUncategorized = !isSplit && !transaction.category;
+  const isUncategorized = !isSplit && !transaction.category && transaction.type !== "TRANSFER";
 
   let categoryIndicator: React.ReactNode;
   if (isUncategorized) {
