@@ -24,6 +24,12 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+
+const BUCKET_COLORS: Record<string, string> = {
+  NEEDS:   "#3B82F6",
+  WANTS:   "#F59E0B",
+  SAVINGS: "#10B981",
+};
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { formatAmount } from "@/lib/formatters";
@@ -50,6 +56,7 @@ interface BudgetCategory {
   percentage: number;
   isIncome: boolean;
   note: string | null;
+  bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
 }
 
 // A group is either a parent category (with children[]) or a standalone leaf
@@ -133,9 +140,10 @@ function BudgetSkeleton() {
 
 interface GroupHeaderProps {
   group: BudgetGroup;
+  showBucketColors?: boolean;
 }
 
-function GroupHeader({ group }: Readonly<GroupHeaderProps>) {
+function GroupHeader({ group, showBucketColors }: Readonly<GroupHeaderProps>) {
   const t = useTranslations("budget");
   const locale = useLocale();
   let remainingClass: string;
@@ -160,8 +168,13 @@ function GroupHeader({ group }: Readonly<GroupHeaderProps>) {
       : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(group.remaining), locale) });
   }
 
+  const bucketColor = showBucketColors && group.bucket ? BUCKET_COLORS[group.bucket] : undefined;
+
   return (
-    <div className="flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5">
+    <div
+      className={cn("flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5", bucketColor && "border-l-4")}
+      style={bucketColor ? { borderLeftColor: bucketColor } : undefined}
+    >
       <span className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
         {group.groupName}
       </span>
@@ -198,9 +211,10 @@ interface CategoryRowProps {
   onChange: (value: string) => void;
   onNoteChange: (value: string) => void;
   isChild?: boolean;
+  showBucketColors?: boolean;
 }
 
-function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild }: Readonly<CategoryRowProps>) {
+function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild, showBucketColors }: Readonly<CategoryRowProps>) {
   const t = useTranslations("budget");
   const locale = useLocale();
   const [noteState, setNoteState] = useState<NoteState>("closed");
@@ -259,8 +273,13 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
       : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) });
   }
 
+  const bucketColor = showBucketColors && category.bucket ? BUCKET_COLORS[category.bucket] : undefined;
+
   return (
-    <div className={cn("space-y-2 py-3", isChild ? "pl-7 pr-4" : "px-4")}>
+    <div
+      className={cn("space-y-2 py-3", isChild ? "pl-7 pr-4" : "px-4", bucketColor && "border-l-4")}
+      style={bucketColor ? { borderLeftColor: bucketColor } : undefined}
+    >
       {/* Name + note icon + actual */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -360,27 +379,31 @@ interface BudgetGroupItemProps {
   noteEdits: Record<string, string>;
   onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
   onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  showBucketColors?: boolean;
 }
 
-function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNoteChange }: Readonly<BudgetGroupItemProps>) {
+function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNoteChange, showBucketColors }: Readonly<BudgetGroupItemProps>) {
   if (group.children.length > 0) {
     return (
       <div key={group.groupId}>
-        <GroupHeader group={group} />
-        {group.children.map((cat) => {
-          const key = editKey(type, cat.categoryId);
-          return (
-            <CategoryRow
-              key={cat.categoryId}
-              category={cat}
-              editedBudget={edits[key] ?? cat.budgeted}
-              note={key in noteEdits ? noteEdits[key] : cat.note}
-              onChange={(v) => onAmountChange(type, cat.categoryId, v)}
-              onNoteChange={(v) => onNoteChange(type, cat.categoryId, v)}
-              isChild
-            />
-          );
-        })}
+        <GroupHeader group={group} showBucketColors={showBucketColors} />
+        <div className="divide-y">
+          {group.children.map((cat) => {
+            const key = editKey(type, cat.categoryId);
+            return (
+              <CategoryRow
+                key={cat.categoryId}
+                category={cat}
+                editedBudget={edits[key] ?? cat.budgeted}
+                note={key in noteEdits ? noteEdits[key] : cat.note}
+                onChange={(v) => onAmountChange(type, cat.categoryId, v)}
+                onNoteChange={(v) => onNoteChange(type, cat.categoryId, v)}
+                isChild
+                showBucketColors={showBucketColors}
+              />
+            );
+          })}
+        </div>
       </div>
     );
   }
@@ -394,6 +417,7 @@ function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNote
       note={key in noteEdits ? noteEdits[key] : group.note}
       onChange={(v) => onAmountChange(type, group.groupId, v)}
       onNoteChange={(v) => onNoteChange(type, group.groupId, v)}
+      showBucketColors={showBucketColors}
     />
   );
 }
@@ -476,9 +500,10 @@ interface BudgetCategoryTabsProps {
   onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
   onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
   year: number;
+  showBucketColors?: boolean;
 }
 
-function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChange, year }: Readonly<BudgetCategoryTabsProps>) {
+function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChange, year, showBucketColors }: Readonly<BudgetCategoryTabsProps>) {
   const t = useTranslations("budget");
   return (
     <Tabs defaultValue="expenses">
@@ -503,6 +528,7 @@ function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChan
                 noteEdits={noteEdits}
                 onAmountChange={onAmountChange}
                 onNoteChange={onNoteChange}
+                showBucketColors={showBucketColors}
               />
             ))}
           </div>
@@ -525,6 +551,7 @@ function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChan
                 noteEdits={noteEdits}
                 onAmountChange={onAmountChange}
                 onNoteChange={onNoteChange}
+                showBucketColors={showBucketColors}
               />
             ))}
           </div>
@@ -609,6 +636,19 @@ export function BudgetContent() {
   const now = new Date();
   const year = Number.parseInt(searchParams.get("year") || String(now.getFullYear()));
 
+  const [showBucketColors, setShowBucketColors] = useState(false);
+  useEffect(() => {
+    setShowBucketColors(localStorage.getItem("budget.bucketColors") === "true");
+
+    function onStorage(e: StorageEvent) {
+      if (e.key === "budget.bucketColors") {
+        setShowBucketColors(e.newValue === "true");
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave } = useBudgetData(year);
 
   return (
@@ -649,6 +689,7 @@ export function BudgetContent() {
             onAmountChange={handleChange}
             onNoteChange={handleNoteChange}
             year={year}
+            showBucketColors={showBucketColors}
           />
 
           {/* ── Planned 50/30/20 ────────────────────────────────────── */}

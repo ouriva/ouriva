@@ -48,6 +48,7 @@ interface LeafEntry {
   percentage: number;
   isIncome: boolean;
   note: string | null;
+  bucket: BucketKey;
 }
 
 interface GroupEntry extends LeafEntry {
@@ -75,7 +76,8 @@ function buildGroupsFromSeeds(
   seedLeaves: { id: string; name: string; parentId?: string | null; parentName?: string | null }[],
   budgetMap: Map<string, { amount: number; note: string | null }>,
   actualMap: Map<string, number>,
-  isIncome: boolean
+  isIncome: boolean,
+  bucketMap?: Map<string, string | null>
 ): GroupEntry[] {
   type RawGroup = {
     groupId: string; groupName: string;
@@ -163,6 +165,7 @@ function buildGroupsFromSeeds(
             categoryId: c.id, categoryName: c.name,
             budgeted: c.budgeted, actual: c.actual,
             remaining: rem, percentage: pct, isIncome, note: c.note,
+            bucket: (bucketMap?.get(c.id) ?? null) as BucketKey,
           };
         });
 
@@ -171,6 +174,7 @@ function buildGroupsFromSeeds(
         categoryId: g.groupId, categoryName: g.groupName,
         budgeted: g.budgeted, actual: g.actual,
         remaining, percentage, isIncome, note: g.note, children,
+        bucket: (bucketMap?.get(g.groupId) ?? null) as BucketKey,
       };
     })
     .toSorted((a, b) => a.groupName.localeCompare(b.groupName));
@@ -181,7 +185,8 @@ function buildGroupsFromSeeds(
 function buildGroupsFromUnion(
   budgetMap: Map<string, { amount: number; note: string | null; name?: string; parentId?: string; parentName?: string }>,
   actualMap: Map<string, { total: number; name?: string; parentId?: string; parentName?: string }>,
-  isIncome: boolean
+  isIncome: boolean,
+  bucketMap?: Map<string, string | null>
 ): GroupEntry[] {
   const allIds = new Set([...budgetMap.keys(), ...actualMap.keys()]);
   const seeds = Array.from(allIds).map((id) => {
@@ -199,7 +204,7 @@ function buildGroupsFromUnion(
   const flatActualMap = new Map<string, number>();
   for (const [id, a] of actualMap) flatActualMap.set(id, a.total);
 
-  return buildGroupsFromSeeds(seeds, budgetMap, flatActualMap, isIncome);
+  return buildGroupsFromSeeds(seeds, budgetMap, flatActualMap, isIncome, bucketMap);
 }
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
@@ -364,7 +369,7 @@ export async function GET(
             ...(transferCategoryId && { id: { not: transferCategoryId } }),
           },
           include: {
-            parent: { select: { id: true, name: true } },
+            parent: { select: { id: true, name: true, bucket: true } },
             children: { where: { isActive: true }, select: { id: true } },
           },
           orderBy: { name: "asc" },
@@ -406,6 +411,14 @@ export async function GET(
         parentName: c.parent?.name ?? null,
       }));
 
+    // ── Bucket map — effective bucket for every active category ───────────
+    // Leaf categories inherit from their parent when their own bucket is null.
+    // Parent categories (group headers) use their own bucket only.
+    const categoryBucketMap = new Map<string, string | null>();
+    for (const c of allCategories) {
+      categoryBucketMap.set(c.id, effectiveBucket(c) as string | null);
+    }
+
     // ── Actual maps — no rollup to parent ────────────────────────────────
     const actualExpenseMap = buildExpenseActualMap(expenseTransactions);
     const actualIncomeMap  = buildIncomeActualMap(incomeTransactions);
@@ -426,10 +439,10 @@ export async function GET(
 
     // ── Build grouped category lists ──────────────────────────────────────
     // Expense: seeded from all active leaf categories
-    const expenseGroups = buildGroupsFromSeeds(leafCategories, expenseBudgetMap, actualExpenseMap, false);
+    const expenseGroups = buildGroupsFromSeeds(leafCategories, expenseBudgetMap, actualExpenseMap, false, categoryBucketMap);
 
     // Income: seeded from union of budget+actual keys only
-    const incomeGroups = buildGroupsFromUnion(incomeBudgetMap, actualIncomeMap, true);
+    const incomeGroups = buildGroupsFromUnion(incomeBudgetMap, actualIncomeMap, true, categoryBucketMap);
 
     // ── Totals ────────────────────────────────────────────────────────────
     const totalBudgetedExpense = expenseGroups.reduce((s, g) => s + g.budgeted, 0);
