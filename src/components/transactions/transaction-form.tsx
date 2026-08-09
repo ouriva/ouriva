@@ -306,8 +306,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
   // EXPENSE transactions → EXPENSE categories; INCOME transactions → INCOME categories.
   // TRANSFER transactions have no category, so the category section is hidden.
   const categoryTypeFilter: "INCOME" | "EXPENSE" | null =
-    transactionType === "INCOME" ? "INCOME" :
-    transactionType === "EXPENSE" ? "EXPENSE" : null;
+    transactionType === "TRANSFER" ? null : transactionType;
 
   const filteredCategories = categoryTypeFilter
     ? categories.filter((c) => c.type === categoryTypeFilter)

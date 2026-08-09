@@ -497,6 +497,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
 
                   {/* Expand/collapse button */}
                   <button
+                    type="button"
                     onClick={() => parent.children.length > 0 && toggleExpand(parent.id)}
                     className={cn(
                       "flex min-h-[52px] w-10 shrink-0 items-center justify-center",
@@ -508,6 +509,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
 
                   {/* Icon circle — the tap target that opens edit */}
                   <button
+                    type="button"
                     onClick={() => openEdit(parent.id)}
                     className="shrink-0 rounded-full transition-opacity hover:opacity-80 active:opacity-60"
                     title={t("editTitle")}
@@ -517,6 +519,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
 
                   {/* Name + badges — tapping this area also opens edit */}
                   <button
+                    type="button"
                     onClick={() => openEdit(parent.id)}
                     className="flex flex-1 items-center gap-2 px-2 text-left min-h-[52px]"
                   >
