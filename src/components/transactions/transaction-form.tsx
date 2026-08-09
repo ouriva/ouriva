@@ -60,6 +60,7 @@ interface Category {
   id: string;
   name: string;
   parentId: string | null;
+  type: "INCOME" | "EXPENSE";
   children?: Category[];
 }
 
@@ -69,7 +70,7 @@ interface Category {
 // when absent the form POSTs a new record (create/duplicate).
 interface TransactionFormData {
   id?: string;
-  type: "INCOME" | "EXPENSE";
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
   amount: number;
   description?: string;
   friendlyName?: string;
@@ -161,7 +162,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     // CreateTransactionFormInput uses z.input types (pre-coercion), so
     // date is string | number | Date here, matching what the input produces.
     // z.coerce.date() handles the string→Date conversion on submit.
-    defaultValues: initialData
+    defaultValues: (initialData
       ? {
           ...initialData,
           date: format(initialData.date, "yyyy-MM-dd"),
@@ -169,7 +170,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           splits: initialData.splits ?? [],
         }
       : {
-          type: "EXPENSE" as const,
+          type: "EXPENSE",
           amount: undefined,
           description: "",
           friendlyName: "",
@@ -179,7 +180,8 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           categoryId: undefined,
           exchangeRate: undefined,
           splits: [],
-        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }) as any,
   });
 
   // useFieldArray manages the dynamic list of split rows.
@@ -256,7 +258,8 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
   // validation and coercion by the time this function is called, so the values
   // are actually the post-coercion CreateTransactionInput shape at runtime.
   // We cast here to get correct types for the API payload.
-  async function onSubmit(rawData: CreateTransactionFormInput) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function onSubmit(rawData: any) {
     const data = rawData as unknown as CreateTransactionInput;
     setIsSubmitting(true);
     try {
@@ -299,11 +302,21 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     }
   }
 
+  // Filter categories by the CategoryType that matches the current transaction type.
+  // EXPENSE transactions → EXPENSE categories; INCOME transactions → INCOME categories.
+  // TRANSFER transactions have no category, so the category section is hidden.
+  const categoryTypeFilter: "INCOME" | "EXPENSE" | null =
+    transactionType === "TRANSFER" ? null : transactionType;
+
+  const filteredCategories = categoryTypeFilter
+    ? categories.filter((c) => c.type === categoryTypeFilter)
+    : [];
+
   // Leaf-only assignment: parents with children become non-selectable group
   // headers (SelectGroup/SelectLabel). Standalone parents (no children) are
   // selectable directly. This matches the industry standard (YNAB, Mint, etc.).
-  const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories = categories.filter((c) => c.parentId);
+  const parentCategories = filteredCategories.filter((c) => !c.parentId);
+  const childCategories = filteredCategories.filter((c) => c.parentId);
 
   function handleToggleSplitMode() {
     if (isSplitMode) {
@@ -326,14 +339,21 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
         <Label>{t("typeLabel")}</Label>
         <Tabs
           value={transactionType}
-          onValueChange={(value) =>
-            setValue("type", value as CreateTransactionInput["type"])
-          }
+          onValueChange={(value) => {
+            setValue("type", value as CreateTransactionInput["type"]);
+            // Clear category when switching to TRANSFER — transfers have no category
+            if (value === "TRANSFER") {
+              setValue("categoryId", undefined);
+              setValue("splits" as Path<CreateTransactionFormInput>, []);
+              setIsSplitMode(false);
+            }
+          }}
           className="mt-2"
         >
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="EXPENSE">{t("typeLabelExpense")}</TabsTrigger>
             <TabsTrigger value="INCOME">{t("typeLabelIncome")}</TabsTrigger>
+            <TabsTrigger value="TRANSFER">{t("typeLabelTransfer")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -460,7 +480,8 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
         </div>
       )}
 
-      {/* Category / Split section */}
+      {/* Category / Split section — hidden for TRANSFER transactions */}
+      {transactionType !== "TRANSFER" && (
       <div>
         <div className="flex items-center justify-between">
           <Label>{isSplitMode ? t("splitCategoryLabel") : t("categoryLabel")}</Label>
@@ -582,6 +603,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           </div>
         )}
       </div>
+      )}
 
       {/* Needs Review */}
       <div className="flex items-center gap-2">

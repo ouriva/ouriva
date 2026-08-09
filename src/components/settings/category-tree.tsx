@@ -30,7 +30,15 @@ import {
   SheetHeader,
   SheetTitle,
   SheetFooter,
+  SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Loader2,
   ChevronRight,
@@ -47,6 +55,7 @@ interface Category {
   parentId: string | null;
   isActive: boolean;
   excludeFromStats: boolean;
+  type: "INCOME" | "EXPENSE";
   bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
   icon: string | null;
   color: string | null;
@@ -70,6 +79,7 @@ function CategoryEditSheet({
 }>) {
   const t = useTranslations("categories");
   const [name,             setName]             = useState(category.name);
+  const [type,             setType]             = useState<"INCOME" | "EXPENSE">(category.type ?? "EXPENSE");
   const [icon,             setIcon]             = useState<string | null>(category.icon);
   const [color,            setColor]            = useState<string | null>(category.color);
   const [bucket,           setBucket]           = useState<"NEEDS" | "WANTS" | "SAVINGS" | null>(category.bucket);
@@ -85,7 +95,7 @@ function CategoryEditSheet({
     await fetch(`/api/categories/${category.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, icon, color, bucket, isActive, excludeFromStats }),
+      body: JSON.stringify({ name, type, icon, color, bucket, isActive, excludeFromStats }),
     });
     setSaving(false);
     onSave();
@@ -129,6 +139,24 @@ function CategoryEditSheet({
               placeholder={t("categoryNameLabel")}
             />
           </div>
+
+          {/* ── Type ── */}
+          {/* Only root categories set their own type. Children inherit from parent
+              (a subcategory of an INCOME parent is always INCOME). */}
+          {!category.parentId && (
+            <div className="space-y-1.5">
+              <Label>{t("typeLabel")}</Label>
+              <Select value={type} onValueChange={(v) => setType(v as "INCOME" | "EXPENSE")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EXPENSE">{t("typeExpense")}</SelectItem>
+                  <SelectItem value="INCOME">{t("typeIncome")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* ── Color ── */}
           <div className="space-y-2">
@@ -302,6 +330,91 @@ function SmallIconCircle({
   );
 }
 
+// ── AddCategorySheet ──────────────────────────────────────────────────────
+// Custom "add root category" form that includes the type (INCOME/EXPENSE) dropdown.
+function AddCategorySheet({ onSuccess }: Readonly<{ onSuccess: () => void }>) {
+  const t = useTranslations("categories");
+  const tCommon = useTranslations("common");
+  const [isOpen,      setIsOpen]      = useState(false);
+  const [name,        setName]        = useState("");
+  const [type,        setType]        = useState<"INCOME" | "EXPENSE">("EXPENSE");
+  const [isSaving,    setIsSaving]    = useState(false);
+
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, type }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message ?? "Failed to save");
+      }
+      setIsOpen(false);
+      setName("");
+      setType("EXPENSE");
+      onSuccess();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="sm">
+          <Plus className="mr-2 h-4 w-4" />
+          {tCommon("add")}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="rounded-t-xl">
+        <SheetHeader>
+          <SheetTitle>{tCommon("addNew", { title: t("categoryFormTitle") })}</SheetTitle>
+        </SheetHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          <div>
+            <Label htmlFor="new-cat-name">{t("categoryNameLabel")}</Label>
+            <Input
+              id="new-cat-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("namePlaceholder")}
+              className="mt-2"
+              required
+            />
+          </div>
+          <div>
+            <Label>{t("typeLabel")}</Label>
+            <Select value={type} onValueChange={(v) => setType(v as "INCOME" | "EXPENSE")}>
+              <SelectTrigger className="mt-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="EXPENSE">{t("typeExpense")}</SelectItem>
+                <SelectItem value="INCOME">{t("typeIncome")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setIsOpen(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button type="submit" className="flex-1" disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {tCommon("createButton")}
+            </Button>
+          </div>
+        </form>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 // ── CategoryTree ──────────────────────────────────────────────────────────
 
 interface CategoryTreeProps {
@@ -358,31 +471,11 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
     );
   }
 
-  const parents     = categories.filter((c) => !c.parentId);
-  const nameField   = [{ name: "name", label: t("categoryNameLabel"), placeholder: t("namePlaceholder") }];
+  const expenseParents = categories.filter((c) => !c.parentId && c.type === "EXPENSE");
+  const incomeParents  = categories.filter((c) => !c.parentId && c.type === "INCOME");
 
-  return (
-    <>
-      <div className="space-y-6">
-        {/* Page header with Add button */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
-            {pageDescription && (
-              <p className="text-sm text-muted-foreground">{pageDescription}</p>
-            )}
-          </div>
-          <SettingsItemForm
-            title={t("categoryFormTitle")}
-            fields={nameField}
-            apiEndpoint="/api/categories"
-            onSuccess={() => setRefreshKey((k) => k + 1)}
-          />
-        </div>
-
-        <div className="space-y-4">
-
-        {parents.map((parent) => {
+  function renderParentList(parents: Category[]) {
+    return parents.map((parent) => {
           const isExpanded    = expanded.has(parent.id);
           const activeChildren = parent.children.filter((c) => c.isActive).length;
           const expandIcon = isExpanded
@@ -404,6 +497,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
 
                   {/* Expand/collapse button */}
                   <button
+                    type="button"
                     onClick={() => parent.children.length > 0 && toggleExpand(parent.id)}
                     className={cn(
                       "flex min-h-[52px] w-10 shrink-0 items-center justify-center",
@@ -415,6 +509,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
 
                   {/* Icon circle — the tap target that opens edit */}
                   <button
+                    type="button"
                     onClick={() => openEdit(parent.id)}
                     className="shrink-0 rounded-full transition-opacity hover:opacity-80 active:opacity-60"
                     title={t("editTitle")}
@@ -422,8 +517,12 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                     <SmallIconCircle icon={parent.icon} color={parent.color} />
                   </button>
 
-                  {/* Name + badges — display only */}
-                  <div className="flex flex-1 items-center gap-2 px-2">
+                  {/* Name + badges — tapping this area also opens edit */}
+                  <button
+                    type="button"
+                    onClick={() => openEdit(parent.id)}
+                    className="flex flex-1 items-center gap-2 px-2 text-left min-h-[52px]"
+                  >
                     <span className="font-medium">{parent.name}</span>
                     {parent.children.length > 0 && (
                       <Badge variant="secondary">{t("activeChildCount", { count: activeChildren })}</Badge>
@@ -436,12 +535,12 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                         {t("nonTrackedBadge")}
                       </Badge>
                     )}
-                  </div>
+                  </button>
 
-                  {/* Add subcategory */}
+                  {/* Add subcategory — inherits type from parent, only name needed */}
                   <SettingsItemForm
                     title={t("subcategoryFormTitle")}
-                    fields={nameField}
+                    fields={[{ name: "name", label: t("categoryNameLabel"), placeholder: t("namePlaceholder") }]}
                     initialValues={{ parentId: parent.id }}
                     apiEndpoint="/api/categories"
                     onSuccess={() => setRefreshKey((k) => k + 1)}
@@ -486,8 +585,46 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
               </CardContent>
             </Card>
           );
-        })}
+        });
+  }
+
+  return (
+    <>
+      <div className="space-y-6">
+        {/* Page header with Add button */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
+            {pageDescription && (
+              <p className="text-sm text-muted-foreground">{pageDescription}</p>
+            )}
+          </div>
+          <AddCategorySheet onSuccess={() => setRefreshKey((k) => k + 1)} />
         </div>
+
+        {/* ── Expense group ── */}
+        {expenseParents.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("typeExpense")}
+            </h2>
+            <div className="space-y-4">
+              {renderParentList(expenseParents)}
+            </div>
+          </div>
+        )}
+
+        {/* ── Income group ── */}
+        {incomeParents.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("typeIncome")}
+            </h2>
+            <div className="space-y-4">
+              {renderParentList(incomeParents)}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit sheet — rendered outside the list so z-index is never an issue */}

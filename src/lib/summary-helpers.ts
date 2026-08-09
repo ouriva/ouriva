@@ -148,9 +148,10 @@ export async function fetchSummaryTransactions(
   return prisma.transaction.findMany({
     where: {
       date: { gte: startDate, lte: endDate },
+      // Exclude TRANSFER transactions — they represent inter-account movements
+      // and must not appear in income/expense summaries.
+      type: { not: "TRANSFER" },
       // Exclude split parents — their total is covered by their children.
-      // splits: { none: {} } means "has zero split children", which passes for
-      // regular transactions and split children but excludes split parents.
       splits: { none: {} },
       ...(excludedCategoryIds.length > 0 && {
         categoryId: { notIn: excludedCategoryIds },

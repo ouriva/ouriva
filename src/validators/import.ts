@@ -52,7 +52,7 @@ export type CheckDuplicatesInput = z.infer<typeof checkDuplicatesSchema>;
 // The client sends the fully-mapped, user-approved list from Step 4.
 
 export const importTransactionSchema = z.object({
-  type: z.enum(["INCOME", "EXPENSE"]),
+  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]),
   amount: z.number().positive(),
   description: z.string().optional(),
   friendlyName: z.string().max(255).optional(),

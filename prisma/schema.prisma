@@ -49,6 +49,7 @@ model Category {
   name             String
   isActive         Boolean         @default(true)
   excludeFromStats Boolean         @default(false)
+  type             CategoryType    @default(EXPENSE)
   bucket           CategoryBucket?
   icon             String?
   color            String?
@@ -60,10 +61,10 @@ model Category {
   children            Category[]     @relation("CategoryParent")
   transactions        Transaction[]
   rules               CategoryRule[]
-  transferAppSettings AppSettings[]  @relation("TransferCategory")
 
   @@index([parentId])
   @@index([excludeFromStats])
+  @@index([type])
 }
 
 model Transaction {
@@ -123,11 +124,9 @@ model ImportProfile {
 }
 
 model AppSettings {
-  id                 String    @id @default("singleton")
-  transferCategoryId String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  transferCategory   Category? @relation("TransferCategory", fields: [transferCategoryId], references: [id], onDelete: SetNull)
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CategoryRule {
@@ -147,6 +146,12 @@ model CategoryRule {
 }
 
 enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum CategoryType {
   INCOME
   EXPENSE
 }

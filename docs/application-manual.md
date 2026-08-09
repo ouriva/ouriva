@@ -33,7 +33,7 @@ A comprehensive guide to every part of this application: what each technology do
 This is a **personal finance application** that replaces an Excel spreadsheet. It lets you:
 
 - Track multiple bank accounts across different currencies (EUR, USD, BRL, etc.)
-- Record income and expenses, with a configurable transfer category for inter-account movements
+- Record income, expenses, and inter-account transfers (INCOME / EXPENSE / TRANSFER transaction types)
 - Import bank statements from CSV and Excel files with column mapping and duplicate detection
 - Auto-categorize imported transactions using configurable text-matching rules (contains / starts with / exact / regex)
 - Add friendly display names and notes to transactions
@@ -318,7 +318,7 @@ ouriva/
 │   │   └── settings/             # Settings-specific
 │   ├── lib/                      # Shared utilities
 │   │   ├── prisma.ts             # Database client singleton
-│   │   ├── settings.ts           # Transfer category helper (reads AppSettings)
+│   │   ├── settings.ts           # Excluded category IDs helper (reads AppSettings)
 │   │   ├── utils.ts              # cn() class merger
 │   │   ├── formatters.ts         # Currency/date formatting
 │   │   ├── import-ref.ts         # Import deduplication hash generation
@@ -637,17 +637,19 @@ This enum powers the **50/30/20 Budget Rule** feature. Each category can be assi
 
 ```prisma
 model Category {
-  id          String          @id @default(uuid())
-  name        String                               // "Food", "Groceries"
-  isActive    Boolean         @default(true)
-  parentId    String?                              // null = top-level
-  bucket      CategoryBucket?                      // NEEDS, WANTS, SAVINGS, or null
-  icon        String?                              // Lucide icon name, e.g. "ShoppingCart"
-  color       String?                              // Palette key, e.g. "emerald"
-  parent      Category?       @relation("CategoryTree", fields: [parentId], references: [id])
-  children    Category[]      @relation("CategoryTree")
-  transactions Transaction[]
-  budgets     Budget[]
+  id               String          @id @default(uuid())
+  name             String                               // "Food", "Groceries"
+  isActive         Boolean         @default(true)
+  type             CategoryType    @default(EXPENSE)    // INCOME or EXPENSE
+  parentId         String?                              // null = top-level
+  excludeFromStats Boolean         @default(false)
+  bucket           CategoryBucket?                      // NEEDS, WANTS, SAVINGS, or null
+  icon             String?                              // Lucide icon name, e.g. "ShoppingCart"
+  color            String?                              // Palette key, e.g. "emerald"
+  parent           Category?       @relation("CategoryTree", fields: [parentId], references: [id])
+  children         Category[]      @relation("CategoryTree")
+  transactions     Transaction[]
+  budgets          Budget[]
 }
 ```
 
@@ -667,7 +669,7 @@ Food (parentId: null, bucket: NEEDS)
 ```prisma
 model Transaction {
   id            String          @id @default(uuid())
-  type          TransactionType                    // INCOME, EXPENSE
+  type          TransactionType                    // INCOME, EXPENSE, TRANSFER
   amount        Decimal         @db.Decimal(12, 2)
   description   String?
   friendlyName  String?         @db.VarChar(255)   // User-facing display name
@@ -685,8 +687,12 @@ model Transaction {
 **Transaction types**:
 - **INCOME**: Money comes into an account (e.g., Salary).
 - **EXPENSE**: Money leaves an account (e.g., Groceries).
+- **TRANSFER**: An inter-account movement (e.g., moving money from checking to savings). TRANSFER transactions have no category and are excluded from all income/expense summaries and budget actuals. They still count toward account balances.
 
-There is no TRANSFER type. Transfers between accounts are recorded as regular INCOME/EXPENSE transactions tagged with a configurable "transfer category" (see AppSettings). This matches how bank CSV statements represent transfers and simplifies the data model.
+**CategoryType** (`INCOME` | `EXPENSE`) is a separate attribute on `Category`. It determines how transactions are routed in budget reports:
+- An INCOME transaction in an EXPENSE category is a **contra-expense** (e.g., a health insurance reimbursement in the "Doctor" category reduces the net doctor expense — the reimbursement netting model).
+- An INCOME transaction in an INCOME category is real income (e.g., Salary).
+- Subcategories inherit their parent's CategoryType.
 
 **Amount is always positive** — The `type` determines direction. An expense of €50 is stored as `amount: 50, type: EXPENSE`, not `amount: -50`. This avoids confusion and makes aggregation queries simpler.
 
@@ -723,19 +729,15 @@ model Budget {
 
 ```prisma
 model AppSettings {
-  id                 String    @id @default("singleton")
-  transferCategoryId String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  transferCategory   Category? @relation(fields: [transferCategoryId], references: [id], onDelete: SetNull)
+  id        String   @id @default("singleton")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 ```
 
 **Singleton pattern** — There is only one row, always with `id = "singleton"`. The API uses `upsert` to auto-create it on first access. This avoids having global settings scattered across multiple tables.
 
-**`transferCategoryId`** — Points to the category used for inter-account transfers. Transactions in this category are excluded from summaries and budgets (but still count toward account balances). The Settings > General page lets you select this category and shows a "Transfer Balance" indicator that should be 0 if all transfers are properly matched across accounts.
-
-**`onDelete: SetNull`** — If the referenced category is deleted, the setting is cleared rather than causing a foreign key error.
+Currently this model stores no user-editable fields. It exists as a stable extension point — future preferences (default currency, theme override, etc.) can be added here without a schema redesign. The Settings > General page reads it to compute the **Transfer Balance** (sum of all TRANSFER-type transactions, shown as an informational figure).
 
 #### MatchType Enum
 
@@ -1432,12 +1434,11 @@ A reusable icon circle component used in both `TransactionCard` and `DashboardCo
 
 #### `GeneralSettings` (`src/components/settings/general-settings.tsx`)
 
-The app-wide preferences panel, accessible from Settings > General. Currently supports:
+The app-wide preferences panel, accessible from Settings > General. Currently shows:
 
-- **Transfer Category selector** — A dropdown to pick which category represents inter-account transfers. Transactions in this category are excluded from summaries and budgets. Saves immediately on change via `PUT /api/settings`.
-- **Transfer Balance indicator** — Shows the net sum of all transfer-categorized transactions (INCOME minus EXPENSE). Displayed in green if 0 (all transfers are matched), amber if non-zero (some transfers are missing a counterpart).
+- **Transfer Balance** — The total volume of all TRANSFER-type transactions for the current data set. This is an informational figure (not a net balance) — since each transfer side is recorded independently, the number tells you how much money has been moved between accounts in total.
 
-This is a client component that fetches categories and settings on mount, then re-fetches settings after each save to update the transfer balance.
+This is a client component that fetches settings on mount via `GET /api/settings`, which computes the transfer balance server-side using `prisma.transaction.aggregate`.
 
 #### `SimpleSettingsList` — Generic CRUD Component
 
@@ -2470,13 +2471,32 @@ SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END) AS total_income
 SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END) AS total_expense
 ```
 
-### Transfers Are Category-Based, Not a Type
+### TRANSFER as a First-Class Transaction Type
 
-Instead of a dedicated TRANSFER transaction type (with `fromAccountId` / `toAccountId`), transfers are regular INCOME/EXPENSE transactions tagged with a configurable "transfer category" in Settings > General. This approach was chosen because:
-- **Matches bank statement reality** — Bank CSVs show transfers as debits/credits, not as a special type. Import works without special handling.
-- **Simpler data model** — No `toAccountId`, `toAmount`, or type-specific branching in every API and UI component.
-- **Flexible** — Users configure which category represents transfers, matching their existing workflow (e.g., from Excel budgeting).
-- **Transfer Balance indicator** — Settings > General shows the net sum of all transfer-categorized transactions, which should be 0 if all transfers are properly matched across accounts.
+Transfers between accounts are recorded as `type: TRANSFER` transactions — a dedicated enum value alongside INCOME and EXPENSE. TRANSFER transactions:
+- Have no category (the field is nullable and ignored by the UI)
+- Are excluded from all income/expense summaries, budget actuals, and monthly/annual reports
+- Still count toward account balances (they represent real money movement)
+- Are shown in a dedicated Transfer tab in the transaction list
+
+**Why a proper type instead of a "transfer category"?** The previous approach used a configurable category to tag transfers. This had several problems: the category appeared in category dropdowns, budget reports needed to know which category to exclude, and the configuration was easy to lose. A dedicated enum value is explicit, non-configurable, and requires no special-case logic scattered across the codebase.
+
+**Single-entry model** — Users record each side of a transfer independently (one TRANSFER transaction per account involved). This matches how bank CSVs represent transfers and keeps the data model simple. The Transfer Balance in Settings > General shows the total volume moved (not a net figure).
+
+### CategoryType Drives Budget Routing
+
+Each `Category` has a `type: CategoryType` field (`INCOME` | `EXPENSE`, default `EXPENSE`). This is independent of `TransactionType` and determines how transactions are routed in budget reports:
+
+| Transaction type | Category type | Routed to |
+|-----------------|--------------|-----------|
+| EXPENSE | EXPENSE | Expense actual (spending) |
+| INCOME | EXPENSE | Contra-expense — subtracted from the expense actual (reimbursement netting) |
+| INCOME | INCOME | Income actual |
+| TRANSFER | any | Excluded entirely |
+
+**Reimbursement netting example**: A restaurant bill split where a friend pays you back is recorded as an INCOME transaction in the "Restaurants" (EXPENSE) category. The budget report shows your net out-of-pocket cost — the gross expense minus the reimbursement — without any manual adjustment.
+
+**Subcategory inheritance**: When creating a subcategory, the API inherits the parent's CategoryType automatically, keeping the tree consistent.
 
 ### Soft-Delete for Accounts and Categories
 
