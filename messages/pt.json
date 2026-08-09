@@ -333,7 +333,9 @@
     "nonTrackedNonZero": "Valor em aberto em todas as categorias não rastreadas.",
     "languageLabel": "Idioma",
     "languageEnglish": "English",
-    "languagePortuguese": "Português"
+    "languagePortuguese": "Português",
+    "bucketColorsLabel": "Cores de secção do orçamento",
+    "bucketColorsDescription": "Mostra cada categoria do orçamento com a cor da sua secção 50/30/20 (Necessidades, Desejos, Poupanças)."
   },
   "currencies": {
     "pageTitle": "Moedas",
