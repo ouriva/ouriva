@@ -140,10 +140,9 @@ function BudgetSkeleton() {
 
 interface GroupHeaderProps {
   group: BudgetGroup;
-  showBucketColors?: boolean;
 }
 
-function GroupHeader({ group, showBucketColors }: Readonly<GroupHeaderProps>) {
+function GroupHeader({ group }: Readonly<GroupHeaderProps>) {
   const t = useTranslations("budget");
   const locale = useLocale();
   let remainingClass: string;
@@ -168,13 +167,8 @@ function GroupHeader({ group, showBucketColors }: Readonly<GroupHeaderProps>) {
       : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(group.remaining), locale) });
   }
 
-  const bucketColor = showBucketColors && group.bucket ? BUCKET_COLORS[group.bucket] : undefined;
-
   return (
-    <div
-      className={cn("flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5", bucketColor && "border-l-4")}
-      style={bucketColor ? { borderLeftColor: bucketColor } : undefined}
-    >
+    <div className="flex items-center justify-between gap-2 bg-muted/40 px-4 py-2.5">
       <span className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
         {group.groupName}
       </span>
@@ -386,7 +380,7 @@ function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNote
   if (group.children.length > 0) {
     return (
       <div key={group.groupId}>
-        <GroupHeader group={group} showBucketColors={showBucketColors} />
+        <GroupHeader group={group} />
         <div className="divide-y">
           {group.children.map((cat) => {
             const key = editKey(type, cat.categoryId);
