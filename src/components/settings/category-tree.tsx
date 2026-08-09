@@ -340,7 +340,7 @@ function AddCategorySheet({ onSuccess }: Readonly<{ onSuccess: () => void }>) {
   const [type,        setType]        = useState<"INCOME" | "EXPENSE">("EXPENSE");
   const [isSaving,    setIsSaving]    = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSaving(true);
     try {

@@ -39,6 +39,7 @@ import {
 import { matchRule, type CategoryRuleInput } from "@/lib/category-rules";
 import { parseDate, parseAmount } from "./step-review-utils";
 import type { ImportState } from "./import-wizard";
+import type { TransactionType } from "@/generated/prisma";
 
 interface Category {
   id: string;
@@ -52,14 +53,14 @@ interface ParsedRow {
   description: string;
   amount: number;
   reference?: string;
-  type: "INCOME" | "EXPENSE" | "TRANSFER";
+  type: TransactionType;
   importRef: string;
 }
 
 interface ReviewResult {
   selectedRows: boolean[];
   categoryIds: (string | undefined)[];
-  transactionTypes: ("INCOME" | "EXPENSE" | "TRANSFER")[];
+  transactionTypes: TransactionType[];
   importRefs: string[];
   duplicateRefs: Set<string>;
   friendlyNames: (string | undefined)[];
