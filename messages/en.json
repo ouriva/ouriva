@@ -400,6 +400,7 @@
     "nonTrackedBadge": "Non-tracked",
     "activeChildCount": "{count} active",
     "editTitle": "Edit category",
-    "saveButton": "Save"
+    "saveButton": "Save",
+    "saveError": "Failed to save category"
   }
 }

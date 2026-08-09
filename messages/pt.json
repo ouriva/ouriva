@@ -400,6 +400,7 @@
     "nonTrackedBadge": "Não rastreado",
     "activeChildCount": "{count} ativo",
     "editTitle": "Editar categoria",
-    "saveButton": "Guardar"
+    "saveButton": "Guardar",
+    "saveError": "Falha ao guardar categoria"
   }
 }
