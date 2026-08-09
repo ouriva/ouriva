@@ -471,25 +471,11 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
     );
   }
 
-  const parents = categories.filter((c) => !c.parentId);
+  const expenseParents = categories.filter((c) => !c.parentId && c.type === "EXPENSE");
+  const incomeParents  = categories.filter((c) => !c.parentId && c.type === "INCOME");
 
-  return (
-    <>
-      <div className="space-y-6">
-        {/* Page header with Add button */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
-            {pageDescription && (
-              <p className="text-sm text-muted-foreground">{pageDescription}</p>
-            )}
-          </div>
-          <AddCategorySheet onSuccess={() => setRefreshKey((k) => k + 1)} />
-        </div>
-
-        <div className="space-y-4">
-
-        {parents.map((parent) => {
+  function renderParentList(parents: Category[]) {
+    return parents.map((parent) => {
           const isExpanded    = expanded.has(parent.id);
           const activeChildren = parent.children.filter((c) => c.isActive).length;
           const expandIcon = isExpanded
@@ -535,11 +521,6 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                     className="flex flex-1 items-center gap-2 px-2 text-left min-h-[52px]"
                   >
                     <span className="font-medium">{parent.name}</span>
-                    {parent.type === "INCOME" && (
-                      <Badge variant="outline" className="border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400">
-                        {t("typeIncome")}
-                      </Badge>
-                    )}
                     {parent.children.length > 0 && (
                       <Badge variant="secondary">{t("activeChildCount", { count: activeChildren })}</Badge>
                     )}
@@ -601,8 +582,46 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
               </CardContent>
             </Card>
           );
-        })}
+        });
+  }
+
+  return (
+    <>
+      <div className="space-y-6">
+        {/* Page header with Add button */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
+            {pageDescription && (
+              <p className="text-sm text-muted-foreground">{pageDescription}</p>
+            )}
+          </div>
+          <AddCategorySheet onSuccess={() => setRefreshKey((k) => k + 1)} />
         </div>
+
+        {/* ── Expense group ── */}
+        {expenseParents.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("typeExpense")}
+            </h2>
+            <div className="space-y-4">
+              {renderParentList(expenseParents)}
+            </div>
+          </div>
+        )}
+
+        {/* ── Income group ── */}
+        {incomeParents.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("typeIncome")}
+            </h2>
+            <div className="space-y-4">
+              {renderParentList(incomeParents)}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit sheet — rendered outside the list so z-index is never an issue */}
