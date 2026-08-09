@@ -451,6 +451,7 @@ function TransactionListContent({
         const txs = grouped[dateKey];
         const dayNet = txs.reduce((sum, tx) => {
           const amount = Number.parseFloat(tx.amount);
+          if (tx.type === "TRANSFER") return sum; // transfers are neutral
           return tx.type === "INCOME" ? sum + amount : sum - amount;
         }, 0);
         return (
@@ -646,10 +647,11 @@ export function TransactionList() {
           value={type || "ALL"}
           onValueChange={(v) => updateParams({ type: v === "ALL" ? undefined : v })}
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="ALL">{t("tabAll")}</TabsTrigger>
             <TabsTrigger value="INCOME">{t("tabIncome")}</TabsTrigger>
             <TabsTrigger value="EXPENSE">{t("tabExpense")}</TabsTrigger>
+            <TabsTrigger value="TRANSFER">{t("tabTransfer")}</TabsTrigger>
           </TabsList>
         </Tabs>
 

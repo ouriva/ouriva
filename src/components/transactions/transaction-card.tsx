@@ -10,7 +10,7 @@
 "use client";
 
 import React from "react";
-import { ArrowDownLeft, ArrowUpRight, TriangleAlert, CircleDot, Split } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, TriangleAlert, CircleDot, Split } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
@@ -38,6 +38,13 @@ const typeConfig = {
     bgColor: "bg-red-100 dark:bg-red-900/30",
     amountColor: "",
     sign: "-",
+  },
+  TRANSFER: {
+    icon: ArrowLeftRight,
+    color: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+    amountColor: "text-blue-600 dark:text-blue-400",
+    sign: "⇄",
   },
 } as const;
 
