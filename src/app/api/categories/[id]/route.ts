@@ -64,11 +64,24 @@ export async function PUT(
       );
     }
 
-    const category = await prisma.category.update({
-      where: { id },
-      data: parsed.data,
-      include: { parent: true, children: true },
-    });
+    const typeChanged = parsed.data.type && parsed.data.type !== existing.type;
+    const isParent = existing.parentId === null;
+
+    const [category] = await prisma.$transaction([
+      prisma.category.update({
+        where: { id },
+        data: parsed.data,
+        include: { parent: true, children: true },
+      }),
+      ...(typeChanged && isParent
+        ? [
+            prisma.category.updateMany({
+              where: { parentId: id },
+              data: { type: parsed.data.type },
+            }),
+          ]
+        : []),
+    ]);
 
     return NextResponse.json(category);
   } catch (error) {
