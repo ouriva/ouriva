@@ -101,6 +101,7 @@
     "typeLabelTransfer": "Transfer",
     "amountLabel": "Amount",
     "amountPlaceholder": "0.00",
+    "amountPlaceholderTransfer": "+inbound or −outbound",
     "descriptionLabel": "Description",
     "descriptionPlaceholder": "What was this for?",
     "displayNameLabel": "Display Name",

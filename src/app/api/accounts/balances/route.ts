@@ -44,6 +44,9 @@ function buildBalanceMap(
       balanceMap.set(tx.fromAccountId, current + amount);
     } else if (tx.type === "EXPENSE") {
       balanceMap.set(tx.fromAccountId, current - amount);
+    } else if (tx.type === "TRANSFER") {
+      // TRANSFER amounts are signed: positive = inbound (+), negative = outbound (−)
+      balanceMap.set(tx.fromAccountId, current + amount);
     }
   }
 
