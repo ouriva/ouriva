@@ -446,7 +446,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const res = await fetch("/api/categories?all=true");
+      const res = await fetch("/api/categories?all=true", { cache: "no-store" });
       if (cancelled) return;
       if (res.ok) {
         const data = await res.json();
