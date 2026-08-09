@@ -17,16 +17,6 @@ CREATE INDEX "Category_type_idx" ON "Category"("type");
 -- AlterTable: add isTransfer flag to Transaction, default false for all
 ALTER TABLE "Transaction" ADD COLUMN "isTransfer" BOOLEAN NOT NULL DEFAULT false;
 
--- DATA MIGRATION: mark transactions that belong to the current transfer category as transfers.
-UPDATE "Transaction"
-SET "isTransfer" = true,
-    "categoryId" = NULL
-WHERE "categoryId" = (SELECT "transferCategoryId" FROM "AppSettings" WHERE "id" = 'singleton')
-   OR "parentTransactionId" IN (
-     SELECT "id" FROM "Transaction"
-     WHERE "categoryId" = (SELECT "transferCategoryId" FROM "AppSettings" WHERE "id" = 'singleton')
-   );
-
 -- CreateIndex
 CREATE INDEX "Transaction_isTransfer_idx" ON "Transaction"("isTransfer");
 

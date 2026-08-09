@@ -434,9 +434,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const netChange = useMemo(() => {
     return parsedRows.reduce((sum, row, i) => {
       if (!selectedRows[i]) return sum;
+      // TRANSFER amounts are signed (positive = inbound, negative = outbound)
+      if (transactionTypes[i] === "TRANSFER") return sum + row.amount;
       const abs = Math.abs(row.amount);
-      // TRANSFER transactions are neutral — excluded from the net change display
-      if (transactionTypes[i] === "TRANSFER") return sum;
       return transactionTypes[i] === "INCOME" ? sum + abs : sum - abs;
     }, 0);
   }, [parsedRows, selectedRows, transactionTypes]);

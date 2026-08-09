@@ -10,7 +10,7 @@
 "use client";
 
 import React from "react";
-import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, TriangleAlert, CircleDot, Split } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, TriangleAlert, CircleDot, Split } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import type { TransactionWithRelations } from "@/hooks/use-transactions";
@@ -39,13 +39,6 @@ const typeConfig = {
     amountColor: "",
     sign: "-",
   },
-  TRANSFER: {
-    icon: ArrowLeftRight,
-    color: "text-blue-600 dark:text-blue-400",
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    amountColor: "text-blue-600 dark:text-blue-400",
-    sign: "⇄",
-  },
 } as const;
 
 // Format a split's category into a display string
@@ -62,9 +55,19 @@ function splitCategoryName(
 export function TransactionCard({ transaction, onClick }: Readonly<TransactionCardProps>) {
   const t = useTranslations("transactions");
   const locale = useLocale();
-  const config = typeConfig[transaction.type];
+  // TRANSFER uses signed amounts: positive = inbound (INCOME styling), negative = outbound (EXPENSE styling)
+  const config =
+    transaction.type === "TRANSFER"
+      ? Number(transaction.amount) >= 0
+        ? typeConfig.INCOME
+        : typeConfig.EXPENSE
+      : typeConfig[transaction.type];
   const Icon = config.icon;
   const currency = transaction.fromAccount.currency;
+  const displayAmount =
+    transaction.type === "TRANSFER"
+      ? Math.abs(Number(transaction.amount))
+      : Number(transaction.amount);
 
   const isSplit = transaction.splits.length > 0;
 
@@ -145,7 +148,7 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
         <div className="text-right">
           <p className={cn("font-semibold tabular-nums", config.amountColor)}>
             {config.sign}
-            {formatCurrency(transaction.amount, currency.code, locale)}
+            {formatCurrency(displayAmount, currency.code, locale)}
           </p>
         </div>
       </div>
