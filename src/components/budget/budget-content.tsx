@@ -88,32 +88,23 @@ interface BudgetData {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function editKey(type: "EXPENSE" | "INCOME", categoryId: string): string {
-  return `${type}:${categoryId}`;
-}
-
 // Flatten a group list to leaf-level budget entries, applying any pending edits.
 function collectLeaves(
   groups: BudgetGroup[],
-  type: "EXPENSE" | "INCOME",
   edits: Record<string, number>,
   noteEdits: Record<string, string>
-): { categoryId: string; type: "EXPENSE" | "INCOME"; amount: number; note?: string }[] {
+): { categoryId: string; amount: number; note?: string }[] {
   return groups.flatMap((g) => {
     const leaves: BudgetCategory[] =
       g.children.length > 0
         ? g.children
         : [{ ...g, categoryId: g.groupId, categoryName: g.groupName }];
 
-    return leaves.map((c) => {
-      const key = editKey(type, c.categoryId);
-      return {
-        categoryId: c.categoryId,
-        type,
-        amount: edits[key] ?? c.budgeted,
-        note: key in noteEdits ? noteEdits[key] : c.note ?? undefined,
-      };
-    });
+    return leaves.map((c) => ({
+      categoryId: c.categoryId,
+      amount: edits[c.categoryId] ?? c.budgeted,
+      note: c.categoryId in noteEdits ? noteEdits[c.categoryId] : c.note ?? undefined,
+    }));
   });
 }
 
@@ -368,49 +359,44 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
 
 interface BudgetGroupItemProps {
   group: BudgetGroup;
-  type: "EXPENSE" | "INCOME";
   edits: Record<string, number>;
   noteEdits: Record<string, string>;
-  onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
-  onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  onAmountChange: (categoryId: string, value: string) => void;
+  onNoteChange: (categoryId: string, value: string) => void;
   showBucketColors?: boolean;
 }
 
-function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNoteChange, showBucketColors }: Readonly<BudgetGroupItemProps>) {
+function BudgetGroupItem({ group, edits, noteEdits, onAmountChange, onNoteChange, showBucketColors }: Readonly<BudgetGroupItemProps>) {
   if (group.children.length > 0) {
     return (
       <div key={group.groupId}>
         <GroupHeader group={group} />
         <div className="divide-y">
-          {group.children.map((cat) => {
-            const key = editKey(type, cat.categoryId);
-            return (
-              <CategoryRow
-                key={cat.categoryId}
-                category={cat}
-                editedBudget={edits[key] ?? cat.budgeted}
-                note={key in noteEdits ? noteEdits[key] : cat.note}
-                onChange={(v) => onAmountChange(type, cat.categoryId, v)}
-                onNoteChange={(v) => onNoteChange(type, cat.categoryId, v)}
-                isChild
-                showBucketColors={showBucketColors}
-              />
-            );
-          })}
+          {group.children.map((cat) => (
+            <CategoryRow
+              key={cat.categoryId}
+              category={cat}
+              editedBudget={edits[cat.categoryId] ?? cat.budgeted}
+              note={cat.categoryId in noteEdits ? noteEdits[cat.categoryId] : cat.note}
+              onChange={(v) => onAmountChange(cat.categoryId, v)}
+              onNoteChange={(v) => onNoteChange(cat.categoryId, v)}
+              isChild
+              showBucketColors={showBucketColors}
+            />
+          ))}
         </div>
       </div>
     );
   }
 
-  const key = editKey(type, group.groupId);
   return (
     <CategoryRow
       key={group.groupId}
       category={{ ...group, categoryId: group.groupId, categoryName: group.groupName }}
-      editedBudget={edits[key] ?? group.budgeted}
-      note={key in noteEdits ? noteEdits[key] : group.note}
-      onChange={(v) => onAmountChange(type, group.groupId, v)}
-      onNoteChange={(v) => onNoteChange(type, group.groupId, v)}
+      editedBudget={edits[group.groupId] ?? group.budgeted}
+      note={group.groupId in noteEdits ? noteEdits[group.groupId] : group.note}
+      onChange={(v) => onAmountChange(group.groupId, v)}
+      onNoteChange={(v) => onNoteChange(group.groupId, v)}
       showBucketColors={showBucketColors}
     />
   );
@@ -491,8 +477,8 @@ interface BudgetCategoryTabsProps {
   data: BudgetData;
   edits: Record<string, number>;
   noteEdits: Record<string, string>;
-  onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
-  onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  onAmountChange: (categoryId: string, value: string) => void;
+  onNoteChange: (categoryId: string, value: string) => void;
   year: number;
   showBucketColors?: boolean;
 }
@@ -517,7 +503,6 @@ function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChan
               <BudgetGroupItem
                 key={g.groupId}
                 group={g}
-                type="EXPENSE"
                 edits={edits}
                 noteEdits={noteEdits}
                 onAmountChange={onAmountChange}
@@ -540,7 +525,6 @@ function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChan
               <BudgetGroupItem
                 key={g.groupId}
                 group={g}
-                type="INCOME"
                 edits={edits}
                 noteEdits={noteEdits}
                 onAmountChange={onAmountChange}
@@ -584,14 +568,14 @@ function useBudgetData(year: number) {
 
   const hasEdits = Object.keys(edits).length > 0 || Object.keys(noteEdits).length > 0;
 
-  function handleChange(type: "EXPENSE" | "INCOME", categoryId: string, value: string) {
+  function handleChange(categoryId: string, value: string) {
     const amount = Number.parseFloat(value);
     if (Number.isNaN(amount) || amount < 0) return;
-    setEdits((prev) => ({ ...prev, [editKey(type, categoryId)]: amount }));
+    setEdits((prev) => ({ ...prev, [categoryId]: amount }));
   }
 
-  function handleNoteChange(type: "EXPENSE" | "INCOME", categoryId: string, value: string) {
-    setNoteEdits((prev) => ({ ...prev, [editKey(type, categoryId)]: value }));
+  function handleNoteChange(categoryId: string, value: string) {
+    setNoteEdits((prev) => ({ ...prev, [categoryId]: value }));
   }
 
   async function handleSave() {
@@ -599,8 +583,8 @@ function useBudgetData(year: number) {
     setIsSaving(true);
     try {
       const budgets = [
-        ...collectLeaves(data.expense.groups, "EXPENSE", edits, noteEdits),
-        ...collectLeaves(data.income.groups, "INCOME", edits, noteEdits),
+        ...collectLeaves(data.expense.groups, edits, noteEdits),
+        ...collectLeaves(data.income.groups, edits, noteEdits),
       ];
       const res = await fetch("/api/budgets", {
         method: "POST",

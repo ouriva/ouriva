@@ -292,10 +292,10 @@ function buildIncomeActualMap(
 
 type BudgetWithCategory = {
   categoryId: string;
-  type: string;
   amount: unknown;
   note?: string | null;
   category: {
+    type: string;
     name: string;
     parent?: { id: string; name: string } | null;
     children: { id: string }[];
@@ -310,7 +310,7 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
   const incomeBudgetMap = new Map<string, { amount: number; note: string | null; parentId?: string; parentName?: string; name?: string }>();
 
   for (const b of budgets) {
-    if (b.type === "INCOME") {
+    if (b.category.type === "INCOME") {
       incomeBudgetMap.set(b.categoryId, {
         amount: Number(b.amount),
         note: b.note ?? null,
@@ -425,9 +425,10 @@ export async function GET(
     const totalBudgetedIncome  = incomeGroups.reduce( (s, g) => s + g.budgeted, 0);
     const totalActualIncome    = incomeGroups.reduce( (s, g) => s + g.actual,   0);
 
-    // ── Planned 50/30/20 — leaf categories only (no double-count) ────────
+    // ── Planned 50/30/20 — leaf EXPENSE categories only (no double-count) ──
     const plannedBuckets = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
-    for (const b of budgets.filter((b) => b.type === "EXPENSE")) {
+    for (const b of budgets) {
+      if (b.category.type !== "EXPENSE") continue;
       if (b.category.children.length > 0) continue;
       const bucket = effectiveBucket(b.category);
       plannedBuckets[bucket ?? "unclassified"] += Number(b.amount);

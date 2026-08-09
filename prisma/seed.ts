@@ -701,9 +701,9 @@ async function main() {
 
   for (const budget of budgetEntries) {
     await prisma.budget.upsert({
-      where: { year_categoryId_type: { year: budget.year, categoryId: budget.categoryId, type: "EXPENSE" } },
+      where: { year_categoryId: { year: budget.year, categoryId: budget.categoryId } },
       update: { amount: budget.amount },
-      create: { ...budget, type: "EXPENSE" },
+      create: { ...budget },
     });
   }
 

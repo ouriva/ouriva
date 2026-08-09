@@ -14,6 +14,7 @@ export type DefaultCurrency = { code: string; symbol: string } | null;
 export type TxCategory = {
   id: string;
   name: string;
+  type: string;
   parent: { id: string; name: string } | null;
 } | null;
 
