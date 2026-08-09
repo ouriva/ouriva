@@ -212,52 +212,30 @@ const ReviewRow = memo(function ReviewRow({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
-                {/* INCOME categories first */}
-                {parentCategories.filter(p => p.type === "INCOME").map((parent) => {
-                  const children = childCategories.filter(
-                    (c) => c.parentId === parent.id
-                  );
-                  if (children.length > 0) {
-                    return (
-                      <SelectGroup key={parent.id}>
-                        <SelectLabel className="text-xs">{parent.name}</SelectLabel>
-                        {children.map((child) => (
-                          <SelectItem key={child.id} value={child.id} className="text-xs">
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
+                {[...parentCategories]
+                  .sort((a, b) => (a.type === b.type ? 0 : a.type === "INCOME" ? -1 : 1))
+                  .map((parent) => {
+                    const children = childCategories.filter(
+                      (c) => c.parentId === parent.id
                     );
-                  }
-                  return (
-                    <SelectItem key={parent.id} value={parent.id} className="text-xs">
-                      {parent.name}
-                    </SelectItem>
-                  );
-                })}
-                {/* EXPENSE categories below */}
-                {parentCategories.filter(p => p.type === "EXPENSE").map((parent) => {
-                  const children = childCategories.filter(
-                    (c) => c.parentId === parent.id
-                  );
-                  if (children.length > 0) {
+                    if (children.length > 0) {
+                      return (
+                        <SelectGroup key={parent.id}>
+                          <SelectLabel className="text-xs">{parent.name}</SelectLabel>
+                          {children.map((child) => (
+                            <SelectItem key={child.id} value={child.id} className="text-xs">
+                              {child.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      );
+                    }
                     return (
-                      <SelectGroup key={parent.id}>
-                        <SelectLabel className="text-xs">{parent.name}</SelectLabel>
-                        {children.map((child) => (
-                          <SelectItem key={child.id} value={child.id} className="text-xs">
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
+                      <SelectItem key={parent.id} value={parent.id} className="text-xs">
+                        {parent.name}
+                      </SelectItem>
                     );
-                  }
-                  return (
-                    <SelectItem key={parent.id} value={parent.id} className="text-xs">
-                      {parent.name}
-                    </SelectItem>
-                  );
-                })}
+                  })}
               </SelectContent>
             </Select>
           </div>
