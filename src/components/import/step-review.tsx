@@ -39,13 +39,13 @@ import {
 import { matchRule, type CategoryRuleInput } from "@/lib/category-rules";
 import { parseDate, parseAmount } from "./step-review-utils";
 import type { ImportState } from "./import-wizard";
-import type { TransactionType } from "@/generated/prisma";
+import type { TransactionType, CategoryType } from "@/generated/prisma/client";
 
 interface Category {
   id: string;
   name: string;
   parentId: string | null;
-  type: "INCOME" | "EXPENSE";
+  type: CategoryType;
 }
 
 interface ParsedRow {
@@ -318,7 +318,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
 
           // Parse amount based on mode
           let amount: number;
-          let type: "INCOME" | "EXPENSE";
+          let type: CategoryType;
 
           if (isSplitMode) {
             // Split mode: separate Debit (expense) and Credit (income) columns
