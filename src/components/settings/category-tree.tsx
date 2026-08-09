@@ -529,9 +529,17 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                     <SmallIconCircle icon={parent.icon} color={parent.color} />
                   </button>
 
-                  {/* Name + badges — display only */}
-                  <div className="flex flex-1 items-center gap-2 px-2">
+                  {/* Name + badges — tapping this area also opens edit */}
+                  <button
+                    onClick={() => openEdit(parent.id)}
+                    className="flex flex-1 items-center gap-2 px-2 text-left min-h-[52px]"
+                  >
                     <span className="font-medium">{parent.name}</span>
+                    {parent.type === "INCOME" && (
+                      <Badge variant="outline" className="border-emerald-300 text-emerald-700 dark:border-emerald-700 dark:text-emerald-400">
+                        {t("typeIncome")}
+                      </Badge>
+                    )}
                     {parent.children.length > 0 && (
                       <Badge variant="secondary">{t("activeChildCount", { count: activeChildren })}</Badge>
                     )}
@@ -543,7 +551,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                         {t("nonTrackedBadge")}
                       </Badge>
                     )}
-                  </div>
+                  </button>
 
                   {/* Add subcategory — inherits type from parent, only name needed */}
                   <SettingsItemForm
