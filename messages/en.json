@@ -333,7 +333,9 @@
     "nonTrackedNonZero": "Outstanding amount across all non-tracked categories.",
     "languageLabel": "Language",
     "languageEnglish": "English",
-    "languagePortuguese": "Português"
+    "languagePortuguese": "Português",
+    "bucketColorsLabel": "Budget bucket colours",
+    "bucketColorsDescription": "Colour-code each budget category row by its 50/30/20 bucket (Needs, Wants, Savings)."
   },
   "currencies": {
     "pageTitle": "Currencies",

@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -86,6 +87,17 @@ export function GeneralSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showBucketColors, setShowBucketColors] = useState(false);
+
+  useEffect(() => {
+    setShowBucketColors(localStorage.getItem("budget.bucketColors") === "true");
+  }, []);
+
+  function handleBucketColorsToggle(checked: boolean) {
+    setShowBucketColors(checked);
+    localStorage.setItem("budget.bucketColors", String(checked));
+    window.dispatchEvent(new StorageEvent("storage", { key: "budget.bucketColors", newValue: String(checked) }));
+  }
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -162,6 +174,25 @@ export function GeneralSettings() {
                 <SelectItem value="pt">{t("languagePortuguese")}</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Budget bucket colours */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <Label htmlFor="bucket-colors-toggle">{t("bucketColorsLabel")}</Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("bucketColorsDescription")}
+              </p>
+            </div>
+            <Switch
+              id="bucket-colors-toggle"
+              checked={showBucketColors}
+              onCheckedChange={handleBucketColorsToggle}
+            />
           </div>
         </CardContent>
       </Card>
