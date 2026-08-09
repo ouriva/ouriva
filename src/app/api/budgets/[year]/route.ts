@@ -312,15 +312,22 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
   return { expenseBudgetMap, incomeBudgetMap };
 }
 
+// A category is a reimbursement candidate when it appears in expense context
+// (has expense transactions or an expense budget) but is NOT a planned income
+// source (no income budget entry). Categories with income budgets — Salary,
+// Freelance, etc. — are pure income sources; any income there should never
+// be netted against expenses even if the category also appears in expense data.
 function netOffReimbursements(
   actualExpenseMap: Map<string, number>,
   actualIncomeMap: Map<string, { total: number }>,
   incomeTransactions: TransactionWithCategory[],
-  expenseBudgetMap: Map<string, { amount: number; note: string | null }>
+  expenseBudgetMap: Map<string, { amount: number; note: string | null }>,
+  incomeBudgetMap: Map<string, unknown>
 ): void {
   for (const tx of incomeTransactions) {
     if (!tx.category) continue;
     const catId = tx.category.id;
+    if (incomeBudgetMap.has(catId)) continue;
     if (actualExpenseMap.has(catId) || expenseBudgetMap.has(catId)) {
       actualExpenseMap.set(catId, (actualExpenseMap.get(catId) ?? 0) - Number(tx.amount));
       const incEntry = actualIncomeMap.get(catId);
@@ -419,12 +426,11 @@ export async function GET(
     //   • They reduce the expense actual → net out-of-pocket cost
     //   • They are removed from the income actual → not double-counted
     //
-    // A category is "in expense context" when it has expense transactions or
-    // an expense budget target. Pure income categories (salary, freelance)
-    // are untouched.
-    netOffReimbursements(actualExpenseMap, actualIncomeMap, incomeTransactions, expenseBudgetMap);
+    // Categories with income budgets are exempt — they are planned income
+    // sources (Salary, Freelance, etc.) and must never be treated as
+    // reimbursements even if they also appear in expense data.
+    netOffReimbursements(actualExpenseMap, actualIncomeMap, incomeTransactions, expenseBudgetMap, incomeBudgetMap);
 
-    // ── Build grouped category lists ──────────────────────────────────────
     // Expense: seeded from all active leaf categories
     const expenseGroups = buildGroupsFromSeeds(leafCategories, expenseBudgetMap, actualExpenseMap, false);
 
