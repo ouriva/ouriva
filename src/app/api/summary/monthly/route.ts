@@ -84,8 +84,13 @@ export async function GET(request: NextRequest) {
         addToBucket(bucketTotals, tx.category, amount);
       }
 
-      const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
-      updateCategoryMap(targetMap, tx.category, amount);
+      // Route by category type, not transaction type.
+      // INCOME transactions in EXPENSE categories are reimbursements — they
+      // reduce that category's expense total rather than polluting the income tab.
+      const categoryType = tx.category?.type ?? (tx.type === "INCOME" ? "INCOME" : "EXPENSE");
+      const displayAmount = categoryType === "EXPENSE" && tx.type === "INCOME" ? -amount : amount;
+      const targetMap = categoryType === "EXPENSE" ? categoryMap : incomeCategoryMap;
+      updateCategoryMap(targetMap, tx.category, displayAmount);
     }
 
     return NextResponse.json({

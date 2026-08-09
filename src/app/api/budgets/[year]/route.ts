@@ -296,6 +296,7 @@ type BudgetWithCategory = {
   amount: unknown;
   note?: string | null;
   category: {
+    type: string;
     name: string;
     parent?: { id: string; name: string } | null;
     children: { id: string }[];
@@ -310,7 +311,11 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
   const incomeBudgetMap = new Map<string, { amount: number; note: string | null; parentId?: string; parentName?: string; name?: string }>();
 
   for (const b of budgets) {
-    if (b.type === "INCOME") {
+    // Only route a budget entry to the income side when both the budget entry
+    // and the category itself are INCOME. Mismatches are stale data (created
+    // when a category type was briefly wrong) and are silently ignored so they
+    // don't pollute the wrong tab.
+    if (b.type === "INCOME" && b.category.type === "INCOME") {
       incomeBudgetMap.set(b.categoryId, {
         amount: Number(b.amount),
         note: b.note ?? null,
@@ -318,7 +323,7 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
         parentId: b.category.parent?.id,
         parentName: b.category.parent?.name,
       });
-    } else {
+    } else if (b.type === "EXPENSE" && b.category.type === "EXPENSE") {
       expenseBudgetMap.set(b.categoryId, { amount: Number(b.amount), note: b.note ?? null });
     }
   }
