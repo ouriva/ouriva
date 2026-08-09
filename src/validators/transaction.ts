@@ -98,11 +98,22 @@ const expenseBase = z.object({
   categoryId: z.uuid("Invalid category").optional(),
 });
 
+// TRANSFER transactions represent money moving between accounts or internal
+// flows that should not appear in income/expense reports. They carry no
+// category because they are not budget-trackable.
+const transferBase = z.object({
+  type: z.literal("TRANSFER"),
+  ...baseTransactionFields,
+  fromAccountId: z.uuid("Invalid account"),
+  categoryId: z.undefined().optional(),
+});
+
 // --- Exported schemas ---
 
 export const createTransactionSchema = z.discriminatedUnion("type", [
   incomeBase.superRefine(validateSplits),
   expenseBase.superRefine(validateSplits),
+  transferBase,
 ]);
 
 // For updates, all fields are optional (partial update / PATCH semantics).
@@ -111,6 +122,7 @@ export const createTransactionSchema = z.discriminatedUnion("type", [
 export const updateTransactionSchema = z.discriminatedUnion("type", [
   incomeBase.partial().extend({ type: z.literal("INCOME") }).superRefine(validateSplits),
   expenseBase.partial().extend({ type: z.literal("EXPENSE") }).superRefine(validateSplits),
+  transferBase.partial().extend({ type: z.literal("TRANSFER") }),
 ]);
 
 // Query parameters for the GET /api/transactions endpoint.
@@ -118,7 +130,7 @@ export const updateTransactionSchema = z.discriminatedUnion("type", [
 export const transactionQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-  type: z.enum(["INCOME", "EXPENSE"]).optional(),
+  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]).optional(),
   accountId: z.uuid().optional(),
   categoryId: z.union([z.uuid(), z.literal("uncategorized")]).optional(),
   startDate: z.coerce.date().optional(),

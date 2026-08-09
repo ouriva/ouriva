@@ -1,17 +1,12 @@
-// API: GET/PUT /api/settings
-// ==========================
+// API: GET /api/settings
+// ======================
 // Singleton app settings. The "singleton" row is auto-created on
 // first read via upsert. GET also computes:
-//   - transferBalance: net sum of all transactions in the transfer category
+//   - transferBalance: total volume of all TRANSFER-type transactions
 //   - nonTrackedBalance: net sum across ALL categories marked excludeFromStats
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { z } from "zod/v4";
-
-const updateSettingsSchema = z.object({
-  transferCategoryId: z.uuid().nullable().optional(),
-});
 
 export async function GET() {
   try {
@@ -19,12 +14,9 @@ export async function GET() {
       where: { id: "singleton" },
       update: {},
       create: { id: "singleton" },
-      include: { transferCategory: true },
     });
 
     // Helper: compute net balance (income - expense) for a set of category IDs.
-    // Returns a positive number when you are owed money (income > expense),
-    // negative when you've spent more than you've received back.
     async function computeBalance(categoryIds: string[]): Promise<number> {
       if (categoryIds.length === 0) return 0;
       const txs = await prisma.transaction.findMany({
@@ -39,7 +31,18 @@ export async function GET() {
       return Math.round(balance * 100) / 100;
     }
 
-    // Fetch all non-tracked categories to compute their combined balance
+    // Transfer balance: sum of all TRANSFER transactions.
+    // TRANSFER transactions have no direction, so we sum their amounts.
+    // Ideally both sides of a transfer are recorded (out + in), so the total
+    // represents how much was moved between accounts.
+    async function computeTransferBalance(): Promise<number> {
+      const result = await prisma.transaction.aggregate({
+        where: { type: "TRANSFER" },
+        _sum: { amount: true },
+      });
+      return Math.round(Number(result._sum.amount ?? 0) * 100) / 100;
+    }
+
     const nonTrackedCategories = await prisma.category.findMany({
       where: { excludeFromStats: true },
       select: { id: true },
@@ -47,9 +50,7 @@ export async function GET() {
     const nonTrackedIds = nonTrackedCategories.map((c) => c.id);
 
     const [transferBalance, nonTrackedBalance] = await Promise.all([
-      settings.transferCategoryId
-        ? computeBalance([settings.transferCategoryId])
-        : Promise.resolve(0),
+      computeTransferBalance(),
       computeBalance(nonTrackedIds),
     ]);
 
@@ -62,46 +63,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/settings error:", error);
-    return NextResponse.json(
-      { error: { message: "Internal server error", code: "INTERNAL_ERROR" } },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const parsed = updateSettingsSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        {
-          error: {
-            message: "Invalid settings data",
-            code: "VALIDATION_ERROR",
-            details: z.flattenError(parsed.error).fieldErrors,
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    const updateData: Record<string, string | null> = {};
-    if (parsed.data.transferCategoryId !== undefined) {
-      updateData.transferCategoryId = parsed.data.transferCategoryId;
-    }
-
-    const settings = await prisma.appSettings.upsert({
-      where: { id: "singleton" },
-      update: updateData,
-      create: { id: "singleton", ...updateData },
-      include: { transferCategory: true },
-    });
-
-    return NextResponse.json({ data: settings });
-  } catch (error) {
-    console.error("PUT /api/settings error:", error);
     return NextResponse.json(
       { error: { message: "Internal server error", code: "INTERNAL_ERROR" } },
       { status: 500 }

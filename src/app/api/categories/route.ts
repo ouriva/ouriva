@@ -8,14 +8,22 @@ import { createCategorySchema } from "@/validators/category";
 
 export async function GET(request: NextRequest) {
   try {
-    const showAll = request.nextUrl.searchParams.get("all") === "true";
+    const showAll  = request.nextUrl.searchParams.get("all") === "true";
+    const typeParam = request.nextUrl.searchParams.get("type");
+    const typeFilter = typeParam === "INCOME" || typeParam === "EXPENSE" ? typeParam : undefined;
 
     const categories = await prisma.category.findMany({
-      where: showAll ? {} : { isActive: true },
+      where: {
+        ...(showAll ? {} : { isActive: true }),
+        ...(typeFilter ? { type: typeFilter } : {}),
+      },
       include: {
         parent: true,
         children: {
-          where: showAll ? {} : { isActive: true },
+          where: {
+            ...(showAll ? {} : { isActive: true }),
+            ...(typeFilter ? { type: typeFilter } : {}),
+          },
           orderBy: { name: "asc" },
         },
       },

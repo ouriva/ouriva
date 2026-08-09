@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 
 export const createCategorySchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
+  type: z.enum(["INCOME", "EXPENSE"]).default("EXPENSE"),
   parentId: z.uuid().optional(),
 });
 
