@@ -1,12 +1,9 @@
 // General Settings
 // ================
-// App-wide preferences. Currently supports selecting a "transfer
-// category" whose transactions are excluded from summaries and budgets.
-// Shows a Transfer Balance indicator (should be 0 if matched).
-//
-// Non-tracked categories are now configured per-category in
-// Settings > Categories (via the excludeFromStats flag). This page
-// shows the combined Non-tracked Balance across all such categories.
+// App-wide preferences. Shows Transfer Balance (total volume of all
+// TRANSFER-type transactions) and Non-tracked Balance.
+// Non-tracked categories are configured per-category in
+// Settings > Categories (via the excludeFromStats flag).
 
 "use client";
 
@@ -21,29 +18,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CategorySelectOptions } from "@/components/ui/category-select-options";
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 
-interface Category {
-  id: string;
-  name: string;
-  parentId: string | null;
-}
-
 interface Settings {
-  transferCategoryId: string | null;
-  transferCategory: { id: string; name: string } | null;
   transferBalance: number;
   nonTrackedBalance: number;
 }
 
-// Set the NEXT_LOCALE cookie directly. The next-intl middleware reads
-// this cookie on every request and makes the locale available to all
-// Server Components and Client Components. A full page reload is
-// required so the server re-renders with the new locale's message bundle.
 function handleLocaleChange(newLocale: string) {
   document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
   globalThis.location.reload();
@@ -55,8 +39,6 @@ interface BalanceIndicatorProps {
   nonZeroLabel: string;
 }
 
-// Defined at module scope (not inside GeneralSettings) to avoid React creating
-// a new component identity on every render (S6478).
 function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
   const t = useTranslations("generalSettings");
   const locale = useLocale();
@@ -81,16 +63,21 @@ function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<Balance
 
 export function GeneralSettings() {
   const t = useTranslations("generalSettings");
-  const tCommon = useTranslations("common");
   const locale = useLocale();
-  const [categories, setCategories] = useState<Category[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showBucketColors, setShowBucketColors] = useState(false);
+  const [showBucketColors, setShowBucketColors] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("budget.bucketColors") === "true"
+  );
 
   useEffect(() => {
-    setShowBucketColors(localStorage.getItem("budget.bucketColors") === "true");
+    function onStorage(e: StorageEvent) {
+      if (e.key === "budget.bucketColors") {
+        setShowBucketColors(e.newValue === "true");
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   function handleBucketColorsToggle(checked: boolean) {
@@ -99,52 +86,23 @@ export function GeneralSettings() {
     window.dispatchEvent(new StorageEvent("storage", { key: "budget.bucketColors", newValue: String(checked) }));
   }
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const [catRes, settingsRes] = await Promise.all([
-      fetch("/api/categories"),
-      fetch("/api/settings"),
-    ]);
-
-    if (catRes.ok) {
-      const data = await catRes.json();
-      setCategories(data.data || data);
+  // isLoading starts true; we only set it false after fetch resolves.
+  // fetchData is stable — referenced by useEffect below.
+  const fetchData = useCallback(() => {
+    async function load() {
+      const res = await fetch("/api/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data.data);
+      }
+      setIsLoading(false);
     }
-    if (settingsRes.ok) {
-      const data = await settingsRes.json();
-      setSettings(data.data);
-    }
-    setIsLoading(false);
+    load();
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  async function handleCategoryChange(value: string) {
-    const categoryId = value === "none" ? null : value;
-    setIsSaving(true);
-
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transferCategoryId: categoryId }),
-      });
-
-      if (res.ok) {
-        const settingsRes = await fetch("/api/settings");
-        if (settingsRes.ok) {
-          const data = await settingsRes.json();
-          setSettings(data.data);
-        }
-      }
-    } catch {
-      alert("Failed to save setting.");
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   if (isLoading) {
     return (
@@ -153,10 +111,6 @@ export function GeneralSettings() {
       </div>
     );
   }
-
-  // Build category options grouped by parent
-  const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories = categories.filter((c) => c.parentId);
 
   return (
     <div className="space-y-6">
@@ -197,38 +151,20 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Transfer Category */}
+      {/* Transfer Balance */}
       <Card>
         <CardContent className="space-y-4 p-4">
           <div>
-            <Label>{t("transferCategoryLabel")}</Label>
+            <Label>{t("transferBalanceLabel")}</Label>
             <p className="mt-1 text-sm text-muted-foreground">
-              {t("transferCategoryDescription")}
+              {t("transferBalanceDescription")}
             </p>
-            <Select
-              value={settings?.transferCategoryId ?? "none"}
-              onValueChange={handleCategoryChange}
-              disabled={isSaving}
-            >
-              <SelectTrigger className="mt-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{tCommon("none")}</SelectItem>
-                <CategorySelectOptions
-                  parentCategories={parentCategories}
-                  childCategories={childCategories}
-                />
-              </SelectContent>
-            </Select>
           </div>
-          {settings?.transferCategoryId && (
-            <BalanceIndicator
-              balance={settings.transferBalance}
-              zeroLabel={t("balanceZero")}
-              nonZeroLabel={t("balanceNonZero")}
-            />
-          )}
+          <BalanceIndicator
+            balance={settings?.transferBalance ?? 0}
+            zeroLabel={t("balanceZero")}
+            nonZeroLabel={t("balanceNonZero")}
+          />
         </CardContent>
       </Card>
 

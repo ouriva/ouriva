@@ -44,6 +44,7 @@ interface Category {
   id: string;
   name: string;
   parentId: string | null;
+  type: "INCOME" | "EXPENSE";
 }
 
 interface ParsedRow {
@@ -51,14 +52,14 @@ interface ParsedRow {
   description: string;
   amount: number;
   reference?: string;
-  type: "INCOME" | "EXPENSE";
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
   importRef: string;
 }
 
 interface ReviewResult {
   selectedRows: boolean[];
   categoryIds: (string | undefined)[];
-  transactionTypes: ("INCOME" | "EXPENSE")[];
+  transactionTypes: ("INCOME" | "EXPENSE" | "TRANSFER")[];
   importRefs: string[];
   duplicateRefs: Set<string>;
   friendlyNames: (string | undefined)[];
@@ -89,14 +90,14 @@ interface ReviewRowProps {
   isSelected: boolean;
   categoryId: string | undefined;
   autoApplied: boolean;
-  transactionType: "INCOME" | "EXPENSE";
+  transactionType: "INCOME" | "EXPENSE" | "TRANSFER";
   friendlyName: string | undefined;
   note: string | undefined;
   needsReview: boolean;
   parentCategories: Category[];
   childCategories: Category[];
   onSelectChange: (i: number, checked: boolean) => void;
-  onTypeChange: (i: number, type: "INCOME" | "EXPENSE") => void;
+  onTypeChange: (i: number, type: "INCOME" | "EXPENSE" | "TRANSFER") => void;
   onCategoryChange: (i: number, id: string | undefined) => void;
   onFriendlyNameChange: (i: number, value: string) => void;
   onNoteChange: (i: number, value: string) => void;
@@ -185,17 +186,21 @@ const ReviewRow = memo(function ReviewRow({
         <div className="flex items-center gap-2">
           <Select
             value={transactionType}
-            onValueChange={(v) => onTypeChange(i, v as "INCOME" | "EXPENSE")}
+            onValueChange={(v) => onTypeChange(i, v as "INCOME" | "EXPENSE" | "TRANSFER")}
           >
-            <SelectTrigger className="h-7 w-24 text-xs">
+            <SelectTrigger className="h-7 w-28 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="INCOME">{t("incomeBadge")}</SelectItem>
               <SelectItem value="EXPENSE">{t("expenseBadge")}</SelectItem>
+              <SelectItem value="TRANSFER">{t("transferBadge")}</SelectItem>
             </SelectContent>
           </Select>
 
+          {/* Category picker — hidden for TRANSFER. Shows all categories:
+              INCOME categories first (grouped), then EXPENSE below. */}
+          {transactionType !== "TRANSFER" && (
           <div className="flex-1">
             <Select
               value={categoryId ?? "none"}
@@ -206,7 +211,31 @@ const ReviewRow = memo(function ReviewRow({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
-                {parentCategories.map((parent) => {
+                {/* INCOME categories first */}
+                {parentCategories.filter(p => p.type === "INCOME").map((parent) => {
+                  const children = childCategories.filter(
+                    (c) => c.parentId === parent.id
+                  );
+                  if (children.length > 0) {
+                    return (
+                      <SelectGroup key={parent.id}>
+                        <SelectLabel className="text-xs">{parent.name}</SelectLabel>
+                        {children.map((child) => (
+                          <SelectItem key={child.id} value={child.id} className="text-xs">
+                            {child.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    );
+                  }
+                  return (
+                    <SelectItem key={parent.id} value={parent.id} className="text-xs">
+                      {parent.name}
+                    </SelectItem>
+                  );
+                })}
+                {/* EXPENSE categories below */}
+                {parentCategories.filter(p => p.type === "EXPENSE").map((parent) => {
                   const children = childCategories.filter(
                     (c) => c.parentId === parent.id
                   );
@@ -231,6 +260,7 @@ const ReviewRow = memo(function ReviewRow({
               </SelectContent>
             </Select>
           </div>
+          )}
         </div>
       </div>
 
@@ -255,7 +285,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<boolean[]>([]);
   const [categoryIds, setCategoryIds] = useState<(string | undefined)[]>([]);
-  const [transactionTypes, setTransactionTypes] = useState<("INCOME" | "EXPENSE")[]>([]);
+  const [transactionTypes, setTransactionTypes] = useState<("INCOME" | "EXPENSE" | "TRANSFER")[]>([]);
   const [duplicateRefs, setDuplicateRefs] = useState<Set<string>>(new Set());
   const [friendlyNames, setFriendlyNames] = useState<(string | undefined)[]>([]);
   const [notes, setNotes] = useState<(string | undefined)[]>([]);
@@ -426,6 +456,8 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
     return parsedRows.reduce((sum, row, i) => {
       if (!selectedRows[i]) return sum;
       const abs = Math.abs(row.amount);
+      // TRANSFER transactions are neutral — excluded from the net change display
+      if (transactionTypes[i] === "TRANSFER") return sum;
       return transactionTypes[i] === "INCOME" ? sum + abs : sum - abs;
     }, 0);
   }, [parsedRows, selectedRows, transactionTypes]);
@@ -447,7 +479,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
     setSelectedRows((prev) => { const n = [...prev]; n[i] = checked; return n; });
   }, []);
 
-  const handleTypeChange = useCallback((i: number, type: "INCOME" | "EXPENSE") => {
+  const handleTypeChange = useCallback((i: number, type: "INCOME" | "EXPENSE" | "TRANSFER") => {
     setTransactionTypes((prev) => { const n = [...prev]; n[i] = type; return n; });
   }, []);
 
