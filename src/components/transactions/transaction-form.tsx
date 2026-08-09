@@ -365,9 +365,9 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           id="amount"
           type="number"
           step="0.01"
-          min="0.01"
+          min={transactionType === "TRANSFER" ? undefined : "0.01"}
           inputMode="decimal" // shows numeric keyboard on mobile
-          placeholder={t("amountPlaceholder")}
+          placeholder={transactionType === "TRANSFER" ? t("amountPlaceholderTransfer") : t("amountPlaceholder")}
           {...register("amount", { valueAsNumber: true })}
           className="mt-2 text-lg"
         />

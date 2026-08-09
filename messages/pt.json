@@ -101,6 +101,7 @@
     "typeLabelTransfer": "Transferência",
     "amountLabel": "Valor",
     "amountPlaceholder": "0,00",
+    "amountPlaceholderTransfer": "+entrada ou −saída",
     "descriptionLabel": "Descrição",
     "descriptionPlaceholder": "Para que foi isto?",
     "displayNameLabel": "Nome de Exibição",
