@@ -92,14 +92,27 @@ function CategoryEditSheet({
 
   async function handleSave() {
     setSaving(true);
-    await fetch(`/api/categories/${category.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, type, icon, color, bucket, isActive, excludeFromStats }),
-    });
-    setSaving(false);
-    onSave();
-    onClose();
+    try {
+      const body = {
+        name, icon, color, bucket, isActive, excludeFromStats,
+        // Children inherit type from their parent — never send type for children
+        ...(!category.parentId && { type }),
+      };
+      const res = await fetch(`/api/categories/${category.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error?.message ?? t("saveError"));
+        return;
+      }
+      onSave();
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   }
 
   const buckets = [

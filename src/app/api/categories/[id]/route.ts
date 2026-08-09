@@ -56,7 +56,10 @@ export async function PUT(
       );
     }
 
-    const existing = await prisma.category.findUnique({ where: { id } });
+    const existing = await prisma.category.findUnique({
+      where: { id },
+      include: { parent: true },
+    });
     if (!existing) {
       return NextResponse.json(
         { error: { message: "Category not found", code: "NOT_FOUND" } },
@@ -64,20 +67,25 @@ export async function PUT(
       );
     }
 
-    const typeChanged = parsed.data.type && parsed.data.type !== existing.type;
+    // Children always inherit their parent's type — ignore any type sent in the body.
     const isParent = existing.parentId === null;
+    const effectiveData = !isParent && existing.parent
+      ? { ...parsed.data, type: existing.parent.type }
+      : parsed.data;
+
+    const typeChanged = effectiveData.type && effectiveData.type !== existing.type;
 
     const [category] = await prisma.$transaction([
       prisma.category.update({
         where: { id },
-        data: parsed.data,
+        data: effectiveData,
         include: { parent: true, children: true },
       }),
       ...(typeChanged && isParent
         ? [
             prisma.category.updateMany({
               where: { parentId: id },
-              data: { type: parsed.data.type },
+              data: { type: effectiveData.type },
             }),
           ]
         : []),
