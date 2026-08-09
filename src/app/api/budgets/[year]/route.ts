@@ -292,7 +292,6 @@ function buildIncomeActualMap(
 
 type BudgetWithCategory = {
   categoryId: string;
-  type: string;
   amount: unknown;
   note?: string | null;
   category: {
@@ -311,12 +310,7 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
   const incomeBudgetMap = new Map<string, { amount: number; note: string | null; parentId?: string; parentName?: string; name?: string }>();
 
   for (const b of budgets) {
-    // Route by category type — Budget.type is redundant because categories are
-    // strictly INCOME or EXPENSE and cannot cross sides. Routing by category type
-    // also discards any stale Budget rows whose type doesn't match the category.
     if (b.category.type === "INCOME") {
-      // Prefer the entry whose Budget.type matches (skip stale EXPENSE-typed rows)
-      if (b.type !== "INCOME") continue;
       incomeBudgetMap.set(b.categoryId, {
         amount: Number(b.amount),
         note: b.note ?? null,
@@ -325,8 +319,6 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
         parentName: b.category.parent?.name,
       });
     } else {
-      // Prefer the entry whose Budget.type matches (skip stale INCOME-typed rows)
-      if (b.type !== "EXPENSE") continue;
       expenseBudgetMap.set(b.categoryId, { amount: Number(b.amount), note: b.note ?? null });
     }
   }
@@ -433,9 +425,10 @@ export async function GET(
     const totalBudgetedIncome  = incomeGroups.reduce( (s, g) => s + g.budgeted, 0);
     const totalActualIncome    = incomeGroups.reduce( (s, g) => s + g.actual,   0);
 
-    // ── Planned 50/30/20 — leaf categories only (no double-count) ────────
+    // ── Planned 50/30/20 — leaf EXPENSE categories only (no double-count) ──
     const plannedBuckets = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
-    for (const b of budgets.filter((b) => b.type === "EXPENSE")) {
+    for (const b of budgets) {
+      if (b.category.type !== "EXPENSE") continue;
       if (b.category.children.length > 0) continue;
       const bucket = effectiveBucket(b.category);
       plannedBuckets[bucket ?? "unclassified"] += Number(b.amount);

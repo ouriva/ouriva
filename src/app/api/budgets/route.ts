@@ -2,10 +2,9 @@
 // =================
 // POST — bulk upsert budget entries for a year.
 //
-// Each entry now carries a `type` (EXPENSE | INCOME) so income and
-// expense budgets can be saved together in one request. The unique
-// constraint [year, categoryId, type] allows the same category to
-// have both an expense budget and an income budget independently.
+// The unique constraint [year, categoryId] ensures one budget per category
+// per year. Which tab (income/expense) a category appears in is determined
+// by Category.type, not by any field on the budget entry itself.
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
@@ -36,17 +35,15 @@ export async function POST(request: NextRequest) {
       budgets.map((b) =>
         prisma.budget.upsert({
           where: {
-            year_categoryId_type: {
+            year_categoryId: {
               year,
               categoryId: b.categoryId,
-              type: b.type,
             },
           },
           update: { amount: b.amount, note: b.note ?? null },
           create: {
             year,
             categoryId: b.categoryId,
-            type: b.type,
             amount: b.amount,
             note: b.note ?? null,
           },
