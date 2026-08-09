@@ -6,13 +6,13 @@ USING "Category" c
 WHERE b."categoryId" = c.id
   AND b."type"::text != c."type"::text;
 
--- Step 2: drop the old unique constraint that included type.
-ALTER TABLE "Budget" DROP CONSTRAINT "Budget_year_categoryId_type_key";
+-- Step 2: drop the old unique index that included type.
+DROP INDEX "Budget_year_categoryId_type_key";
 
--- Step 3: add the new unique constraint on (year, categoryId) only.
-ALTER TABLE "Budget" ADD CONSTRAINT "Budget_year_categoryId_key" UNIQUE ("year", "categoryId");
+-- Step 3: recreate the unique index on (year, categoryId) only.
+CREATE UNIQUE INDEX "Budget_year_categoryId_key" ON "Budget"("year", "categoryId");
 
--- Step 4: drop the type column — it is redundant because Category.type already
+-- Step 4: drop the type column — redundant because Category.type already
 -- determines which side (income/expense) a budget entry belongs to.
 ALTER TABLE "Budget" DROP COLUMN "type";
 
