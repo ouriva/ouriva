@@ -58,7 +58,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enforce max 2 levels: if parentId is set, the parent must not have a parent
+    // Enforce max 2 levels: if parentId is set, the parent must not have a parent.
+    // Subcategories inherit the parent's CategoryType so the tree stays consistent.
+    let resolvedType = parsed.data.type;
     if (parsed.data.parentId) {
       const parent = await prisma.category.findUnique({
         where: { id: parsed.data.parentId },
@@ -74,10 +76,11 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      if (parent) resolvedType = parent.type;
     }
 
     const category = await prisma.category.create({
-      data: parsed.data,
+      data: { ...parsed.data, type: resolvedType },
       include: { parent: true, children: true },
     });
 
