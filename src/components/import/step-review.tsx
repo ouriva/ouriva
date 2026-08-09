@@ -91,14 +91,14 @@ interface ReviewRowProps {
   isSelected: boolean;
   categoryId: string | undefined;
   autoApplied: boolean;
-  transactionType: "INCOME" | "EXPENSE" | "TRANSFER";
+  transactionType: TransactionType;
   friendlyName: string | undefined;
   note: string | undefined;
   needsReview: boolean;
   parentCategories: Category[];
   childCategories: Category[];
   onSelectChange: (i: number, checked: boolean) => void;
-  onTypeChange: (i: number, type: "INCOME" | "EXPENSE" | "TRANSFER") => void;
+  onTypeChange: (i: number, type: TransactionType) => void;
   onCategoryChange: (i: number, id: string | undefined) => void;
   onFriendlyNameChange: (i: number, value: string) => void;
   onNoteChange: (i: number, value: string) => void;
@@ -187,7 +187,7 @@ const ReviewRow = memo(function ReviewRow({
         <div className="flex items-center gap-2">
           <Select
             value={transactionType}
-            onValueChange={(v) => onTypeChange(i, v as "INCOME" | "EXPENSE" | "TRANSFER")}
+            onValueChange={(v) => onTypeChange(i, v as TransactionType)}
           >
             <SelectTrigger className="h-7 w-28 text-xs">
               <SelectValue />
@@ -286,7 +286,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<boolean[]>([]);
   const [categoryIds, setCategoryIds] = useState<(string | undefined)[]>([]);
-  const [transactionTypes, setTransactionTypes] = useState<("INCOME" | "EXPENSE" | "TRANSFER")[]>([]);
+  const [transactionTypes, setTransactionTypes] = useState<TransactionType[]>([]);
   const [duplicateRefs, setDuplicateRefs] = useState<Set<string>>(new Set());
   const [friendlyNames, setFriendlyNames] = useState<(string | undefined)[]>([]);
   const [notes, setNotes] = useState<(string | undefined)[]>([]);
@@ -480,7 +480,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
     setSelectedRows((prev) => { const n = [...prev]; n[i] = checked; return n; });
   }, []);
 
-  const handleTypeChange = useCallback((i: number, type: "INCOME" | "EXPENSE" | "TRANSFER") => {
+  const handleTypeChange = useCallback((i: number, type: TransactionType) => {
     setTransactionTypes((prev) => { const n = [...prev]; n[i] = type; return n; });
   }, []);
 
