@@ -49,14 +49,15 @@ export default async function EditTransactionPage({
   // Transform the Prisma result into the shape the form expects
   const initialData = {
     id: transaction.id,
-    type: transaction.type as "INCOME" | "EXPENSE",
+    type: transaction.type as "INCOME" | "EXPENSE" | "TRANSFER",
     amount: Number(transaction.amount),
     description: transaction.description || "",
     friendlyName: transaction.friendlyName || "",
     notes: transaction.notes || "",
     date: transaction.date,
     fromAccountId: transaction.fromAccountId,
-    ...(transaction.categoryId && { categoryId: transaction.categoryId }),
+    // TRANSFER transactions intentionally have no category
+    ...(transaction.categoryId && transaction.type !== "TRANSFER" && { categoryId: transaction.categoryId }),
     needsReview: transaction.needsReview,
     exchangeRate: transaction.exchangeRate ?? null,
     // Pre-populate split rows so the form can enter split mode on load
