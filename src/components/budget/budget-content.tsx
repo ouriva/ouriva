@@ -630,10 +630,10 @@ export function BudgetContent() {
   const now = new Date();
   const year = Number.parseInt(searchParams.get("year") || String(now.getFullYear()));
 
-  const [showBucketColors, setShowBucketColors] = useState(false);
+  const [showBucketColors, setShowBucketColors] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("budget.bucketColors") === "true"
+  );
   useEffect(() => {
-    setShowBucketColors(localStorage.getItem("budget.bucketColors") === "true");
-
     function onStorage(e: StorageEvent) {
       if (e.key === "budget.bucketColors") {
         setShowBucketColors(e.newValue === "true");
