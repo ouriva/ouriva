@@ -107,7 +107,11 @@ function CategorySelect({
   const t = useTranslations("transactionForm");
   return (
     <Select
-      value={value || "none"}
+      // Only fall back to the "none" sentinel when a "none" SelectItem is
+      // actually rendered (showNone). Otherwise Radix is given a value with
+      // no matching item, which suppresses the placeholder and renders the
+      // trigger blank instead of showing "Select category".
+      value={value || (showNone ? "none" : "")}
       onValueChange={(v) => onChange(v === "none" ? "" : v)}
     >
       <SelectTrigger>
@@ -157,6 +161,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     handleSubmit,  // wraps your submit handler with validation
     watch,         // reactively watch a field's value
     setValue,      // programmatically set a field's value
+    clearErrors,   // explicitly clear field errors after the user corrects them
     control,       // passed to useFieldArray to share form state
     formState: { errors }, // validation errors per field
   } = useForm<CreateTransactionFormInput>({
@@ -342,6 +347,10 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
             // Switching type clears the category (INCOME/EXPENSE/TRANSFER each have
             // different category lists) and always exits split mode for TRANSFER.
             setValue("categoryId", undefined);
+            // Clear any stale categoryId error — the new type may have different
+            // requirements (INCOME/EXPENSE: optional, TRANSFER: required) and the
+            // user hasn't had a chance to pick a category for the new type yet.
+            clearErrors("categoryId");
             if (value === "TRANSFER") {
               setValue("splits" as Path<CreateTransactionFormInput>, []);
               setIsSplitMode(false);
@@ -592,7 +601,13 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           <div className="mt-2">
             <CategorySelect
               value={watch("categoryId")}
-              onChange={(v) => setValue("categoryId", v === "none" ? undefined : v)}
+              onChange={(v) => {
+                const next = v === "none" ? undefined : v;
+                setValue("categoryId", next);
+                // Clear the validation error as soon as the user picks a category,
+                // so the "Invalid category" message doesn't linger after correction.
+                if (next) clearErrors("categoryId");
+              }}
               parentCategories={parentCategories}
               childCategories={childCategories}
               showNone={transactionType !== "TRANSFER"}
