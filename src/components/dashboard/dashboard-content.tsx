@@ -97,7 +97,12 @@ interface RecentTransactionRowProps {
 }
 
 function RecentTransactionRow({ tx, isLast, locale }: Readonly<RecentTransactionRowProps>) {
-  const config = TX_CONFIG[tx.type as keyof typeof TX_CONFIG] ?? TX_CONFIG.EXPENSE;
+  const config =
+    tx.type === "TRANSFER"
+      ? tx.category?.name === "Transfer In"
+        ? TX_CONFIG.INCOME
+        : TX_CONFIG.EXPENSE
+      : (TX_CONFIG[tx.type as keyof typeof TX_CONFIG] ?? TX_CONFIG.EXPENSE);
   const categoryLabel = tx.category?.parent?.name ?? tx.category?.name ?? null;
   const description = tx.description ?? categoryLabel ?? (tx.type === "INCOME" ? "Income" : "Transaction");
   const subtext = [tx.fromAccount.name, formatTxDate(tx.date)].filter(Boolean).join(" · ");
