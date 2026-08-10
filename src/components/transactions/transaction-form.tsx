@@ -90,6 +90,7 @@ interface CategorySelectProps {
   placeholder?: string;
   parentCategories: Category[];
   childCategories: Category[];
+  showNone?: boolean;
 }
 
 // Reusable category select rendered inside split rows and single-category mode.
@@ -101,6 +102,7 @@ function CategorySelect({
   placeholder,
   parentCategories,
   childCategories,
+  showNone = true,
 }: Readonly<CategorySelectProps>) {
   const t = useTranslations("transactionForm");
   return (
@@ -112,7 +114,7 @@ function CategorySelect({
         <SelectValue placeholder={placeholder ?? t("selectCategoryPlaceholder")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
+        {showNone && <SelectItem value="none">{t("noCategoryOption")}</SelectItem>}
         <CategorySelectOptions
           parentCategories={parentCategories}
           childCategories={childCategories}
@@ -593,6 +595,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
               onChange={(v) => setValue("categoryId", v === "none" ? undefined : v)}
               parentCategories={parentCategories}
               childCategories={childCategories}
+              showNone={transactionType !== "TRANSFER"}
             />
             {errors.categoryId && (
               <p className="mt-1 text-sm text-destructive">
