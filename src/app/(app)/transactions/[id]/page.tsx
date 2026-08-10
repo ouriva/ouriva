@@ -56,8 +56,7 @@ export default async function EditTransactionPage({
     notes: transaction.notes || "",
     date: transaction.date,
     fromAccountId: transaction.fromAccountId,
-    // TRANSFER transactions intentionally have no category
-    ...(transaction.categoryId && transaction.type !== "TRANSFER" && { categoryId: transaction.categoryId }),
+    ...(transaction.categoryId && { categoryId: transaction.categoryId }),
     needsReview: transaction.needsReview,
     exchangeRate: transaction.exchangeRate ?? null,
     // Pre-populate split rows so the form can enter split mode on load

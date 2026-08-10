@@ -99,18 +99,14 @@ const expenseBase = z.object({
 });
 
 // TRANSFER transactions represent money moving between accounts or internal
-// flows that should not appear in income/expense reports. They carry no
-// category because they are not budget-trackable.
-// Amount is signed: positive = inbound (money arriving), negative = outbound (money leaving).
+// flows that should not appear in income/expense reports. Direction is encoded
+// by the category: Transfer In (money arriving) or Transfer Out (money leaving).
+// Amounts are always positive.
 const transferBase = z.object({
   type: z.literal("TRANSFER"),
   ...baseTransactionFields,
-  amount: z
-    .number()
-    .multipleOf(0.01, { message: "Amount can have at most 2 decimal places" })
-    .refine((n) => n !== 0, { message: "Amount must be non-zero" }),
   fromAccountId: z.uuid("Invalid account"),
-  categoryId: z.undefined().optional(),
+  categoryId: z.uuid("Invalid category"),
 });
 
 // --- Exported schemas ---
