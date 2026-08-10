@@ -2,7 +2,7 @@
 // ======================
 // Singleton app settings. The "singleton" row is auto-created on
 // first read via upsert. GET also computes:
-//   - transferBalance: total volume of all TRANSFER-type transactions
+//   - transferBalance: net of Transfer In minus Transfer Out (0 = balanced)
 //   - nonTrackedBalance: net sum across ALL categories marked excludeFromStats
 
 import { NextResponse } from "next/server";
@@ -31,15 +31,22 @@ export async function GET() {
       return Math.round(balance * 100) / 100;
     }
 
-    // Transfer balance: total volume of all TRANSFER transactions.
-    // All TRANSFER amounts are positive (direction is in the category),
-    // so summing them gives total money moved between accounts.
+    // Transfer balance: net of Transfer In minus Transfer Out.
+    // Zero means all transfers are balanced (every outgoing has a matching
+    // incoming). Non-zero signals a missing side. All amounts are positive;
+    // direction comes from the category name.
     async function computeTransferBalance(): Promise<number> {
-      const result = await prisma.transaction.aggregate({
+      const txs = await prisma.transaction.findMany({
         where: { type: "TRANSFER" },
-        _sum: { amount: true },
+        select: { amount: true, category: { select: { name: true } } },
       });
-      return Math.round(Number(result._sum.amount ?? 0) * 100) / 100;
+      let net = 0;
+      for (const tx of txs) {
+        const amount = Number(tx.amount);
+        if (tx.category?.name === "Transfer In") net += amount;
+        else if (tx.category?.name === "Transfer Out") net -= amount;
+      }
+      return Math.round(net * 100) / 100;
     }
 
     const nonTrackedCategories = await prisma.category.findMany({

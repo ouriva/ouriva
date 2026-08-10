@@ -188,6 +188,7 @@
     "totalRows": "{count} linhas no total",
     "selectedRows": "{count} selecionadas",
     "duplicateRows": "{count} duplicados",
+    "uncategorizedTransferRows": "{count} transferência(s) precisam de direção",
     "balanceCurrent": "Saldo atual",
     "balanceChange": "Variação",
     "balanceAfter": "Após importação",

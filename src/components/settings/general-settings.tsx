@@ -1,9 +1,9 @@
 // General Settings
 // ================
-// App-wide preferences. Shows Transfer Balance (total volume of all
-// TRANSFER-type transactions) and Non-tracked Balance.
-// Non-tracked categories are configured per-category in
-// Settings > Categories (via the excludeFromStats flag).
+// App-wide preferences. Shows Transfer Balance (net of Transfer In minus
+// Transfer Out — zero means balanced, non-zero flags a missing side) and
+// Non-tracked Balance. Non-tracked categories are configured per-category
+// in Settings > Categories (via the excludeFromStats flag).
 
 "use client";
 

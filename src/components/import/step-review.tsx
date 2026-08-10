@@ -434,6 +434,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const duplicateCount = parsedRows.filter((r) =>
     duplicateRefs.has(r.importRef)
   ).length;
+  const uncategorizedTransferCount = parsedRows.filter(
+    (_, i) => selectedRows[i] && transactionTypes[i] === "TRANSFER" && !categoryIds[i]
+  ).length;
 
   // Net change from the selected rows, using the (possibly user-overridden)
   // transaction type to determine direction. Recomputes whenever the user
@@ -528,6 +531,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
           {duplicateCount > 0 && (
             <Badge variant="destructive">{t("duplicateRows", { count: duplicateCount })}</Badge>
           )}
+          {uncategorizedTransferCount > 0 && (
+            <Badge variant="destructive">{t("uncategorizedTransferRows", { count: uncategorizedTransferCount })}</Badge>
+          )}
         </div>
 
         {/* Balance preview — only shown once the account balance has loaded.
@@ -612,7 +618,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
                 needsReview,
               })
             }
-            disabled={selectedCount === 0}
+            disabled={selectedCount === 0 || uncategorizedTransferCount > 0}
             className="flex-1"
           >
             {t("nextConfirm", { count: selectedCount })}
