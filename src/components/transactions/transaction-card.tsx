@@ -79,7 +79,7 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
     subtitleText = transaction.category.name;
   }
 
-  const isUncategorized = !isSplit && !transaction.category;
+  const isUncategorized = !isSplit && !transaction.category && transaction.type !== "TRANSFER";
 
   let categoryIndicator: React.ReactNode;
   if (isUncategorized) {
