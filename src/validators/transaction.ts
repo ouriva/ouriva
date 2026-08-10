@@ -10,11 +10,23 @@
 
 import { z } from "zod/v4";
 
+// The system Transfer categories (Transfer, Transfer In, Transfer Out) are
+// seeded by migration with fixed IDs (00000000-0000-0000-0000-00000000000{1,2,3})
+// so the migration is idempotent. Those aren't valid RFC 4122 v4 UUIDs — the
+// version/variant nibbles are both "0" — so Zod's strict z.uuid() rejects them.
+// Validate UUID shape only, not version/variant, so these system IDs pass.
+export const categoryIdSchema = z
+  .string()
+  .regex(
+    /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+    "Invalid category"
+  );
+
 // --- Split entry ---
 // Each split assigns a category and amount to a portion of the parent total.
 
 const splitEntrySchema = z.object({
-  categoryId: z.uuid("Invalid category"),
+  categoryId: categoryIdSchema,
   amount: z
     .number()
     .positive({ message: "Split amount must be positive" })
@@ -88,14 +100,14 @@ const incomeBase = z.object({
   type: z.literal("INCOME"),
   ...baseTransactionFields,
   fromAccountId: z.uuid("Invalid account"),
-  categoryId: z.uuid("Invalid category").optional(),
+  categoryId: categoryIdSchema.optional(),
 });
 
 const expenseBase = z.object({
   type: z.literal("EXPENSE"),
   ...baseTransactionFields,
   fromAccountId: z.uuid("Invalid account"),
-  categoryId: z.uuid("Invalid category").optional(),
+  categoryId: categoryIdSchema.optional(),
 });
 
 // TRANSFER transactions represent money moving between accounts or internal
@@ -106,7 +118,7 @@ const transferBase = z.object({
   type: z.literal("TRANSFER"),
   ...baseTransactionFields,
   fromAccountId: z.uuid("Invalid account"),
-  categoryId: z.uuid("Invalid category"),
+  categoryId: categoryIdSchema,
 });
 
 // --- Exported schemas ---
@@ -133,7 +145,7 @@ export const transactionQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
   type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]).optional(),
   accountId: z.uuid().optional(),
-  categoryId: z.union([z.uuid(), z.literal("uncategorized")]).optional(),
+  categoryId: z.union([categoryIdSchema, z.literal("uncategorized")]).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
   search: z.string().optional(),
