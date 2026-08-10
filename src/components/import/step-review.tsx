@@ -199,47 +199,54 @@ const ReviewRow = memo(function ReviewRow({
             </SelectContent>
           </Select>
 
-          {/* Category picker — hidden for TRANSFER. Shows all categories:
-              INCOME categories first (grouped), then EXPENSE below. */}
-          {transactionType !== "TRANSFER" && (
+          {/* Category picker — always visible.
+              TRANSFER rows show only Transfer In / Transfer Out;
+              INCOME/EXPENSE rows show their respective categories. */}
           <div className="flex-1">
-            <Select
-              value={categoryId ?? "none"}
-              onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
-            >
-              <SelectTrigger className="h-7 w-full text-xs">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
-                {[...parentCategories]
-                  .sort((a, b) => (a.type === b.type ? 0 : a.type === "INCOME" ? -1 : 1))
-                  .map((parent) => {
-                    const children = childCategories.filter(
-                      (c) => c.parentId === parent.id
-                    );
-                    if (children.length > 0) {
-                      return (
-                        <SelectGroup key={parent.id}>
-                          <SelectLabel className="text-xs">{parent.name}</SelectLabel>
-                          {children.map((child) => (
-                            <SelectItem key={child.id} value={child.id} className="text-xs">
-                              {child.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
+            {(() => {
+              const displayParents = transactionType === "TRANSFER"
+                ? parentCategories.filter((p) => p.type === "TRANSFER")
+                : parentCategories.filter((p) => p.type !== "TRANSFER")
+                    .sort((a, b) => (a.type === b.type ? 0 : a.type === "INCOME" ? -1 : 1));
+              return (
+                <Select
+                  value={categoryId ?? "none"}
+                  onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
+                >
+                  <SelectTrigger className="h-7 w-full text-xs">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {transactionType !== "TRANSFER" && (
+                      <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
+                    )}
+                    {displayParents.map((parent) => {
+                      const children = childCategories.filter(
+                        (c) => c.parentId === parent.id
                       );
-                    }
-                    return (
-                      <SelectItem key={parent.id} value={parent.id} className="text-xs">
-                        {parent.name}
-                      </SelectItem>
-                    );
-                  })}
-              </SelectContent>
-            </Select>
+                      if (children.length > 0) {
+                        return (
+                          <SelectGroup key={parent.id}>
+                            <SelectLabel className="text-xs">{parent.name}</SelectLabel>
+                            {children.map((child) => (
+                              <SelectItem key={child.id} value={child.id} className="text-xs">
+                                {child.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        );
+                      }
+                      return (
+                        <SelectItem key={parent.id} value={parent.id} className="text-xs">
+                          {parent.name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              );
+            })()}
           </div>
-          )}
         </div>
       </div>
 
@@ -427,6 +434,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const duplicateCount = parsedRows.filter((r) =>
     duplicateRefs.has(r.importRef)
   ).length;
+  const uncategorizedTransferCount = parsedRows.filter(
+    (_, i) => selectedRows[i] && transactionTypes[i] === "TRANSFER" && !categoryIds[i]
+  ).length;
 
   // Net change from the selected rows, using the (possibly user-overridden)
   // transaction type to determine direction. Recomputes whenever the user
@@ -434,12 +444,19 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const netChange = useMemo(() => {
     return parsedRows.reduce((sum, row, i) => {
       if (!selectedRows[i]) return sum;
-      // TRANSFER amounts are signed (positive = inbound, negative = outbound)
-      if (transactionTypes[i] === "TRANSFER") return sum + row.amount;
       const abs = Math.abs(row.amount);
+      if (transactionTypes[i] === "TRANSFER") {
+        // Direction from category: Transfer In = +, Transfer Out = −.
+        // If not yet selected, fall back to the raw sign from the file.
+        const catId = categoryIds[i];
+        const cat = categories.find((c) => c.id === catId);
+        if (cat?.name === "Transfer In") return sum + abs;
+        if (cat?.name === "Transfer Out") return sum - abs;
+        return sum + row.amount; // fallback: use raw sign
+      }
       return transactionTypes[i] === "INCOME" ? sum + abs : sum - abs;
     }, 0);
-  }, [parsedRows, selectedRows, transactionTypes]);
+  }, [parsedRows, selectedRows, transactionTypes, categoryIds, categories]);
 
   function toggleAll(checked: boolean) {
     setSelectedRows(
@@ -460,6 +477,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
 
   const handleTypeChange = useCallback((i: number, type: TransactionType) => {
     setTransactionTypes((prev) => { const n = [...prev]; n[i] = type; return n; });
+    setCategoryIds((prev) => { const n = [...prev]; n[i] = undefined; return n; });
   }, []);
 
   const handleCategoryChange = useCallback((i: number, id: string | undefined) => {
@@ -512,6 +530,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
           <Badge variant="secondary">{t("selectedRows", { count: selectedCount })}</Badge>
           {duplicateCount > 0 && (
             <Badge variant="destructive">{t("duplicateRows", { count: duplicateCount })}</Badge>
+          )}
+          {uncategorizedTransferCount > 0 && (
+            <Badge variant="destructive">{t("uncategorizedTransferRows", { count: uncategorizedTransferCount })}</Badge>
           )}
         </div>
 
@@ -597,7 +618,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
                 needsReview,
               })
             }
-            disabled={selectedCount === 0}
+            disabled={selectedCount === 0 || uncategorizedTransferCount > 0}
             className="flex-1"
           >
             {t("nextConfirm", { count: selectedCount })}

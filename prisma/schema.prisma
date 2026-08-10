@@ -153,6 +153,7 @@ enum TransactionType {
 enum CategoryType {
   INCOME
   EXPENSE
+  TRANSFER
 }
 
 enum CategoryBucket {

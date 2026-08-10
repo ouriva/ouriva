@@ -60,7 +60,7 @@ interface Category {
   id: string;
   name: string;
   parentId: string | null;
-  type: "INCOME" | "EXPENSE";
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
   children?: Category[];
 }
 
@@ -80,6 +80,7 @@ interface TransactionFormData {
   categoryId?: string;
   needsReview?: boolean;
   exchangeRate?: number | null;
+  // splits are only applicable to INCOME/EXPENSE
   splits?: SplitEntry[];
 }
 
@@ -89,6 +90,7 @@ interface CategorySelectProps {
   placeholder?: string;
   parentCategories: Category[];
   childCategories: Category[];
+  showNone?: boolean;
 }
 
 // Reusable category select rendered inside split rows and single-category mode.
@@ -100,6 +102,7 @@ function CategorySelect({
   placeholder,
   parentCategories,
   childCategories,
+  showNone = true,
 }: Readonly<CategorySelectProps>) {
   const t = useTranslations("transactionForm");
   return (
@@ -111,7 +114,7 @@ function CategorySelect({
         <SelectValue placeholder={placeholder ?? t("selectCategoryPlaceholder")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
+        {showNone && <SelectItem value="none">{t("noCategoryOption")}</SelectItem>}
         <CategorySelectOptions
           parentCategories={parentCategories}
           childCategories={childCategories}
@@ -302,19 +305,14 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     }
   }
 
-  // Filter categories by the CategoryType that matches the current transaction type.
-  // EXPENSE transactions → EXPENSE categories; INCOME transactions → INCOME categories.
-  // TRANSFER transactions have no category, so the category section is hidden.
-  const categoryTypeFilter: "INCOME" | "EXPENSE" | null =
-    transactionType === "TRANSFER" ? null : transactionType;
-
-  const filteredCategories = categoryTypeFilter
-    ? categories.filter((c) => c.type === categoryTypeFilter)
-    : [];
+  // Filter categories by the CategoryType that matches the current transaction type:
+  // EXPENSE → EXPENSE categories, INCOME → INCOME categories, TRANSFER → TRANSFER categories.
+  // TRANSFER categories are the two system entries (Transfer In / Transfer Out).
+  const filteredCategories = categories.filter((c) => c.type === transactionType);
 
   // Leaf-only assignment: parents with children become non-selectable group
   // headers (SelectGroup/SelectLabel). Standalone parents (no children) are
-  // selectable directly. This matches the industry standard (YNAB, Mint, etc.).
+  // selectable directly.
   const parentCategories = filteredCategories.filter((c) => !c.parentId);
   const childCategories = filteredCategories.filter((c) => c.parentId);
 
@@ -341,9 +339,10 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           value={transactionType}
           onValueChange={(value) => {
             setValue("type", value as CreateTransactionInput["type"]);
-            // Clear category when switching to TRANSFER — transfers have no category
+            // Switching type clears the category (INCOME/EXPENSE/TRANSFER each have
+            // different category lists) and always exits split mode for TRANSFER.
+            setValue("categoryId", undefined);
             if (value === "TRANSFER") {
-              setValue("categoryId", undefined);
               setValue("splits" as Path<CreateTransactionFormInput>, []);
               setIsSplitMode(false);
             }
@@ -365,9 +364,9 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           id="amount"
           type="number"
           step="0.01"
-          min={transactionType === "TRANSFER" ? undefined : "0.01"}
+          min="0.01"
           inputMode="decimal" // shows numeric keyboard on mobile
-          placeholder={transactionType === "TRANSFER" ? t("amountPlaceholderTransfer") : t("amountPlaceholder")}
+          placeholder={t("amountPlaceholder")}
           {...register("amount", { valueAsNumber: true })}
           className="mt-2 text-lg"
         />
@@ -480,20 +479,22 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
         </div>
       )}
 
-      {/* Category / Split section — hidden for TRANSFER transactions */}
-      {transactionType !== "TRANSFER" && (
+      {/* Category / Split section — for TRANSFER only the two system Transfer In/Out
+          categories appear; for INCOME/EXPENSE full category list + split mode. */}
       <div>
         <div className="flex items-center justify-between">
           <Label>{isSplitMode ? t("splitCategoryLabel") : t("categoryLabel")}</Label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={handleToggleSplitMode}
-          >
-            {isSplitMode ? t("singleCategoryButton") : t("splitTransactionButton")}
-          </Button>
+          {transactionType !== "TRANSFER" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleToggleSplitMode}
+            >
+              {isSplitMode ? t("singleCategoryButton") : t("splitTransactionButton")}
+            </Button>
+          )}
         </div>
 
         {isSplitMode ? (
@@ -594,6 +595,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
               onChange={(v) => setValue("categoryId", v === "none" ? undefined : v)}
               parentCategories={parentCategories}
               childCategories={childCategories}
+              showNone={transactionType !== "TRANSFER"}
             />
             {errors.categoryId && (
               <p className="mt-1 text-sm text-destructive">
@@ -603,7 +605,6 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           </div>
         )}
       </div>
-      )}
 
       {/* Needs Review */}
       <div className="flex items-center gap-2">

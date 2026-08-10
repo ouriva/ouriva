@@ -5,12 +5,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod/v4";
 import { createCategorySchema } from "@/validators/category";
+import type { CategoryType } from "@/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const showAll  = request.nextUrl.searchParams.get("all") === "true";
     const typeParam = request.nextUrl.searchParams.get("type");
-    const typeFilter = typeParam === "INCOME" || typeParam === "EXPENSE" ? typeParam : undefined;
+    const typeFilter = typeParam === "INCOME" || typeParam === "EXPENSE" || typeParam === "TRANSFER" ? typeParam : undefined;
 
     const categories = await prisma.category.findMany({
       where: {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     // Enforce max 2 levels: if parentId is set, the parent must not have a parent.
     // Subcategories inherit the parent's CategoryType so the tree stays consistent.
-    let resolvedType = parsed.data.type;
+    let resolvedType: CategoryType = parsed.data.type;
     if (parsed.data.parentId) {
       const parent = await prisma.category.findUnique({
         where: { id: parsed.data.parentId },

@@ -188,6 +188,7 @@
     "totalRows": "{count} total rows",
     "selectedRows": "{count} selected",
     "duplicateRows": "{count} duplicates",
+    "uncategorizedTransferRows": "{count} transfer(s) need a direction",
     "balanceCurrent": "Current balance",
     "balanceChange": "Change",
     "balanceAfter": "After import",

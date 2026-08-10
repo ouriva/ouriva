@@ -55,27 +55,23 @@ function splitCategoryName(
 export function TransactionCard({ transaction, onClick }: Readonly<TransactionCardProps>) {
   const t = useTranslations("transactions");
   const locale = useLocale();
-  // TRANSFER uses signed amounts: positive = inbound (INCOME styling), negative = outbound (EXPENSE styling)
+  // TRANSFER direction is encoded in the category name:
+  // "Transfer In" → INCOME styling (money arriving), anything else → EXPENSE styling.
   const config =
     transaction.type === "TRANSFER"
-      ? Number(transaction.amount) >= 0
+      ? transaction.category?.name === "Transfer In"
         ? typeConfig.INCOME
         : typeConfig.EXPENSE
       : typeConfig[transaction.type];
   const Icon = config.icon;
   const currency = transaction.fromAccount.currency;
-  const displayAmount =
-    transaction.type === "TRANSFER"
-      ? Math.abs(Number(transaction.amount))
-      : Number(transaction.amount);
+  const displayAmount = Number(transaction.amount);
 
   const isSplit = transaction.splits.length > 0;
 
   // Single-category subtitle (only used when not a split)
   let subtitleText: string;
-  if (transaction.type === "TRANSFER") {
-    subtitleText = t("typeLabelTransfer");
-  } else if (!transaction.category) {
+  if (!transaction.category) {
     subtitleText = t("uncategorizedLabel");
   } else if (transaction.category.parent) {
     subtitleText = `${transaction.category.parent.name} › ${transaction.category.name}`;

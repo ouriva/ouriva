@@ -55,7 +55,7 @@ interface Category {
   parentId: string | null;
   isActive: boolean;
   excludeFromStats: boolean;
-  type: "INCOME" | "EXPENSE";
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
   bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
   icon: string | null;
   color: string | null;
@@ -79,7 +79,7 @@ function CategoryEditSheet({
 }>) {
   const t = useTranslations("categories");
   const [name,             setName]             = useState(category.name);
-  const [type,             setType]             = useState<"INCOME" | "EXPENSE">(category.type ?? "EXPENSE");
+  const [type,             setType]             = useState<"INCOME" | "EXPENSE">((category.type as "INCOME" | "EXPENSE") ?? "EXPENSE");
   const [icon,             setIcon]             = useState<string | null>(category.icon);
   const [color,            setColor]            = useState<string | null>(category.color);
   const [bucket,           setBucket]           = useState<"NEEDS" | "WANTS" | "SAVINGS" | null>(category.bucket);
@@ -450,7 +450,8 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
       if (cancelled) return;
       if (res.ok) {
         const data = await res.json();
-        setCategories(data.data);
+        // Exclude TRANSFER-type system categories — they are not user-configurable.
+        setCategories((data.data as Category[]).filter((c) => c.type !== "TRANSFER"));
       }
       setIsLoading(false);
     }

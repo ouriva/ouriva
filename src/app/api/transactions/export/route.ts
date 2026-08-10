@@ -58,7 +58,7 @@ function buildWhereClause(params: {
 }): Prisma.TransactionWhereInput {
   const where: Prisma.TransactionWhereInput = { parentTransactionId: null };
 
-  if (params.type) where.type = params.type as "INCOME" | "EXPENSE";
+  if (params.type) where.type = params.type as "INCOME" | "EXPENSE" | "TRANSFER";
   if (params.needsReview !== undefined) where.needsReview = params.needsReview;
 
   const andConditions: Prisma.TransactionWhereInput[] = [];
@@ -73,7 +73,9 @@ function buildWhereClause(params: {
   }
   if (params.accountId) where.fromAccountId = params.accountId;
   if (params.categoryId === "uncategorized") {
-    andConditions.push({ categoryId: null, splits: { none: {} } });
+    // Exclude TRANSFER — same logic as the main transactions list.
+    // TRANSFER without a category is a data anomaly, not a missing categorisation.
+    andConditions.push({ categoryId: null, splits: { none: {} }, type: { not: "TRANSFER" } });
   } else if (params.categoryId) {
     andConditions.push({
       OR: [

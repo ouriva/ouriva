@@ -6,6 +6,15 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod/v4";
 import { updateCategorySchema } from "@/validators/category";
 
+// System categories are seeded by migration and must not be modified or
+// deleted — direction logic (balances, day-net, transfer balance) relies
+// on the exact names "Transfer In" and "Transfer Out".
+const SYSTEM_CATEGORY_IDS = new Set([
+  "00000000-0000-0000-0000-000000000001", // Transfer (parent)
+  "00000000-0000-0000-0000-000000000002", // Transfer In
+  "00000000-0000-0000-0000-000000000003", // Transfer Out
+]);
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -40,6 +49,14 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
+
+    if (SYSTEM_CATEGORY_IDS.has(id)) {
+      return NextResponse.json(
+        { error: { message: "System categories cannot be modified", code: "FORBIDDEN" } },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const parsed = updateCategorySchema.safeParse(body);
 
@@ -108,6 +125,13 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
+
+    if (SYSTEM_CATEGORY_IDS.has(id)) {
+      return NextResponse.json(
+        { error: { message: "System categories cannot be deleted", code: "FORBIDDEN" } },
+        { status: 403 }
+      );
+    }
 
     const existing = await prisma.category.findUnique({
       where: { id },

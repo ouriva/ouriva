@@ -55,6 +55,7 @@ interface Category {
   id: string;
   name: string;
   parentId: string | null;
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
 }
 
 interface CategoryRulesListProps {
@@ -243,8 +244,9 @@ function RuleForm({ categories, rule, onSuccess, trigger }: Readonly<RuleFormPro
     }
   }
 
-  const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories  = categories.filter((c) => c.parentId);
+  // Exclude TRANSFER-type system categories — rules should only target INCOME/EXPENSE categories.
+  const parentCategories = categories.filter((c) => !c.parentId && c.type !== "TRANSFER");
+  const childCategories  = categories.filter((c) => !!c.parentId && c.type !== "TRANSFER");
 
   return (
     <Sheet

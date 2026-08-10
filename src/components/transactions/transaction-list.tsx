@@ -451,8 +451,10 @@ function TransactionListContent({
         const txs = grouped[dateKey];
         const dayNet = txs.reduce((sum, tx) => {
           const amount = Number.parseFloat(tx.amount);
-          // TRANSFER amounts are signed (positive = inbound, negative = outbound)
-          if (tx.type === "TRANSFER") return sum + amount;
+          if (tx.type === "TRANSFER") {
+            // Direction encoded in category: Transfer In = +, Transfer Out = −
+            return tx.category?.name === "Transfer In" ? sum + amount : sum - amount;
+          }
           return tx.type === "INCOME" ? sum + amount : sum - amount;
         }, 0);
         return (
