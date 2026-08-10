@@ -107,7 +107,11 @@ function CategorySelect({
   const t = useTranslations("transactionForm");
   return (
     <Select
-      value={value || "none"}
+      // Only fall back to the "none" sentinel when a "none" SelectItem is
+      // actually rendered (showNone). Otherwise Radix is given a value with
+      // no matching item, which suppresses the placeholder and renders the
+      // trigger blank instead of showing "Select category".
+      value={value || (showNone ? "none" : "")}
       onValueChange={(v) => onChange(v === "none" ? "" : v)}
     >
       <SelectTrigger>
