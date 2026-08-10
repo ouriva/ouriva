@@ -47,7 +47,7 @@ export default async function NewTransactionPage({
         notes: source.notes || "",
         date: new Date(),
         fromAccountId: source.fromAccountId,
-        ...(source.categoryId && source.type !== "TRANSFER" && { categoryId: source.categoryId }),
+        ...(source.categoryId && { categoryId: source.categoryId }),
         needsReview: source.needsReview,
         exchangeRate: source.exchangeRate ?? null,
         splits: source.splits.map((s) => ({

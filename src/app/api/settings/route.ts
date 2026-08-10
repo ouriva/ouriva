@@ -31,10 +31,9 @@ export async function GET() {
       return Math.round(balance * 100) / 100;
     }
 
-    // Transfer balance: sum of all TRANSFER transactions.
-    // TRANSFER transactions have no direction, so we sum their amounts.
-    // Ideally both sides of a transfer are recorded (out + in), so the total
-    // represents how much was moved between accounts.
+    // Transfer balance: total volume of all TRANSFER transactions.
+    // All TRANSFER amounts are positive (direction is in the category),
+    // so summing them gives total money moved between accounts.
     async function computeTransferBalance(): Promise<number> {
       const result = await prisma.transaction.aggregate({
         where: { type: "TRANSFER" },
