@@ -3,8 +3,9 @@
 # ============================================================
 # Ouriva — Deploy Script
 # ============================================================
-# Builds the Docker image on your Mac, runs production database
-# migrations, transfers the image to the Raspberry Pi, and
+# Builds the Docker image on your Mac, backs up the production
+# database (only when a migration is about to run), runs the
+# migration, transfers the image to the Raspberry Pi, and
 # restarts the app.
 #
 # The image version is read from the latest git tag (e.g. v1.0.0).
@@ -22,10 +23,12 @@
 # What this script does:
 #   1. Reads the version from the latest git tag
 #   2. Builds the Docker image locally on your Mac
-#   3. Runs Prisma migrations against the production database
-#   4. Exports the image to a compressed file
-#   5. Transfers it to the Raspberry Pi via SSH
-#   6. Loads the image and restarts the container on the Pi
+#   3. Checks for pending migrations; if any, backs up the database
+#      to external storage first
+#   4. Runs Prisma migrations against the production database
+#   5. Exports the image to a compressed file
+#   6. Transfers it to the Raspberry Pi via SSH
+#   7. Loads the image and restarts the container on the Pi
 # ============================================================
 
 set -euo pipefail  # Exit on any error, undefined variable, or pipe failure
@@ -52,7 +55,7 @@ source "${ENV_FILE}"
 set +a
 
 # Verify required variables are set
-for var in PI_SSH PI_APP_DIR DB_SSH MIGRATE_DB_URL; do
+for var in PI_SSH PI_APP_DIR DB_SSH MIGRATE_DB_URL BACKUP_SSH BACKUP_DIR; do
   if [ -z "${!var:-}" ]; then
     echo "Error: ${var} is not set in ${ENV_FILE}"
     exit 1
@@ -108,7 +111,7 @@ echo ""
 # ----------------------------------------------------------
 # Step 1: Build the Docker image
 # ----------------------------------------------------------
-echo "[1/6] Building Docker image (${VERSION})..."
+echo "[1/7] Building Docker image (${VERSION})..."
 # Tag with both the version and "latest".
 # "latest" is what docker-compose.yml references, so it always
 # picks up the most recently deployed version.
@@ -120,13 +123,9 @@ echo "      Done."
 echo ""
 
 # ----------------------------------------------------------
-# Step 2: Run production database migrations
+# Open the DB tunnel once — shared by the backup check, the
+# optional backup itself, and the migration in the next step.
 # ----------------------------------------------------------
-echo "[2/6] Running production database migrations..."
-
-# Check if port 5433 is already in use (leftover tunnel from a previous run).
-# lsof -ti lists PIDs using the port. If something is there, we reuse it
-# instead of failing.
 EXISTING_PID=$(lsof -ti :5433 2>/dev/null || true)
 CREATED_TUNNEL=false
 
@@ -142,6 +141,47 @@ else
   sleep 2
 fi
 
+# ----------------------------------------------------------
+# Step 2: Back up the database, but only if a migration is
+# about to run. `prisma migrate status` prints "up to date"
+# and exits 0 when there's nothing pending — anything else
+# means migrate deploy is about to change the schema, so we
+# back up first.
+# ----------------------------------------------------------
+echo "[2/7] Checking for pending migrations..."
+MIGRATE_STATUS_OUTPUT=$(DATABASE_URL="${MIGRATE_DB_URL}" npx prisma migrate status --schema="${PROJECT_DIR}/prisma/schema.prisma" 2>&1) || true
+echo "${MIGRATE_STATUS_OUTPUT}"
+
+if echo "${MIGRATE_STATUS_OUTPUT}" | grep -q "Database schema is up to date"; then
+  echo "      No pending migrations — skipping backup."
+else
+  echo "      Pending migration detected — backing up database first."
+  # Reuse the postgres:16 image as a throwaway pg_dump client so this
+  # script doesn't require Postgres tools installed on the Mac.
+  # host.docker.internal reaches the Mac's localhost from inside the
+  # container, which is where the SSH tunnel above is bound.
+  BACKUP_FILE="personal_finance-pre_migration-${VERSION}-$(date +%Y%m%d_%H%M%S).dump"
+  DOCKER_DB_URL="${MIGRATE_DB_URL/localhost/host.docker.internal}"
+
+  mkdir -p /tmp/ouriva-backup
+  docker run --rm \
+    -v /tmp/ouriva-backup:/backup \
+    postgres:16 \
+    pg_dump "${DOCKER_DB_URL}" -F c -f "/backup/${BACKUP_FILE}"
+
+  ssh "${BACKUP_SSH}" "mkdir -p '${BACKUP_DIR}'"
+  scp "/tmp/ouriva-backup/${BACKUP_FILE}" "${BACKUP_SSH}:${BACKUP_DIR}/${BACKUP_FILE}"
+  rm -rf /tmp/ouriva-backup
+
+  echo "      Backup saved: ${BACKUP_SSH}:${BACKUP_DIR}/${BACKUP_FILE}"
+fi
+echo ""
+
+# ----------------------------------------------------------
+# Step 3: Run production database migrations
+# ----------------------------------------------------------
+echo "[3/7] Running production database migrations..."
+
 DATABASE_URL="${MIGRATE_DB_URL}" npx prisma migrate deploy --schema="${PROJECT_DIR}/prisma/schema.prisma"
 
 # Only kill the tunnel if we created it
@@ -153,9 +193,9 @@ echo "      Migrations applied."
 echo ""
 
 # ----------------------------------------------------------
-# Step 3: Export the image to a compressed file
+# Step 4: Export the image to a compressed file
 # ----------------------------------------------------------
-echo "[3/6] Exporting Docker image..."
+echo "[4/7] Exporting Docker image..."
 # Save both tags so the Pi has version + latest
 docker save "${IMAGE_NAME}:${VERSION}" "${IMAGE_NAME}:latest" | gzip > /tmp/ouriva-image.tar.gz
 IMAGE_SIZE=$(du -h /tmp/ouriva-image.tar.gz | cut -f1)
@@ -163,17 +203,17 @@ echo "      Image saved (${IMAGE_SIZE})."
 echo ""
 
 # ----------------------------------------------------------
-# Step 4: Transfer to the Raspberry Pi
+# Step 5: Transfer to the Raspberry Pi
 # ----------------------------------------------------------
-echo "[4/6] Transferring image to Raspberry Pi..."
+echo "[5/7] Transferring image to Raspberry Pi..."
 scp /tmp/ouriva-image.tar.gz "${PI_SSH}:/tmp/ouriva-image.tar.gz"
 echo "      Transfer complete."
 echo ""
 
 # ----------------------------------------------------------
-# Step 5: Load image and restart on the Pi
+# Step 6: Load image and restart on the Pi
 # ----------------------------------------------------------
-echo "[5/6] Loading image and restarting app on Pi..."
+echo "[6/7] Loading image and restarting app on Pi..."
 ssh "${PI_SSH}" bash -s << REMOTE_COMMANDS
   echo "      Loading Docker image..."
   docker load < /tmp/ouriva-image.tar.gz
@@ -188,10 +228,10 @@ REMOTE_COMMANDS
 rm /tmp/ouriva-image.tar.gz
 
 # ----------------------------------------------------------
-# Step 6: Verify
+# Step 7: Verify
 # ----------------------------------------------------------
 echo ""
-echo "[6/6] Verifying deployment..."
+echo "[7/7] Verifying deployment..."
 sleep 3
 ssh "${PI_SSH}" "docker ps --filter name=ouriva --format 'table {{.Image}}\t{{.Status}}\t{{.Ports}}'"
 
