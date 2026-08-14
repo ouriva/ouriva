@@ -23,7 +23,7 @@ import {
   // Travel
   MapPin, Hotel, Luggage, Globe, Compass,
   // Finance
-  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3,
+  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3, ArrowLeftRight,
   // Work
   Briefcase, Laptop, Building2, Phone, GraduationCap,
   // Family
@@ -51,7 +51,7 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   // Travel
   MapPin, Hotel, Luggage, Globe, Compass,
   // Finance
-  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3,
+  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3, ArrowLeftRight,
   // Work
   Briefcase, Laptop, Building2, Phone, GraduationCap,
   // Family
@@ -69,7 +69,7 @@ export const ICON_GROUPS: { label: string; icons: string[] }[] = [
   { label: "Shopping",       icons: ["ShoppingCart", "ShoppingBag", "Package", "Tag", "Shirt"] },
   { label: "Entertainment",  icons: ["Music", "Tv", "Gamepad2", "Film", "Ticket", "BookOpen", "Headphones"] },
   { label: "Travel",         icons: ["MapPin", "Hotel", "Luggage", "Globe", "Compass"] },
-  { label: "Finance",        icons: ["Banknote", "CreditCard", "PiggyBank", "TrendingUp", "Wallet", "BarChart3"] },
+  { label: "Finance",        icons: ["Banknote", "CreditCard", "PiggyBank", "TrendingUp", "Wallet", "BarChart3", "ArrowLeftRight"] },
   { label: "Work",           icons: ["Briefcase", "Laptop", "Building2", "Phone", "GraduationCap"] },
   { label: "Family",         icons: ["Baby", "Dog", "Cat", "Users"] },
   { label: "Misc",           icons: ["Gift", "Star", "Leaf", "Sun", "Moon", "Scissors", "Sparkles"] },
