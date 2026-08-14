@@ -7,3 +7,14 @@
 UPDATE "Category"
 SET icon = 'ArrowLeftRight'
 WHERE type = 'TRANSFER';
+
+-- Color-code direction: green for money arriving, red for money leaving.
+-- Both keys already exist in CATEGORY_COLORS (src/lib/category-icons.ts),
+-- no code change needed for these to render.
+UPDATE "Category"
+SET color = 'emerald'
+WHERE id = '00000000-0000-0000-0000-000000000002';  -- Transfer In
+
+UPDATE "Category"
+SET color = 'red'
+WHERE id = '00000000-0000-0000-0000-000000000003';  -- Transfer Out
