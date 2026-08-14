@@ -310,10 +310,15 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     }
   }
 
-  // Filter categories by the CategoryType that matches the current transaction type:
-  // EXPENSE → EXPENSE categories, INCOME → INCOME categories, TRANSFER → TRANSFER categories.
-  // TRANSFER categories are the two system entries (Transfer In / Transfer Out).
-  const filteredCategories = categories.filter((c) => c.type === transactionType);
+  // Filter categories by the CategoryType that matches the current transaction type,
+  // with one exception: INCOME transactions also show EXPENSE categories, since an
+  // INCOME transaction posted against an EXPENSE category is a contra-expense
+  // (reimbursement netting — see CLAUDE.md "Category routing"). EXPENSE and TRANSFER
+  // transactions only ever show their own matching type. TRANSFER categories are the
+  // two system entries (Transfer In / Transfer Out).
+  const filteredCategories = categories.filter((c) =>
+    transactionType === "INCOME" ? c.type === "INCOME" || c.type === "EXPENSE" : c.type === transactionType
+  );
 
   // Leaf-only assignment: parents with children become non-selectable group
   // headers (SelectGroup/SelectLabel). Standalone parents (no children) are
