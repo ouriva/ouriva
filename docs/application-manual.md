@@ -42,7 +42,7 @@ This is a **personal finance application** that replaces an Excel spreadsheet. I
 - Search and filter transactions by text, type, account, category, date range, or review status
 - Export transactions to CSV (with active filters applied) for use in spreadsheets
 - Organize transactions with hierarchical categories (e.g., Food > Groceries)
-- Set annual budgets per category and track spending against them; reimbursements (income in an expense category) are automatically netted off the expense actual
+- Set annual budgets per category and track spending against them; reimbursements (income in an expense category) and corrections (expense in an income category) are automatically netted off the relevant actual
 - View monthly and annual summaries with charts; drill into subcategory breakdowns in the annual view
 - Access everything from your phone as a PWA (Progressive Web App)
 
@@ -691,7 +691,8 @@ model Transaction {
 
 **CategoryType** (`INCOME` | `EXPENSE`) is a separate attribute on `Category`. It determines how transactions are routed in budget reports:
 - An INCOME transaction in an EXPENSE category is a **contra-expense** (e.g., a health insurance reimbursement in the "Doctor" category reduces the net doctor expense — the reimbursement netting model).
-- An INCOME transaction in an INCOME category is real income (e.g., Salary).
+- An EXPENSE transaction in an INCOME category is a **contra-income** (e.g., paying back a salary overpayment in the "Salary" category reduces the net income — the mirror of reimbursement netting).
+- An INCOME transaction in an INCOME category is real income (e.g., Salary); an EXPENSE transaction in an EXPENSE category is real spending.
 - Subcategories inherit their parent's CategoryType.
 
 **Amount is always positive** — The `type` determines direction. An expense of €50 is stored as `amount: 50, type: EXPENSE`, not `amount: -50`. This avoids confusion and makes aggregation queries simpler.
@@ -1061,7 +1062,7 @@ The `percentage` drives the progress bar color: green (<75%), yellow (75-100%), 
 
 **Split transactions**: Split parents have no category of their own (`categoryId: null`). The API fetches top-level transactions with their split children included, then replaces each split parent with its children. This means each child's amount is attributed to its own category, so a single split transaction can contribute to multiple budget rows simultaneously.
 
-**Reimbursement netoff**: Income transactions assigned to an expense category (e.g. an insurance reimbursement categorised as "Health") are treated as contra-expenses. The expense `actual` = gross expenses − reimbursements in that category, giving the true out-of-pocket cost. Those same income transactions are excluded from the income tab so they are not double-counted. A category is considered "in expense context" when it has expense transactions or an expense budget target — pure income categories (salary, freelance) are unaffected.
+**Reimbursement/correction netoff**: routing is driven by `Category.type`, not `Transaction.type` (see "CategoryType Drives Budget Routing" above). Income transactions assigned to an EXPENSE category (e.g. an insurance reimbursement categorised as "Health") are treated as contra-expenses: the expense `actual` = gross expenses − reimbursements in that category, giving the true out-of-pocket cost. Symmetrically, expense transactions assigned to an INCOME category (e.g. paying back a salary overpayment) are treated as contra-income: the income `actual` = gross income − corrections in that category. Either way, the netted-off transaction is excluded from the opposite tab so it is not double-counted.
 
 #### `POST /api/budgets` — Bulk Upsert
 
@@ -2492,9 +2493,14 @@ Each `Category` has a `type: CategoryType` field (`INCOME` | `EXPENSE`, default 
 | EXPENSE | EXPENSE | Expense actual (spending) |
 | INCOME | EXPENSE | Contra-expense — subtracted from the expense actual (reimbursement netting) |
 | INCOME | INCOME | Income actual |
+| EXPENSE | INCOME | Contra-income — subtracted from the income actual (refund/correction of income already received) |
 | TRANSFER | any | Excluded entirely |
 
 **Reimbursement netting example**: A restaurant bill split where a friend pays you back is recorded as an INCOME transaction in the "Restaurants" (EXPENSE) category. The budget report shows your net out-of-pocket cost — the gross expense minus the reimbursement — without any manual adjustment.
+
+**Contra-income example**: A salary overpayment that you pay back is recorded as an EXPENSE transaction in the "Salary" (INCOME) category. The budget report shows your net income — the gross salary minus the correction — without any manual adjustment.
+
+**Category picker**: the transaction form shows a single merged list of INCOME + EXPENSE categories for both INCOME and EXPENSE transactions, so either netting direction is selectable. TRANSFER transactions keep their own restricted list (the two system Transfer In/Out categories).
 
 **Subcategory inheritance**: When creating a subcategory, the API inherits the parent's CategoryType automatically, keeping the tree consistent.
 
