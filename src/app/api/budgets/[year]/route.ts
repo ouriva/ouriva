@@ -14,7 +14,10 @@
 //   • Transactions are routed to expense or income based on Category.type (not TransactionType).
 //   • An INCOME transaction in an EXPENSE category is a contra-expense (reimbursement)
 //     and reduces the expense actual for that category — the net-out-of-pocket model.
-//   • An INCOME transaction in an INCOME category is real income.
+//   • An EXPENSE transaction in an INCOME category is a contra-income (refund/correction
+//     of income already received) and reduces the income actual for that category.
+//   • An INCOME transaction in an INCOME category is real income; an EXPENSE transaction
+//     in an EXPENSE category is real spending.
 //   • TRANSFER transactions are excluded entirely — they never appear in budget reports.
 //
 // Grouping rules:
@@ -267,16 +270,21 @@ function buildExpenseActualMap(
   return map;
 }
 
-// Build income actual map: only INCOME transactions in INCOME categories.
-// INCOME transactions in EXPENSE categories are reimbursements and are excluded.
+// Build income actual map using CategoryType-aware routing:
+//   • INCOME transactions in INCOME categories → add to actual (real income)
+//   • EXPENSE transactions in INCOME categories → subtract from actual (contra-income:
+//     a refund or correction of income already received)
+//   • Transactions in EXPENSE categories are ignored here (handled separately)
 function buildIncomeActualMap(
   incomeTransactions: TransactionWithCategory[],
+  expenseTransactions: TransactionWithCategory[],
   incomeCategoryIds: Set<string>
 ): Map<string, { total: number; name?: string; parentId?: string; parentName?: string }> {
   const map = new Map<string, { total: number; name?: string; parentId?: string; parentName?: string }>();
-  for (const tx of incomeTransactions) {
-    if (!tx.category) continue;
-    if (!incomeCategoryIds.has(tx.category.id)) continue;
+
+  function addToMap(tx: TransactionWithCategory, sign: 1 | -1) {
+    if (!tx.category) return;
+    if (!incomeCategoryIds.has(tx.category.id)) return;
     const id = tx.category.id;
     const entry = map.get(id) ?? {
       total: 0,
@@ -284,9 +292,14 @@ function buildIncomeActualMap(
       parentId: (tx.category as { parent?: { id: string } | null }).parent?.id,
       parentName: (tx.category as { parent?: { name: string } | null }).parent?.name,
     };
-    entry.total += Number(tx.amount);
+    entry.total += sign * Number(tx.amount);
     map.set(id, entry);
   }
+
+  for (const tx of incomeTransactions) addToMap(tx, 1);
+
+  // Net off: expense in income categories = contra-income (refund/correction)
+  for (const tx of expenseTransactions) addToMap(tx, -1);
   return map;
 }
 
@@ -408,7 +421,7 @@ export async function GET(
     // CategoryType determines routing: EXPENSE categories net reimbursements,
     // INCOME categories accumulate income only.
     const actualExpenseMap = buildExpenseActualMap(expenseTransactions, incomeTransactions, expenseCategoryIds);
-    const actualIncomeMap  = buildIncomeActualMap(incomeTransactions, incomeCategoryIds);
+    const actualIncomeMap  = buildIncomeActualMap(incomeTransactions, expenseTransactions, incomeCategoryIds);
 
     // ── Budget maps ───────────────────────────────────────────────────────
     const { expenseBudgetMap, incomeBudgetMap } = buildBudgetMaps(budgets);
