@@ -85,16 +85,26 @@ export async function GET(request: NextRequest) {
       } else {
         months[monthIndex].expense += amount;
         totalExpense += amount;
-        addToBucket(bucketTotals, tx.category, amount);
       }
 
       // Route by category type, not transaction type.
       // INCOME transactions in EXPENSE categories are reimbursements — they
       // reduce that category's expense total rather than polluting the income tab.
+      // Symmetrically, EXPENSE transactions in INCOME categories are contra-income
+      // (refund/correction of income already received) and reduce that category's
+      // income total instead of appearing as a new expense.
       const categoryType = tx.category?.type ?? (tx.type === "INCOME" ? "INCOME" : "EXPENSE");
-      const displayAmount = categoryType === "EXPENSE" && tx.type === "INCOME" ? -amount : amount;
+      const displayAmount = categoryType !== tx.type ? -amount : amount;
       const targetMap = categoryType === "EXPENSE" ? categoryMap : incomeCategoryMap;
       updateCategoryMap(targetMap, tx.category, displayAmount, monthIndex);
+
+      // 50/30/20 bucket breakdown tracks real spending only — a transaction
+      // whose type matches its category's type (no netting applied above).
+      // This excludes both reimbursements (INCOME tx in EXPENSE category) and
+      // contra-income corrections (EXPENSE tx in INCOME category).
+      if (categoryType === "EXPENSE" && tx.type === "EXPENSE") {
+        addToBucket(bucketTotals, tx.category, amount);
+      }
     }
 
     // Round all values and convert maps to arrays
