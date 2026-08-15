@@ -275,7 +275,14 @@
     "remainingToGo": "{symbol}{amount} to go",
     "remainingOver": "{symbol}{amount} over",
     "remainingLeft": "{symbol}{amount} left",
-    "failedToLoad": "Failed to load budget data"
+    "failedToLoad": "Failed to load budget data",
+    "copyButton": "Copy from {year}",
+    "copyTooltipEmpty": "No budget found for {year}",
+    "copyDialogTitle": "Copy budget from {year}?",
+    "copyDialogDescription": "This will overwrite any budget amounts and notes already set for {year}. This can't be undone.",
+    "copyCancelButton": "Cancel",
+    "copyConfirmButton": "Overwrite & copy",
+    "copyErrorMessage": "Failed to copy budget"
   },
   "settings": {
     "pageTitle": "Settings",
