@@ -275,7 +275,14 @@
     "remainingToGo": "{symbol}{amount} em falta",
     "remainingOver": "{symbol}{amount} excedido",
     "remainingLeft": "{symbol}{amount} restante",
-    "failedToLoad": "Erro ao carregar dados do orçamento"
+    "failedToLoad": "Erro ao carregar dados do orçamento",
+    "copyButton": "Copiar de {year}",
+    "copyTooltipEmpty": "Sem orçamento para {year}",
+    "copyDialogTitle": "Copiar orçamento de {year}?",
+    "copyDialogDescription": "Isto vai substituir todos os valores e notas de orçamento já definidos para {year}. Esta ação não pode ser desfeita.",
+    "copyCancelButton": "Cancelar",
+    "copyConfirmButton": "Substituir e copiar",
+    "copyErrorMessage": "Falha ao copiar orçamento"
   },
   "settings": {
     "pageTitle": "Definições",
