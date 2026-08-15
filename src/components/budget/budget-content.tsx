@@ -44,6 +44,8 @@ import { MonthYearPicker } from "@/components/summary/month-year-picker";
 import { BudgetSplit } from "@/components/summary/budget-split";
 import { BudgetProgressBar } from "./budget-progress-bar";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/page-header";
+import { CopyPreviousYearButton } from "./copy-previous-year-button";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -602,13 +604,14 @@ function useBudgetData(year: number) {
     }
   }
 
-  return { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave };
+  return { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave, fetchData };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function BudgetContent() {
   const t = useTranslations("budget");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const now = new Date();
@@ -627,10 +630,14 @@ export function BudgetContent() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave } = useBudgetData(year);
+  const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave, fetchData } = useBudgetData(year);
 
   return (
     <div className="space-y-6">
+      <PageHeader title={tNav("budget")}>
+        <CopyPreviousYearButton year={year} onCopied={fetchData} />
+      </PageHeader>
+
       <MonthYearPicker mode="year" basePath="/budget" />
 
       {/* Unsaved changes banner — sticky so it's never off-screen on mobile */}
