@@ -411,5 +411,14 @@
     "editTitle": "Editar categoria",
     "saveButton": "Guardar",
     "saveError": "Falha ao guardar categoria"
+  },
+  "deleteCategory": {
+    "deleteButton": "Eliminar categoria",
+    "dialogTitle": "Eliminar \"{name}\"?",
+    "dialogDescription": "Esta ação não pode ser desfeita.",
+    "dialogDescriptionWithChildren": "Isto também vai eliminar as suas {count} subcategorias. Esta ação não pode ser desfeita.",
+    "cancelButton": "Cancelar",
+    "confirmButton": "Eliminar",
+    "errorMessage": "Falha ao eliminar categoria"
   }
 }

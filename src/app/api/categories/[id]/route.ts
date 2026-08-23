@@ -118,7 +118,10 @@ export async function PUT(
   }
 }
 
-// Soft-delete: sets isActive to false
+// Hard delete: removes the category and, for a parent, all of its children.
+// Blocked entirely if any transaction references the category or any child
+// (splits are themselves Transaction rows with their own categoryId, so a
+// single count over targetIds covers both top-level transactions and splits).
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -135,7 +138,7 @@ export async function DELETE(
 
     const existing = await prisma.category.findUnique({
       where: { id },
-      include: { children: { where: { isActive: true } } },
+      include: { children: true },
     });
 
     if (!existing) {
@@ -145,18 +148,29 @@ export async function DELETE(
       );
     }
 
-    // If this is a parent with active children, deactivate children too
-    if (existing.children.length > 0) {
-      await prisma.category.updateMany({
-        where: { parentId: id },
-        data: { isActive: false },
-      });
+    const targetIds = [id, ...existing.children.map((c) => c.id)];
+
+    const transactionCount = await prisma.transaction.count({
+      where: { categoryId: { in: targetIds } },
+    });
+
+    if (transactionCount > 0) {
+      return NextResponse.json(
+        {
+          error: {
+            message: `Cannot delete category — ${transactionCount} transaction(s) still reference it.`,
+            code: "CONSTRAINT_ERROR",
+          },
+        },
+        { status: 409 }
+      );
     }
 
-    await prisma.category.update({
-      where: { id },
-      data: { isActive: false },
-    });
+    await prisma.$transaction([
+      prisma.categoryRule.deleteMany({ where: { categoryId: { in: targetIds } } }),
+      prisma.budget.deleteMany({ where: { categoryId: { in: targetIds } } }),
+      prisma.category.deleteMany({ where: { id: { in: targetIds } } }),
+    ]);
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
