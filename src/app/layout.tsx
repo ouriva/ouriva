@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { ConfirmProvider } from "@/components/providers/confirm-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -78,7 +79,9 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <TooltipProvider>
-              {children}
+              <ConfirmProvider>
+                {children}
+              </ConfirmProvider>
             </TooltipProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

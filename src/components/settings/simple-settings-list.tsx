@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Plus, Star } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface Field {
   name: string;
@@ -50,6 +51,7 @@ export function SimpleSettingsList({
   setDefaultAction,
 }: Readonly<SimpleSettingsListProps>) {
   const tCommon = useTranslations("common");
+  const { confirm } = useConfirm();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,7 +84,14 @@ export function SimpleSettingsList({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(tCommon("deleteConfirm", { title: title.toLowerCase() }))) return;
+    const ok = await confirm({
+      variant: "sheet",
+      destructive: true,
+      title: tCommon("deleteConfirm", { title: title.toLowerCase() }),
+      confirmLabel: tCommon("delete"),
+      cancelLabel: tCommon("cancel"),
+    });
+    if (!ok) return;
 
     const res = await fetch(`${apiEndpoint}/${id}`, { method: "DELETE" });
     if (!res.ok) {
