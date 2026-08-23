@@ -31,6 +31,7 @@ import {
 import { Loader2, Pencil, Plus, Trash2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/hooks/use-confirm";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,8 @@ function categoryDisplayName(rule: CategoryRule): string {
 
 export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<CategoryRulesListProps>) {
   const t = useTranslations("settings.categoryRules");
+  const tCommon = useTranslations("common");
+  const { confirm } = useConfirm();
   const [rules, setRules]           = useState<CategoryRule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
@@ -97,7 +100,14 @@ export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<Categ
   }, [refreshKey]);
 
   async function deleteRule(id: string) {
-    if (!confirm(t("deleteConfirm"))) return;
+    const ok = await confirm({
+      variant: "sheet",
+      destructive: true,
+      title: t("deleteConfirm"),
+      confirmLabel: tCommon("delete"),
+      cancelLabel: tCommon("cancel"),
+    });
+    if (!ok) return;
     await fetch(`/api/category-rules/${id}`, { method: "DELETE" });
     setRefreshKey((k) => k + 1);
   }
