@@ -77,12 +77,6 @@ export async function GET(request: NextRequest) {
     for (const tx of transactions) {
       const amount = effectiveAmount(tx, defaultCurrency);
 
-      if (tx.type === "INCOME") {
-        totalIncome += amount;
-      } else {
-        totalExpense += amount;
-      }
-
       // Route by category type, not transaction type.
       // INCOME transactions in EXPENSE categories are reimbursements — they
       // reduce that category's expense total rather than polluting the income tab.
@@ -93,12 +87,15 @@ export async function GET(request: NextRequest) {
       const displayAmount = categoryType !== tx.type ? -amount : amount;
       const targetMap = categoryType === "EXPENSE" ? categoryMap : incomeCategoryMap;
 
-      // 50/30/20 bucket breakdown tracks real spending only — a transaction
-      // whose type matches its category's type (no netting applied above).
-      // This excludes both reimbursements (INCOME tx in EXPENSE category) and
-      // contra-income corrections (EXPENSE tx in INCOME category).
-      if (categoryType === "EXPENSE" && tx.type === "EXPENSE") {
-        addToBucket(bucketTotals, tx.category, amount);
+      // Totals and the 50/30/20 bucket breakdown use the same netted
+      // displayAmount as the category maps, so they always reconcile with
+      // the category breakdown tables (NEEDS + WANTS + SAVINGS + unclassified
+      // sums to totalExpense).
+      if (categoryType === "EXPENSE") {
+        totalExpense += displayAmount;
+        addToBucket(bucketTotals, tx.category, displayAmount);
+      } else {
+        totalIncome += displayAmount;
       }
       updateCategoryMap(targetMap, tx.category, displayAmount);
     }
