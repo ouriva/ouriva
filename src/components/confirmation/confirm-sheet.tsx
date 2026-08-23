@@ -24,7 +24,7 @@ export function ConfirmSheet({ options, onResolve }: Readonly<ConfirmSheetProps>
         if (!open) onResolve(false);
       }}
     >
-      <SheetContent side="bottom" className="rounded-t-xl">
+      <SheetContent side="bottom" className="rounded-t-xl" showCloseButton={false} {...(!options.description && { "aria-describedby": undefined })}>
         <SheetHeader>
           <SheetTitle>{options.title}</SheetTitle>
           {options.description && (

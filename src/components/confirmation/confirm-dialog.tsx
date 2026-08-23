@@ -24,7 +24,7 @@ export function ConfirmDialog({ options, onResolve }: Readonly<ConfirmDialogProp
         if (!open) onResolve(false);
       }}
     >
-      <DialogContent showCloseButton={false}>
+      <DialogContent showCloseButton={false} {...(!options.description && { "aria-describedby": undefined })}>
         <DialogHeader>
           <DialogTitle>{options.title}</DialogTitle>
           {options.description && (
