@@ -407,7 +407,7 @@
     "savings": "Poupança",
     "inactiveBadge": "Inativo",
     "nonTrackedBadge": "Não rastreado",
-    "activeChildCount": "{count} ativo",
+    "activeChildCount": "{count} de {total} ativo",
     "editTitle": "Editar categoria",
     "saveButton": "Guardar",
     "saveError": "Falha ao guardar categoria"

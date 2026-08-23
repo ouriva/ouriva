@@ -549,7 +549,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                   >
                     <span className="font-medium">{parent.name}</span>
                     {parent.children.length > 0 && (
-                      <Badge variant="secondary">{t("activeChildCount", { count: activeChildren })}</Badge>
+                      <Badge variant="secondary">{t("activeChildCount", { count: activeChildren, total: parent.children.length })}</Badge>
                     )}
                     {!parent.isActive && (
                       <Badge variant="outline" className="text-muted-foreground">{t("inactiveBadge")}</Badge>
