@@ -407,7 +407,7 @@
     "savings": "Savings",
     "inactiveBadge": "Inactive",
     "nonTrackedBadge": "Non-tracked",
-    "activeChildCount": "{count} active",
+    "activeChildCount": "{count} of {total} active",
     "editTitle": "Edit category",
     "saveButton": "Save",
     "saveError": "Failed to save category"
