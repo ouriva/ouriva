@@ -1488,7 +1488,7 @@ Displays categories in a collapsible tree. Each row is intentionally minimal —
 - Bucket selector (NEEDS / WANTS / SAVINGS) with full label descriptions
 - Active and Exclude from Stats checkboxes
 
-All changes are staged locally; a single "Save" button commits them via `PUT /api/categories/:id`.
+All changes are staged locally; a single "Save" button commits them via `PUT /api/categories/:id`. The footer also has a **Delete category** button (destructive, with a confirmation dialog) that calls `DELETE /api/categories/:id`.
 
 **Icon and color system**: Stored as `icon` (Lucide icon name string, e.g. `"ShoppingCart"`) and `color` (palette key, e.g. `"emerald"`). The constants live in `src/lib/category-icons.ts`:
 - `CATEGORY_ICONS` — `Record<string, LucideIcon>` mapping name → component
@@ -1499,7 +1499,7 @@ All changes are staged locally; a single "Save" button commits them via `PUT /ap
 
 **Safe child lookup**: When opening the edit sheet for a child category, the component looks up the full category from the flat `categories` array rather than using the nested `parent.children[i]` object. Prisma's nested includes only fetch one level of children — the child objects don't have their own `children` array, so using them directly would crash on `category.children.length`.
 
-**Cascade soft-delete**: When you deactivate a parent category, the API also deactivates all its children. This maintains data consistency — you shouldn't have active children under an inactive parent.
+**Deleting a category**: `DELETE /api/categories/:id` hard-deletes the category — unlike accounts, categories have no `isActive`-based soft-delete for removal (the `isActive` checkbox in the edit sheet is a separate "hide from pickers" toggle, not a delete mechanism). The endpoint blocks deletion entirely with `409 CONSTRAINT_ERROR` if the category or any of its children still has transactions. Deleting a parent cascades to delete all of its children, plus any `Budget` and `CategoryRule` rows referencing the category or its children, in a single transaction. The three system Transfer categories are protected and always return `403 FORBIDDEN`.
 
 **Header integration**: `CategoryTree` accepts `pageTitle` and `pageDescription` props and renders its own page header row (title on the left, "Add" button on the right) at the top of the component. This keeps the Add button co-located with the data state it depends on, while placing it visually alongside the page title.
 
@@ -2504,9 +2504,11 @@ Each `Category` has a `type: CategoryType` field (`INCOME` | `EXPENSE`, default 
 
 **Subcategory inheritance**: When creating a subcategory, the API inherits the parent's CategoryType automatically, keeping the tree consistent.
 
-### Soft-Delete for Accounts and Categories
+### Soft-Delete for Accounts, Hard-Delete for Categories
 
-Accounts and categories use `isActive: false` instead of deletion. This preserves historical data — you can still see transactions from a closed account. Hard-deleting would require cascading deletes or null foreign keys, both problematic.
+Accounts use `isActive: false` instead of deletion. This preserves historical data — you can still see transactions from a closed account. Hard-deleting an account would require cascading deletes or null foreign keys, both problematic.
+
+Categories are hard-deleted via `DELETE /api/categories/:id`, but only when it's safe: the endpoint counts transactions on the category and, for a parent, all of its children, and refuses with `409` if any exist. This sidesteps the "null foreign key" problem entirely — a category is only ever removed once nothing references it. Deleting a parent cascades to its children (and their `Budget`/`CategoryRule` rows) in one transaction, so you never end up with orphaned children under a deleted parent. The `isActive` flag on `Category` is unrelated to this — it's a "hide from pickers" toggle, not a delete mechanism.
 
 Transactions are hard-deleted because they don't have dependent records and the user explicitly confirms deletion.
 

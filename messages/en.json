@@ -411,5 +411,14 @@
     "editTitle": "Edit category",
     "saveButton": "Save",
     "saveError": "Failed to save category"
+  },
+  "deleteCategory": {
+    "deleteButton": "Delete category",
+    "dialogTitle": "Delete \"{name}\"?",
+    "dialogDescription": "This action cannot be undone.",
+    "dialogDescriptionWithChildren": "This will also delete its {count} subcategories. This action cannot be undone.",
+    "cancelButton": "Cancel",
+    "confirmButton": "Delete",
+    "errorMessage": "Failed to delete category"
   }
 }

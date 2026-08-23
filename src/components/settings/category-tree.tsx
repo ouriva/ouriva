@@ -46,6 +46,7 @@ import {
   Plus,
 } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
+import { DeleteCategoryButton } from "./delete-category-button";
 import { cn } from "@/lib/utils";
 import { CATEGORY_ICONS, CATEGORY_COLORS, ICON_GROUPS } from "@/lib/category-icons";
 
@@ -299,7 +300,7 @@ function CategoryEditSheet({
           </div>
         </div>
 
-        <SheetFooter className="px-4 pb-8 pt-4">
+        <SheetFooter className="gap-2 px-4 pb-8 pt-4">
           <Button
             onClick={handleSave}
             disabled={saving || !name.trim()}
@@ -308,6 +309,15 @@ function CategoryEditSheet({
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t("saveButton")}
           </Button>
+          <DeleteCategoryButton
+            categoryId={category.id}
+            categoryName={category.name}
+            childCount={category.children.length}
+            onDeleted={() => {
+              onSave();
+              onClose();
+            }}
+          />
         </SheetFooter>
       </SheetContent>
     </Sheet>
