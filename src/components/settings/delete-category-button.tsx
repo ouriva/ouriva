@@ -1,26 +1,18 @@
 // Delete Category Button
 // =======================
-// A button with confirmation dialog to prevent accidental deletion.
-// Mirrors DeleteTransactionButton's Dialog-based confirmation pattern.
-// The API blocks deletion entirely if the category or any of its
-// subcategories still has transactions, so the dialog only needs to warn
-// about the cascade to child categories, not about data loss on transactions.
+// A button with confirmation before deletion, using the app-wide
+// confirmation system's modal variant. The API blocks deletion
+// entirely if the category or any of its subcategories still has
+// transactions, so the dialog only needs to warn about the cascade
+// to child categories, not about data loss on transactions.
 
 "use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Loader2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface DeleteCategoryButtonProps {
   categoryId: string;
@@ -36,10 +28,23 @@ export function DeleteCategoryButton({
   onDeleted,
 }: Readonly<DeleteCategoryButtonProps>) {
   const t = useTranslations("deleteCategory");
+  const { confirm } = useConfirm();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
 
-  async function handleDelete() {
+  async function handleClick() {
+    const ok = await confirm({
+      variant: "modal",
+      destructive: true,
+      title: t("dialogTitle", { name: categoryName }),
+      description:
+        childCount > 0
+          ? t("dialogDescriptionWithChildren", { count: childCount })
+          : t("dialogDescription"),
+      confirmLabel: t("confirmButton"),
+      cancelLabel: t("cancelButton"),
+    });
+    if (!ok) return;
+
     setIsDeleting(true);
     try {
       const response = await fetch(`/api/categories/${categoryId}`, {
@@ -52,7 +57,6 @@ export function DeleteCategoryButton({
         return;
       }
 
-      setIsOpen(false);
       onDeleted();
     } finally {
       setIsDeleting(false);
@@ -60,40 +64,19 @@ export function DeleteCategoryButton({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full text-destructive hover:text-destructive"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          {t("deleteButton")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("dialogTitle", { name: categoryName })}</DialogTitle>
-          <DialogDescription>
-            {childCount > 0
-              ? t("dialogDescriptionWithChildren", { count: childCount })
-              : t("dialogDescription")}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
-            {t("cancelButton")}
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={isDeleting}
-          >
-            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t("confirmButton")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Button
+      type="button"
+      variant="outline"
+      className="w-full text-destructive hover:text-destructive"
+      onClick={handleClick}
+      disabled={isDeleting}
+    >
+      {isDeleting ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      ) : (
+        <Trash2 className="mr-2 h-4 w-4" />
+      )}
+      {t("deleteButton")}
+    </Button>
   );
 }
