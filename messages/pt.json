@@ -345,7 +345,7 @@
     "balanceZero": "Nenhuma transação de transferência registada.",
     "balanceNonZero": "Valor total movido entre contas através de transações de Transferência.",
     "nonTrackedLabel": "Saldo Não Rastreado",
-    "nonTrackedDescription": "Saldo combinado de todas as categorias não rastreadas. Deve ser €0 quando todas as transações por conta de terceiros estiverem liquidadas.",
+    "nonTrackedDescription": "Saldo combinado de todas as categorias excluídas de resumos e orçamentos. Se estiver a usar isto para acompanhar dinheiro gasto por conta de terceiros, deve voltar a €0 assim que tudo estiver liquidado.",
     "nonTrackedLink": "Marcar categorias como não rastreadas em Definições › Categorias",
     "nonTrackedValueLabel": "Total Não Rastreado",
     "nonTrackedZero": "Todas as transações não rastreadas estão liquidadas.",

@@ -219,10 +219,7 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Balance checks — Transfer Balance and Non-tracked Balance are both
-          reconciliation figures (should read €0 when everything is settled),
-          so they share one card instead of sitting in two identical-looking
-          standalone ones. */}
+      {/* Transfer Balance */}
       <Card>
         <CardContent className="space-y-4 p-4">
           <div>
@@ -237,8 +234,13 @@ export function GeneralSettings() {
             zeroLabel={t("balanceZero")}
             nonZeroLabel={t("balanceNonZero")}
           />
+        </CardContent>
+      </Card>
 
-          <div className="border-t pt-4">
+      {/* Non-tracked Balance */}
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div>
             <Label>{t("nonTrackedLabel")}</Label>
             <p className="mt-1 text-sm text-muted-foreground">
               {t("nonTrackedDescription")}

@@ -345,7 +345,7 @@
     "balanceZero": "No transfer transactions recorded.",
     "balanceNonZero": "Total amount moved between accounts via Transfer transactions.",
     "nonTrackedLabel": "Non-tracked Balance",
-    "nonTrackedDescription": "Combined balance of all non-tracked categories. Should be €0 when all on-behalf-of-others transactions are settled.",
+    "nonTrackedDescription": "Combined balance of all categories excluded from summaries and budgets. If you're using this to track money spent on behalf of others, it should return to €0 once everyone's settled up.",
     "nonTrackedLink": "Mark categories as non-tracked in Settings › Categories",
     "nonTrackedValueLabel": "Non-tracked Total",
     "nonTrackedZero": "All non-tracked transactions are settled.",
