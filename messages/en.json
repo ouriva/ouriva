@@ -247,6 +247,8 @@
     "totalSpentLabel": "Total",
     "totalWithinIncome": "{pct}% of income spent",
     "totalOverIncome": "{pct}% of income spent — {symbol}{amount} over",
+    "amountOverTarget": "{symbol}{amount} over target",
+    "amountShortOfTarget": "{symbol}{amount} short of target",
     "tabMonthly": "Monthly",
     "tabAnnual": "Annual",
     "thisMonth": "This month",

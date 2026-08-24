@@ -213,6 +213,10 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
           // Savings' target is a floor (higher is better), so "over" there
           // means falling short, not exceeding it — the opposite of Needs/Wants.
           const isOverTarget = bucket.key === "SAVINGS" ? diff < 0 : diff > 0;
+          // Currency gap vs. the target amount — same "€X over" framing as
+          // the top bar's total readout, just scoped to this one bucket.
+          const targetAmount = (bucket.target / 100) * totalIncome;
+          const amountGap = Math.abs(amount - targetAmount);
 
           return (
             <div
@@ -258,6 +262,13 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
                     style={{ width: `${Math.min(actualPct / bucket.target, 1) * 100}%` }}
                   />
                 </div>
+                {isOverTarget && (
+                  <p className="mt-1 text-right text-xs font-medium text-red-600 dark:text-red-400">
+                    {bucket.key === "SAVINGS"
+                      ? t("amountShortOfTarget", { symbol: "€", amount: formatAmount(amountGap, locale) })
+                      : t("amountOverTarget", { symbol: "€", amount: formatAmount(amountGap, locale) })}
+                  </p>
+                )}
               </div>
             </div>
           );

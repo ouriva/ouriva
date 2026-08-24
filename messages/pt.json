@@ -247,6 +247,8 @@
     "totalSpentLabel": "Total",
     "totalWithinIncome": "{pct}% da receita gasta",
     "totalOverIncome": "{pct}% da receita gasta — {symbol}{amount} acima",
+    "amountOverTarget": "{symbol}{amount} acima da meta",
+    "amountShortOfTarget": "{symbol}{amount} abaixo da meta",
     "tabMonthly": "Mensal",
     "tabAnnual": "Anual",
     "thisMonth": "Este mês",
