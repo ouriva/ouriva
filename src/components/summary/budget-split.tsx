@@ -210,6 +210,9 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
           const actualPct = pct(amount);
           const status = bucket.statusFn(actualPct);
           const diff = actualPct - bucket.target;
+          // Savings' target is a floor (higher is better), so "over" there
+          // means falling short, not exceeding it — the opposite of Needs/Wants.
+          const isOverTarget = bucket.key === "SAVINGS" ? diff < 0 : diff > 0;
 
           return (
             <div
@@ -251,8 +254,8 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
                   <div
-                    className={cn("h-full rounded-full transition-all", bucket.color)}
-                    style={{ width: `${Math.min(actualPct / bucket.target, 2) * 50}%` }}
+                    className={cn("h-full rounded-full transition-all", isOverTarget ? "bg-red-500" : bucket.color)}
+                    style={{ width: `${Math.min(actualPct / bucket.target, 1) * 100}%` }}
                   />
                 </div>
               </div>
