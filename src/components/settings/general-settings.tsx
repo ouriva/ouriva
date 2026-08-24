@@ -22,6 +22,7 @@ import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import { UnclassifiedCategories } from "./unclassified-categories";
 
 interface Settings {
   transferBalance: number;
@@ -214,6 +215,9 @@ export function GeneralSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Unclassified categories */}
+      <UnclassifiedCategories enabled={settings?.budgetSplitEnabled ?? true} />
 
       {/* Transfer Balance */}
       <Card>

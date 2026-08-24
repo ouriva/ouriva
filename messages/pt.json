@@ -359,7 +359,13 @@
     "budgetSplitInSummaryLabel": "Mostrar no Resumo",
     "budgetSplitInSummaryDescription": "Adiciona um separador 50·30·20 ao resumo mensal e anual.",
     "budgetSplitInBudgetLabel": "Mostrar no Orçamento",
-    "budgetSplitInBudgetDescription": "Mostra a alocação 50·30·20 planeada na página de Orçamento."
+    "budgetSplitInBudgetDescription": "Mostra a alocação 50·30·20 planeada na página de Orçamento.",
+    "unclassifiedCategoriesLabel": "Categorias sem secção",
+    "unclassifiedCategoriesDescription": "Categorias sem secção Necessidades/Desejos/Poupança atribuída — as despesas nestas não contam para nenhum total 50·30·20.",
+    "unclassifiedCountSingle": "1 categoria",
+    "unclassifiedCountPlural": "{count} categorias",
+    "unclassifiedCategoriesEmpty": "Todas as categorias têm uma secção atribuída.",
+    "unclassifiedCategoriesLink": "Atribua secções em Definições › Categorias"
   },
   "currencies": {
     "pageTitle": "Moedas",

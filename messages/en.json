@@ -359,7 +359,13 @@
     "budgetSplitInSummaryLabel": "Show in Summary",
     "budgetSplitInSummaryDescription": "Adds a 50·30·20 tab to the monthly and annual summary.",
     "budgetSplitInBudgetLabel": "Show in Budget",
-    "budgetSplitInBudgetDescription": "Shows the planned 50·30·20 breakdown on the Budget page."
+    "budgetSplitInBudgetDescription": "Shows the planned 50·30·20 breakdown on the Budget page.",
+    "unclassifiedCategoriesLabel": "Unclassified categories",
+    "unclassifiedCategoriesDescription": "Categories with no Needs/Wants/Savings bucket assigned — their spending doesn't count toward any 50·30·20 total.",
+    "unclassifiedCountSingle": "1 category",
+    "unclassifiedCountPlural": "{count} categories",
+    "unclassifiedCategoriesEmpty": "All categories have a bucket assigned.",
+    "unclassifiedCategoriesLink": "Assign buckets in Settings › Categories"
   },
   "currencies": {
     "pageTitle": "Currencies",
