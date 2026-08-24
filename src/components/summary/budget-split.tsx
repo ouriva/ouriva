@@ -1,12 +1,12 @@
 "use client";
 
-// Budget Split — 50/30/20 Rule View
+// Budget Split — 50·30·20 Rule View
 // ===================================
-// Displays actual spending across the three 50/30/20 buckets
+// Displays actual spending across the three 50·30·20 buckets
 // (Needs, Wants, Savings) compared against the target percentages.
 //
 // Income is used as the 100% denominator — consistent with how
-// the 50/30/20 rule is defined (applied to net/after-tax income).
+// the 50·30·20 rule is defined (applied to net/after-tax income).
 //
 // Bucket inheritance: effective bucket = category.bucket ?? parent.bucket.
 // This is resolved server-side; the component just consumes the totals.
@@ -182,7 +182,7 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
           )}
         </div>
         {/* Target markers — one per bucket, colour-matched to its segment
-            above, so the cumulative 50/30/20 split reads at a glance
+            above, so the cumulative 50·30·20 split reads at a glance
             without relying on the hover-only title tooltip. */}
         <div className="relative mt-1 h-2">
           <div

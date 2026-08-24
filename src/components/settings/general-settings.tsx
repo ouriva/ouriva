@@ -168,7 +168,7 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* 50/30/20 Budget Rule visibility */}
+      {/* 50·30·20 Budget Rule visibility */}
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="flex items-center justify-between gap-4">
