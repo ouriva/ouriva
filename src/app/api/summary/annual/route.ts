@@ -79,14 +79,6 @@ export async function GET(request: NextRequest) {
       // tx.date is a Date object; getMonth() returns 0-11
       const monthIndex = new Date(tx.date).getMonth();
 
-      if (tx.type === "INCOME") {
-        months[monthIndex].income += amount;
-        totalIncome += amount;
-      } else {
-        months[monthIndex].expense += amount;
-        totalExpense += amount;
-      }
-
       // Route by category type, not transaction type.
       // INCOME transactions in EXPENSE categories are reimbursements — they
       // reduce that category's expense total rather than polluting the income tab.
@@ -96,15 +88,20 @@ export async function GET(request: NextRequest) {
       const categoryType = tx.category?.type ?? (tx.type === "INCOME" ? "INCOME" : "EXPENSE");
       const displayAmount = categoryType !== tx.type ? -amount : amount;
       const targetMap = categoryType === "EXPENSE" ? categoryMap : incomeCategoryMap;
-      updateCategoryMap(targetMap, tx.category, displayAmount, monthIndex);
 
-      // 50/30/20 bucket breakdown tracks real spending only — a transaction
-      // whose type matches its category's type (no netting applied above).
-      // This excludes both reimbursements (INCOME tx in EXPENSE category) and
-      // contra-income corrections (EXPENSE tx in INCOME category).
-      if (categoryType === "EXPENSE" && tx.type === "EXPENSE") {
-        addToBucket(bucketTotals, tx.category, amount);
+      // Totals, monthly bars, and the 50/30/20 bucket breakdown use the same
+      // netted displayAmount as the category maps, so they always reconcile
+      // with the category breakdown tables (NEEDS + WANTS + SAVINGS +
+      // unclassified sums to totalExpense).
+      if (categoryType === "EXPENSE") {
+        months[monthIndex].expense += displayAmount;
+        totalExpense += displayAmount;
+        addToBucket(bucketTotals, tx.category, displayAmount);
+      } else {
+        months[monthIndex].income += displayAmount;
+        totalIncome += displayAmount;
       }
+      updateCategoryMap(targetMap, tx.category, displayAmount, monthIndex);
     }
 
     // Round all values and convert maps to arrays

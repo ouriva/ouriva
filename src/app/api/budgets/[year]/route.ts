@@ -442,6 +442,7 @@ export async function GET(
     const plannedBuckets = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
     for (const b of budgets) {
       if (b.category.type !== "EXPENSE") continue;
+      if (!expenseCategoryIds.has(b.categoryId)) continue; // exclude hidden/inactive categories
       if (b.category.children.length > 0) continue;
       const bucket = effectiveBucket(b.category);
       plannedBuckets[bucket ?? "unclassified"] += Number(b.amount);
