@@ -18,10 +18,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { ChevronDown, CheckCircle2 } from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { CollapsibleCategoryList, type CategoryListRow } from "./collapsible-category-list";
 
 interface Category {
   id: string;
@@ -30,17 +27,11 @@ interface Category {
   bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
 }
 
-interface UnclassifiedRow {
-  id: string;
-  name: string;
-  parentName: string | null;
-}
-
-function computeUnclassified(categories: Category[]): UnclassifiedRow[] {
+function computeUnclassified(categories: Category[]): CategoryListRow[] {
   const byId = new Map(categories.map((c) => [c.id, c]));
   const parentIds = new Set(categories.filter((c) => c.parentId).map((c) => c.parentId));
 
-  const rows: UnclassifiedRow[] = [];
+  const rows: CategoryListRow[] = [];
 
   for (const c of categories) {
     if (c.parentId) {
@@ -65,7 +56,7 @@ function computeUnclassified(categories: Category[]): UnclassifiedRow[] {
 
 export function UnclassifiedCategories({ enabled }: Readonly<{ enabled: boolean }>) {
   const t = useTranslations("generalSettings");
-  const [rows, setRows] = useState<UnclassifiedRow[] | null>(null);
+  const [rows, setRows] = useState<CategoryListRow[] | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   const fetchData = useCallback(() => {
@@ -88,56 +79,15 @@ export function UnclassifiedCategories({ enabled }: Readonly<{ enabled: boolean 
   const count = rows.length;
 
   return (
-    <div className="border-t pt-4">
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger className="flex w-full items-center justify-between gap-4 text-left">
-          <div className="min-w-0">
-            <p className="font-medium">{t("unclassifiedCategoriesLabel")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("unclassifiedCategoriesDescription")}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {count === 0 ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            ) : (
-              <span className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">
-                {count === 1 ? t("unclassifiedCountSingle") : t("unclassifiedCountPlural", { count })}
-              </span>
-            )}
-            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
-          </div>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent className="mt-3 space-y-2">
-          {count === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("unclassifiedCategoriesEmpty")}</p>
-          ) : (
-            <>
-              <ul className="divide-y rounded-lg border">
-                {rows.map((row) => (
-                  <li key={row.id} className="px-3 py-2 text-sm">
-                    {row.parentName ? (
-                      <span>
-                        <span className="text-muted-foreground">{row.parentName}</span>
-                        <span className="text-muted-foreground"> › </span>
-                        {row.name}
-                      </span>
-                    ) : (
-                      row.name
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-sm">
-                <Link href="/settings/categories" className="underline underline-offset-2">
-                  {t("unclassifiedCategoriesLink")}
-                </Link>
-              </p>
-            </>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
+    <CollapsibleCategoryList
+      label={t("unclassifiedCategoriesLabel")}
+      description={t("unclassifiedCategoriesDescription")}
+      rows={rows}
+      countText={count === 1 ? t("unclassifiedCountSingle") : t("unclassifiedCountPlural", { count })}
+      emptyMessage={t("unclassifiedCategoriesEmpty")}
+      linkText={t("unclassifiedCategoriesLink")}
+      isOpen={isOpen}
+      onOpenChange={setIsOpen}
+    />
   );
 }

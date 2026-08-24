@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { UnclassifiedCategories } from "./unclassified-categories";
+import { NonTrackedCategories } from "./non-tracked-categories";
 
 interface Settings {
   transferBalance: number;
@@ -243,11 +243,6 @@ export function GeneralSettings() {
             <p className="mt-1 text-sm text-muted-foreground">
               {t("nonTrackedDescription")}
             </p>
-            <p className="mt-2 text-sm">
-              <Link href="/settings/categories" className="underline underline-offset-2">
-                {t("nonTrackedLink")}
-              </Link>
-            </p>
           </div>
           <BalanceIndicator
             label={t("nonTrackedValueLabel")}
@@ -255,6 +250,8 @@ export function GeneralSettings() {
             zeroLabel={t("nonTrackedZero")}
             nonZeroLabel={t("nonTrackedNonZero")}
           />
+
+          <NonTrackedCategories />
         </CardContent>
       </Card>
     </div>
