@@ -632,7 +632,7 @@ export function BudgetContent() {
   }, []);
 
   const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave, fetchData } = useBudgetData(year);
-  const { showInBudget: showBudgetSplit } = useBudgetSplitVisibility();
+  const { showInBudget: showBudgetSplit, targets } = useBudgetSplitVisibility();
 
   return (
     <div className="space-y-6">
@@ -684,16 +684,17 @@ export function BudgetContent() {
             <Card className="py-0">
               <CardContent className="p-3 pb-4">
                 <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t("planned503020")}
+                  {t("planned503020", { split: `${targets.NEEDS}·${targets.WANTS}·${targets.SAVINGS}` })}
                 </p>
                 {data.income.totalBudgeted === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    {t("set503020Hint")}
+                    {t("set503020Hint", { split: `${targets.NEEDS}·${targets.WANTS}·${targets.SAVINGS}` })}
                   </p>
                 ) : (
                   <BudgetSplit
                     breakdown={data.plannedBucketBreakdown}
                     totalIncome={data.income.totalBudgeted}
+                    targets={targets}
                   />
                 )}
               </CardContent>

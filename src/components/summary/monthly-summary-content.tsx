@@ -104,7 +104,7 @@ export function MonthlySummaryContent() {
   const [data, setData] = useState<MonthlySummary | null>(null);
   const [prevData, setPrevData] = useState<Pick<MonthlySummary, "totalIncome" | "totalExpense" | "net"> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { showInSummary: showBudgetSplit } = useBudgetSplitVisibility();
+  const { showInSummary: showBudgetSplit, targets } = useBudgetSplitVisibility();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -173,7 +173,9 @@ export function MonthlySummaryContent() {
               <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
               <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
               <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
-              {showBudgetSplit && <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>}
+              {showBudgetSplit && (
+                <TabsTrigger value="budget">{`${targets.NEEDS}·${targets.WANTS}·${targets.SAVINGS}`}</TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="overview" className="mt-4">
@@ -205,6 +207,7 @@ export function MonthlySummaryContent() {
                 <BudgetSplit
                   breakdown={data.bucketBreakdown}
                   totalIncome={data.totalIncome}
+                  targets={targets}
                 />
               </TabsContent>
             )}

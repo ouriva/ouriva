@@ -90,7 +90,7 @@ export function AnnualSummaryContent() {
 
   const [data, setData] = useState<AnnualSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { showInSummary: showBudgetSplit } = useBudgetSplitVisibility();
+  const { showInSummary: showBudgetSplit, targets } = useBudgetSplitVisibility();
 
   // Which category row is currently selected — drives what the chart shows.
   // null = overview (income vs expense lines).
@@ -267,7 +267,9 @@ export function AnnualSummaryContent() {
               <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
               <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
               <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
-              {showBudgetSplit && <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>}
+              {showBudgetSplit && (
+                <TabsTrigger value="budget">{`${targets.NEEDS}·${targets.WANTS}·${targets.SAVINGS}`}</TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="overview" className="mt-4">
@@ -306,6 +308,7 @@ export function AnnualSummaryContent() {
                 <BudgetSplit
                   breakdown={data.bucketBreakdown}
                   totalIncome={data.totalIncome}
+                  targets={targets}
                 />
               </TabsContent>
             )}
