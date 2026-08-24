@@ -730,15 +730,18 @@ model Budget {
 
 ```prisma
 model AppSettings {
-  id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default("singleton")
+  budgetSplitEnabled   Boolean  @default(true)
+  budgetSplitInSummary Boolean  @default(true)
+  budgetSplitInBudget  Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 ```
 
 **Singleton pattern** — There is only one row, always with `id = "singleton"`. The API uses `upsert` to auto-create it on first access. This avoids having global settings scattered across multiple tables.
 
-Currently this model stores no user-editable fields. It exists as a stable extension point — future preferences (default currency, theme override, etc.) can be added here without a schema redesign. The Settings > General page reads it to compute the **Transfer Balance** (sum of all TRANSFER-type transactions, shown as an informational figure).
+**50/30/20 visibility flags** — `budgetSplitEnabled` is the master switch for the whole feature; `budgetSplitInSummary` and `budgetSplitInBudget` scope it to the Summary tabs and the Budget page respectively, but only take effect while the master switch is on (the AND-ing happens client-side in `useBudgetSplitVisibility`, not in these raw flags). All three default to `true` so existing installs see no behavior change. Updated via `PATCH /api/settings` (partial update, validated by `updateSettingsSchema` in `src/validators/settings.ts`) from the toggles in Settings > General; `GET /api/settings` returns them alongside the existing computed `transferBalance`/`nonTrackedBalance` figures. This is a stable extension point for further preferences — new fields can be added here without a schema redesign.
 
 #### MatchType Enum
 
@@ -1435,8 +1438,9 @@ A reusable icon circle component used in both `TransactionCard` and `DashboardCo
 
 #### `GeneralSettings` (`src/components/settings/general-settings.tsx`)
 
-The app-wide preferences panel, accessible from Settings > General. Currently shows:
+The app-wide preferences panel, accessible from Settings > General. Includes:
 
+- **50/30/20 Budget Rule** — a master toggle (`budgetSplitEnabled`) plus two scoped toggles, "Show in Summary" (`budgetSplitInSummary`) and "Show in Budget" (`budgetSplitInBudget`), laid out as sub-rows indented under the master switch. The sub-toggles render `disabled` (and visually dimmed) whenever the master switch is off, but keep their own last-set value rather than resetting, so turning the master switch back on restores whatever scope was previously chosen. Each toggle updates optimistically, then `PATCH`es `/api/settings` with just that one field; on a failed request the local state reverts so the switch never drifts from what's actually persisted.
 - **Transfer Balance** — The total volume of all TRANSFER-type transactions for the current data set. This is an informational figure (not a net balance) — since each transfer side is recorded independently, the number tells you how much money has been moved between accounts in total.
 
 This is a client component that fetches settings on mount via `GET /api/settings`, which computes the transfer balance server-side using `prisma.transaction.aggregate`.
@@ -1664,19 +1668,22 @@ The client component for the annual summary. Uses the same 2+1 stat card layout 
 
 #### `BudgetSplit` (`src/components/summary/budget-split.tsx`)
 
-The 50/30/20 Budget Rule visualization, rendered in the third tab of both monthly and annual summaries.
+The 50/30/20 Budget Rule visualization. Rendered in the third tab of both monthly and annual summaries (actual spending vs. actual income), and in a standalone card on the Budget page (planned budget vs. budgeted income) — same component, different data, in all three places.
 
 Displays:
-- **Three stat cards** — NEEDS, WANTS, SAVINGS. Each shows the actual amount spent, the actual percentage of total income, and the target percentage (50% / 30% / 20%) with a colored indicator (green if at/under target, red if over).
-- **Stacked bar** — A single horizontal bar divided into three colored segments (one per bucket) proportional to actual spending. Gives a visual gestalt of the overall split at a glance.
+- **Total readout + stacked bar** — one bar, 100% = income. Segments show each bucket's share of income, in priority order (Needs, then Wants, then Savings, then unclassified) — a bucket only gets whatever room is left after the ones before it, deliberately: Needs is essential spending and should visually "win" the available space over discretionary buckets when you're over budget, rather than all three shrinking proportionally. A text readout above the bar always states the total ("68% of income spent"), and turns red with the €-over figure ("115% of income spent — €5,400 over") plus a red-tinted track when total spending exceeds income — the segment shapes alone can't be trusted to show that once one bucket has consumed all the remaining room.
+- **Target markers** — three thin vertical lines under the bar at the cumulative 50/30/20 boundaries (50%, 80%, 100%), colour-matched to their segment (blue/amber/emerald) so the ideal split reads at a glance.
+- **Three stat cards** — NEEDS, WANTS, SAVINGS. Each shows the actual amount, its % of income, an On track/Review/Off track badge, and a target-relative progress bar (`min(actual/target, 1) * 100`, i.e. a full bar means you've hit your target — not "double your target," which an earlier version of this formula used). The bar and badge turn red together when off target; for Savings specifically, "off target" means falling *short* of the 20% floor, not exceeding it, so the red condition is inverted relative to Needs/Wants. When off target, the percentage line also grows a currency figure ("+15.0% — €5,400.00 over" / "15.0% — €5,400.00 short"), matching the top bar's phrasing.
 - **Unclassified warning** — If any expenses fall into categories with no bucket assignment, a warning badge shows the unclassified total and prompts the user to assign buckets in Settings > Categories.
 
 ```tsx
 <BudgetSplit
-  bucketBreakdown={{ NEEDS: 980, WANTS: 430, SAVINGS: 200, unclassified: 240 }}
+  breakdown={{ NEEDS: 980, WANTS: 430, SAVINGS: 200, unclassified: 240 }}
   totalIncome={3500}
 />
 ```
+
+**Visibility** — Gated by `useBudgetSplitVisibility()` (`src/hooks/use-budget-split-visibility.ts`), which reads the `budgetSplitEnabled`/`budgetSplitInSummary`/`budgetSplitInBudget` flags on `AppSettings` (see below) and returns `{ showInSummary, showInBudget }` — each already ANDed with the master switch. When a surface is hidden, its `TabsTrigger`/`TabsContent` pair (or, on the Budget page, the whole card) is omitted from the tree entirely, not just visually hidden, and the summary tab grid collapses from 4 to 3 columns.
 
 ### Dashboard Component
 
