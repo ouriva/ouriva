@@ -149,25 +149,6 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Budget bucket colours */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <Label htmlFor="bucket-colors-toggle">{t("bucketColorsLabel")}</Label>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("bucketColorsDescription")}
-              </p>
-            </div>
-            <Switch
-              id="bucket-colors-toggle"
-              checked={showBucketColors}
-              onCheckedChange={handleBucketColorsToggle}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* 50·30·20 Budget Rule visibility */}
       <Card>
         <CardContent className="space-y-4 p-4">
@@ -213,6 +194,21 @@ export function GeneralSettings() {
                 checked={settings?.budgetSplitInBudget ?? true}
                 disabled={!(settings?.budgetSplitEnabled ?? true)}
                 onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitInBudget", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="bucket-colors-toggle">{t("bucketColorsLabel")}</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("bucketColorsDescription")}
+                </p>
+              </div>
+              <Switch
+                id="bucket-colors-toggle"
+                checked={showBucketColors}
+                disabled={!(settings?.budgetSplitEnabled ?? true)}
+                onCheckedChange={handleBucketColorsToggle}
               />
             </div>
           </div>
