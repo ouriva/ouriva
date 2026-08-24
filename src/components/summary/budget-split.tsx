@@ -48,7 +48,7 @@ const BUCKET_CONFIG = [
     color: "bg-amber-500",
     textColor: "text-amber-700 dark:text-amber-300",
     bgColor: "bg-amber-50 dark:bg-amber-950/30",
-    borderColor: "border-amber-200 dark:border-amber-800",
+    borderColor: "border-amber-200 dark:border-amber-500/50",
     // Wants: lower is better — you want to stay under 30%
     statusFn: (pct: number) => {
       if (pct <= 30) return "good";
