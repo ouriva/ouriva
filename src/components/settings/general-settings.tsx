@@ -38,17 +38,17 @@ function handleLocaleChange(newLocale: string) {
 }
 
 interface BalanceIndicatorProps {
+  label: string;
   balance: number;
   zeroLabel: string;
   nonZeroLabel: string;
 }
 
-function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
-  const t = useTranslations("generalSettings");
+function BalanceIndicator({ label, balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
   const locale = useLocale();
   return (
     <div className="rounded-lg border p-4">
-      <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p
         className={`text-2xl font-bold tabular-nums ${
           balance === 0
@@ -219,7 +219,10 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Transfer Balance */}
+      {/* Balance checks — Transfer Balance and Non-tracked Balance are both
+          reconciliation figures (should read €0 when everything is settled),
+          so they share one card instead of sitting in two identical-looking
+          standalone ones. */}
       <Card>
         <CardContent className="space-y-4 p-4">
           <div>
@@ -229,17 +232,13 @@ export function GeneralSettings() {
             </p>
           </div>
           <BalanceIndicator
+            label={t("transferBalanceValueLabel")}
             balance={settings?.transferBalance ?? 0}
             zeroLabel={t("balanceZero")}
             nonZeroLabel={t("balanceNonZero")}
           />
-        </CardContent>
-      </Card>
 
-      {/* Non-tracked Balance */}
-      <Card>
-        <CardContent className="space-y-4 p-4">
-          <div>
+          <div className="border-t pt-4">
             <Label>{t("nonTrackedLabel")}</Label>
             <p className="mt-1 text-sm text-muted-foreground">
               {t("nonTrackedDescription")}
@@ -251,6 +250,7 @@ export function GeneralSettings() {
             </p>
           </div>
           <BalanceIndicator
+            label={t("nonTrackedValueLabel")}
             balance={settings?.nonTrackedBalance ?? 0}
             zeroLabel={t("nonTrackedZero")}
             nonZeroLabel={t("nonTrackedNonZero")}
