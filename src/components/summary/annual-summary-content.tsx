@@ -22,6 +22,7 @@ import { MonthYearPicker } from "./month-year-picker";
 import { AnnualBarChart } from "@/components/charts/annual-bar-chart";
 import { AnnualCategoryTable } from "./annual-category-table";
 import { BudgetSplit } from "./budget-split";
+import { useBudgetSplitVisibility } from "@/hooks/use-budget-split-visibility";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -89,6 +90,7 @@ export function AnnualSummaryContent() {
 
   const [data, setData] = useState<AnnualSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { showInSummary: showBudgetSplit } = useBudgetSplitVisibility();
 
   // Which category row is currently selected — drives what the chart shows.
   // null = overview (income vs expense lines).
@@ -261,11 +263,11 @@ export function AnnualSummaryContent() {
             defaultValue="overview"
             onValueChange={(v) => { setSelectedCategoryId(null); setActiveTab(v); }}
           >
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className={cn("grid w-full", showBudgetSplit ? "grid-cols-4" : "grid-cols-3")}>
               <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
               <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
               <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
-              <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>
+              {showBudgetSplit && <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="overview" className="mt-4">
@@ -299,12 +301,14 @@ export function AnnualSummaryContent() {
               />
             </TabsContent>
 
-            <TabsContent value="budget" className="mt-4">
-              <BudgetSplit
-                breakdown={data.bucketBreakdown}
-                totalIncome={data.totalIncome}
-              />
-            </TabsContent>
+            {showBudgetSplit && (
+              <TabsContent value="budget" className="mt-4">
+                <BudgetSplit
+                  breakdown={data.bucketBreakdown}
+                  totalIncome={data.totalIncome}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         </>
       )}

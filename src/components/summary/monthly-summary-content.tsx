@@ -21,6 +21,7 @@ import { MonthYearPicker } from "./month-year-picker";
 import { CategoryBreakdown } from "./category-breakdown";
 import { NetCategoryBreakdown } from "./net-category-breakdown";
 import { BudgetSplit } from "./budget-split";
+import { useBudgetSplitVisibility } from "@/hooks/use-budget-split-visibility";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -103,6 +104,7 @@ export function MonthlySummaryContent() {
   const [data, setData] = useState<MonthlySummary | null>(null);
   const [prevData, setPrevData] = useState<Pick<MonthlySummary, "totalIncome" | "totalExpense" | "net"> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { showInSummary: showBudgetSplit } = useBudgetSplitVisibility();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -167,11 +169,11 @@ export function MonthlySummaryContent() {
 
           {/* ── Tabs ───────────────────────────────────────────────────── */}
           <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className={cn("grid w-full", showBudgetSplit ? "grid-cols-4" : "grid-cols-3")}>
               <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
               <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
               <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
-              <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>
+              {showBudgetSplit && <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="overview" className="mt-4">
@@ -198,12 +200,14 @@ export function MonthlySummaryContent() {
               />
             </TabsContent>
 
-            <TabsContent value="budget" className="mt-4">
-              <BudgetSplit
-                breakdown={data.bucketBreakdown}
-                totalIncome={data.totalIncome}
-              />
-            </TabsContent>
+            {showBudgetSplit && (
+              <TabsContent value="budget" className="mt-4">
+                <BudgetSplit
+                  breakdown={data.bucketBreakdown}
+                  totalIncome={data.totalIncome}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         </>
       )}

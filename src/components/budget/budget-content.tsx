@@ -42,6 +42,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Loader2, MessageSquare, Save } from "lucide-react";
 import { MonthYearPicker } from "@/components/summary/month-year-picker";
 import { BudgetSplit } from "@/components/summary/budget-split";
+import { useBudgetSplitVisibility } from "@/hooks/use-budget-split-visibility";
 import { BudgetProgressBar } from "./budget-progress-bar";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
@@ -631,6 +632,7 @@ export function BudgetContent() {
   }, []);
 
   const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave, fetchData } = useBudgetData(year);
+  const { showInBudget: showBudgetSplit } = useBudgetSplitVisibility();
 
   return (
     <div className="space-y-6">
@@ -678,23 +680,25 @@ export function BudgetContent() {
           />
 
           {/* ── Planned 50/30/20 ────────────────────────────────────── */}
-          <Card className="py-0">
-            <CardContent className="p-3 pb-4">
-              <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("planned503020")}
-              </p>
-              {data.income.totalBudgeted === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("set503020Hint")}
+          {showBudgetSplit && (
+            <Card className="py-0">
+              <CardContent className="p-3 pb-4">
+                <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("planned503020")}
                 </p>
-              ) : (
-                <BudgetSplit
-                  breakdown={data.plannedBucketBreakdown}
-                  totalIncome={data.income.totalBudgeted}
-                />
-              )}
-            </CardContent>
-          </Card>
+                {data.income.totalBudgeted === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("set503020Hint")}
+                  </p>
+                ) : (
+                  <BudgetSplit
+                    breakdown={data.plannedBucketBreakdown}
+                    totalIncome={data.income.totalBudgeted}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

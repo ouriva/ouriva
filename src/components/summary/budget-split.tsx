@@ -48,7 +48,7 @@ const BUCKET_CONFIG = [
     color: "bg-amber-500",
     textColor: "text-amber-700 dark:text-amber-300",
     bgColor: "bg-amber-50 dark:bg-amber-950/30",
-    borderColor: "border-amber-200 dark:border-amber-800",
+    borderColor: "border-amber-200 dark:border-amber-500/50",
     // Wants: lower is better — you want to stay under 30%
     statusFn: (pct: number) => {
       if (pct <= 30) return "good";
@@ -107,6 +107,12 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
   const pct = (amount: number) =>
     Math.round((amount / totalIncome) * 1000) / 10; // one decimal
 
+  // Total spent across all buckets — uncapped, used to detect overspending
+  // that the capped stacked-bar segments below would otherwise hide.
+  const totalSpent = breakdown.NEEDS + breakdown.WANTS + breakdown.SAVINGS + breakdown.unclassified;
+  const totalPct = pct(totalSpent);
+  const isOverIncome = totalPct > 100;
+
   // Stacked bar segments — each bucket as % of income, capped at 100% total
   const needsPct = Math.min(pct(breakdown.NEEDS), 100);
   const wantsPct = Math.min(pct(breakdown.WANTS), 100 - needsPct);
@@ -120,12 +126,36 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
     <div className="space-y-6">
       {/* Stacked bar — visual proportion of income */}
       <div>
+        <div className="mb-1.5 flex items-center justify-between text-xs">
+          <span className="font-medium text-muted-foreground">{t("totalSpentLabel")}</span>
+          <span
+            className={cn(
+              "font-semibold",
+              isOverIncome ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+            )}
+          >
+            {isOverIncome
+              ? t("totalOverIncome", {
+                  pct: formatPercent(totalPct, 1, locale),
+                  symbol: "€",
+                  amount: formatAmount(totalSpent - totalIncome, locale),
+                })
+              : t("totalWithinIncome", { pct: formatPercent(totalPct, 1, locale) })}
+          </span>
+        </div>
         <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
           <span>0%</span>
           <span>50%</span>
           <span>{t("pctOfIncome", { pct: 100 })}</span>
         </div>
-        <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn(
+            "flex h-4 w-full overflow-hidden rounded-full border",
+            isOverIncome
+              ? "border-red-300 bg-red-100 dark:border-red-800 dark:bg-red-950/40"
+              : "border-transparent bg-muted"
+          )}
+        >
           {needsPct > 0 && (
             <div
               className="bg-blue-500 transition-all"
@@ -151,7 +181,9 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
             />
           )}
         </div>
-        {/* Target markers */}
+        {/* Target markers — one per bucket, colour-matched to its segment
+            above, so the cumulative 50/30/20 split reads at a glance
+            without relying on the hover-only title tooltip. */}
         <div className="relative mt-1 h-2">
           <div
             className="absolute top-0 h-2 w-px bg-blue-400 opacity-60"
@@ -163,6 +195,11 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
             style={{ left: "80%" }}
             title={t("budgetSplit30Target")}
           />
+          <div
+            className="absolute top-0 h-2 w-px bg-emerald-400 opacity-60"
+            style={{ left: "100%" }}
+            title={t("budgetSplit20Target")}
+          />
         </div>
       </div>
 
@@ -173,6 +210,13 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
           const actualPct = pct(amount);
           const status = bucket.statusFn(actualPct);
           const diff = actualPct - bucket.target;
+          // Savings' target is a floor (higher is better), so "over" there
+          // means falling short, not exceeding it — the opposite of Needs/Wants.
+          const isOverTarget = bucket.key === "SAVINGS" ? diff < 0 : diff > 0;
+          // Currency gap vs. the target amount — same "€X over" framing as
+          // the top bar's total readout, just scoped to this one bucket.
+          const targetAmount = (bucket.target / 100) * totalIncome;
+          const amountGap = Math.abs(amount - targetAmount);
 
           return (
             <div
@@ -207,15 +251,27 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
                 <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                   <span>{t("pctOfIncome", { pct: formatPercent(actualPct, 1, locale) })}</span>
                   <span className={cn("font-medium", STATUS_CLASSES[status])}>
-                    {diff > 0 && t("differenceOver", { diff: formatPercent(diff, 1, locale) })}
-                    {diff < 0 && t("differenceUnder", { diff: formatPercent(Math.abs(diff), 1, locale) })}
+                    {isOverTarget && bucket.key === "SAVINGS" &&
+                      t("differenceUnderAmount", {
+                        diff: formatPercent(Math.abs(diff), 1, locale),
+                        symbol: "€",
+                        amount: formatAmount(amountGap, locale),
+                      })}
+                    {isOverTarget && bucket.key !== "SAVINGS" &&
+                      t("differenceOverAmount", {
+                        diff: formatPercent(diff, 1, locale),
+                        symbol: "€",
+                        amount: formatAmount(amountGap, locale),
+                      })}
+                    {!isOverTarget && diff > 0 && t("differenceOver", { diff: formatPercent(diff, 1, locale) })}
+                    {!isOverTarget && diff < 0 && t("differenceUnder", { diff: formatPercent(Math.abs(diff), 1, locale) })}
                     {diff === 0 && t("differenceExact")}
                   </span>
                 </div>
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
                   <div
-                    className={cn("h-full rounded-full transition-all", bucket.color)}
-                    style={{ width: `${Math.min(actualPct / bucket.target, 2) * 50}%` }}
+                    className={cn("h-full rounded-full transition-all", isOverTarget ? "bg-red-500" : bucket.color)}
+                    style={{ width: `${Math.min(actualPct / bucket.target, 1) * 100}%` }}
                   />
                 </div>
               </div>
