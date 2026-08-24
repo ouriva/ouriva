@@ -6,7 +6,7 @@
 //   - nonTrackedBalance: net sum across ALL categories marked excludeFromStats
 //
 // PATCH applies a partial update — used by the General Settings page to
-// flip the 50/30/20 visibility toggles (budgetSplitEnabled/InSummary/InBudget).
+// flip the 50·30·20 visibility toggles (budgetSplitEnabled/InSummary/InBudget).
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod/v4";

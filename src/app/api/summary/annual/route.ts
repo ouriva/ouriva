@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
     let totalIncome = 0;
     let totalExpense = 0;
 
-    // 50/30/20 bucket breakdown — expenses only.
+    // 50·30·20 bucket breakdown — expenses only.
     // Effective bucket = category.bucket ?? parent.bucket ?? null (unclassified).
     const bucketTotals = initBucketTotals();
 
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       const displayAmount = categoryType !== tx.type ? -amount : amount;
       const targetMap = categoryType === "EXPENSE" ? categoryMap : incomeCategoryMap;
 
-      // Totals, monthly bars, and the 50/30/20 bucket breakdown use the same
+      // Totals, monthly bars, and the 50·30·20 bucket breakdown use the same
       // netted displayAmount as the category maps, so they always reconcile
       // with the category breakdown tables (NEEDS + WANTS + SAVINGS +
       // unclassified sums to totalExpense).

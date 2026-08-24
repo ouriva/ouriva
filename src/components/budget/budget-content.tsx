@@ -1,6 +1,6 @@
 // Budget Content
 // ==============
-// Annual budget planner with income + expense sides and 50/30/20 validation.
+// Annual budget planner with income + expense sides and 50·30·20 validation.
 //
 // Layout:
 //   1. Year picker
@@ -13,7 +13,7 @@
 //        • Standalone  — root categories with no children, fully editable
 //      Expense tab seeds from ALL active leaf categories so users can plan
 //      ahead even before their first transaction.
-//   4. 50/30/20 panel — always visible; shows guidance when no income budget set
+//   4. 50·30·20 panel — always visible; shows guidance when no income budget set
 //
 // Editing pattern — "optimistic local state":
 //   Budget amounts → tracked in `edits` keyed by "TYPE:categoryId".
@@ -679,7 +679,7 @@ export function BudgetContent() {
             showBucketColors={showBucketColors}
           />
 
-          {/* ── Planned 50/30/20 ────────────────────────────────────── */}
+          {/* ── Planned 50·30·20 ────────────────────────────────────── */}
           {showBudgetSplit && (
             <Card className="py-0">
               <CardContent className="p-3 pb-4">

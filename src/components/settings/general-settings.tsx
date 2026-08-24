@@ -20,8 +20,9 @@ import {
 } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import { UnclassifiedCategories } from "./unclassified-categories";
+import { NonTrackedCategories } from "./non-tracked-categories";
 
 interface Settings {
   transferBalance: number;
@@ -37,17 +38,17 @@ function handleLocaleChange(newLocale: string) {
 }
 
 interface BalanceIndicatorProps {
+  label: string;
   balance: number;
   zeroLabel: string;
   nonZeroLabel: string;
 }
 
-function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
-  const t = useTranslations("generalSettings");
+function BalanceIndicator({ label, balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
   const locale = useLocale();
   return (
     <div className="rounded-lg border p-4">
-      <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p
         className={`text-2xl font-bold tabular-nums ${
           balance === 0
@@ -149,26 +150,7 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Budget bucket colours */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <Label htmlFor="bucket-colors-toggle">{t("bucketColorsLabel")}</Label>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("bucketColorsDescription")}
-              </p>
-            </div>
-            <Switch
-              id="bucket-colors-toggle"
-              checked={showBucketColors}
-              onCheckedChange={handleBucketColorsToggle}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 50/30/20 Budget Rule visibility */}
+      {/* 50·30·20 Budget Rule visibility */}
       <Card>
         <CardContent className="space-y-4 p-4">
           <div className="flex items-center justify-between gap-4">
@@ -215,7 +197,25 @@ export function GeneralSettings() {
                 onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitInBudget", checked)}
               />
             </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="bucket-colors-toggle">{t("bucketColorsLabel")}</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("bucketColorsDescription")}
+                </p>
+              </div>
+              <Switch
+                id="bucket-colors-toggle"
+                checked={showBucketColors}
+                disabled={!(settings?.budgetSplitEnabled ?? true)}
+                onCheckedChange={handleBucketColorsToggle}
+              />
+            </div>
           </div>
+
+          {/* Unclassified categories */}
+          <UnclassifiedCategories enabled={settings?.budgetSplitEnabled ?? true} />
         </CardContent>
       </Card>
 
@@ -229,6 +229,7 @@ export function GeneralSettings() {
             </p>
           </div>
           <BalanceIndicator
+            label={t("transferBalanceValueLabel")}
             balance={settings?.transferBalance ?? 0}
             zeroLabel={t("balanceZero")}
             nonZeroLabel={t("balanceNonZero")}
@@ -244,17 +245,15 @@ export function GeneralSettings() {
             <p className="mt-1 text-sm text-muted-foreground">
               {t("nonTrackedDescription")}
             </p>
-            <p className="mt-2 text-sm">
-              <Link href="/settings/categories" className="underline underline-offset-2">
-                {t("nonTrackedLink")}
-              </Link>
-            </p>
           </div>
           <BalanceIndicator
+            label={t("nonTrackedValueLabel")}
             balance={settings?.nonTrackedBalance ?? 0}
             zeroLabel={t("nonTrackedZero")}
             nonZeroLabel={t("nonTrackedNonZero")}
           />
+
+          <NonTrackedCategories />
         </CardContent>
       </Card>
     </div>

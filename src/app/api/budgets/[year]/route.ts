@@ -36,7 +36,7 @@
 // Actual tracking: transactions are kept at their assigned category level —
 //   no rollup to parent. Each child shows its own progress independently.
 //
-// Planned 50/30/20 breakdown: uses only leaf-level budget entries so parent
+// Planned 50·30·20 breakdown: uses only leaf-level budget entries so parent
 //   budgets (if any remain from before the migration) are not double-counted.
 //
 // Effective bucket: category.bucket ?? category.parent?.bucket ?? null
@@ -438,7 +438,7 @@ export async function GET(
     const totalBudgetedIncome  = incomeGroups.reduce( (s, g) => s + g.budgeted, 0);
     const totalActualIncome    = incomeGroups.reduce( (s, g) => s + g.actual,   0);
 
-    // ── Planned 50/30/20 — leaf EXPENSE categories only (no double-count) ──
+    // ── Planned 50·30·20 — leaf EXPENSE categories only (no double-count) ──
     const plannedBuckets = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
     for (const b of budgets) {
       if (b.category.type !== "EXPENSE") continue;

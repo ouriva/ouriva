@@ -6,7 +6,7 @@
 //
 // What is seeded:
 //   - Currencies (EUR = default), account types, accounts
-//   - Full category tree with icons, colors, and 50/30/20 buckets
+//   - Full category tree with icons, colors, and 50·30·20 buckets
 //   - Transactions across Oct 2025 – Mar 2026 (6 months)
 //   - Multi-currency: USD freelance income + SaaS, BRL salary + expenses
 //   - Transfers, proxy purchases, health reimbursements, needsReview flags
@@ -152,10 +152,10 @@ async function main() {
   );
 
   // ----------------------------------------------------------
-  // 4. Categories — icons, colors, and 50/30/20 buckets
+  // 4. Categories — icons, colors, and 50·30·20 buckets
   // ----------------------------------------------------------
   // bucket is set on parent categories and inherited by children
-  // that don't have their own. This powers the 50/30/20 summary.
+  // that don't have their own. This powers the 50·30·20 summary.
   //
   // Bucket assignments:
   //   NEEDS  — Housing, Food, Transport, Utilities, Health
@@ -718,7 +718,7 @@ async function main() {
     Needs review:      5 transactions
 
   Categories:
-    9 parent categories with icons, colors, and 50/30/20 buckets
+    9 parent categories with icons, colors, and 50·30·20 buckets
     NEEDS: Housing, Food, Transport, Utilities, Health
     WANTS: Entertainment, Shopping, Tech & Software
 

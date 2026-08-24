@@ -1,6 +1,6 @@
 // useBudgetSplitVisibility Hook
 // ==============================
-// Resolves whether the 50/30/20 Budget Rule (the `BudgetSplit` component)
+// Resolves whether the 50·30·20 Budget Rule (the `BudgetSplit` component)
 // should render on the Summary tabs and on the Budget page, based on the
 // three AppSettings toggles set in Settings > General:
 //   - budgetSplitEnabled    — master switch for the whole feature
