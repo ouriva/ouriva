@@ -23,6 +23,7 @@ import { formatCurrency } from "@/lib/formatters";
 import { useTranslations, useLocale } from "next-intl";
 import { UnclassifiedCategories } from "./unclassified-categories";
 import { NonTrackedCategories } from "./non-tracked-categories";
+import { BudgetSplitTargets } from "./budget-split-targets";
 
 interface Settings {
   transferBalance: number;
@@ -30,6 +31,9 @@ interface Settings {
   budgetSplitEnabled: boolean;
   budgetSplitInSummary: boolean;
   budgetSplitInBudget: boolean;
+  needsTarget: number;
+  wantsTarget: number;
+  savingsTarget: number;
 }
 
 function handleLocaleChange(newLocale: string) {
@@ -104,6 +108,10 @@ export function GeneralSettings() {
     }
   }
 
+  function handleTargetsSaved(saved: { needsTarget: number; wantsTarget: number; savingsTarget: number }) {
+    setSettings((prev) => (prev ? { ...prev, ...saved } : prev));
+  }
+
   // isLoading starts true; we only set it false after fetch resolves.
   // fetchData is stable — referenced by useEffect below.
   const fetchData = useCallback(() => {
@@ -121,6 +129,8 @@ export function GeneralSettings() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const splitLabel = `${settings?.needsTarget ?? 50}·${settings?.wantsTarget ?? 30}·${settings?.savingsTarget ?? 20}`;
 
   if (isLoading) {
     return (
@@ -172,7 +182,7 @@ export function GeneralSettings() {
               <div className="min-w-0">
                 <Label htmlFor="budget-split-summary-toggle">{t("budgetSplitInSummaryLabel")}</Label>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {t("budgetSplitInSummaryDescription")}
+                  {t("budgetSplitInSummaryDescription", { split: splitLabel })}
                 </p>
               </div>
               <Switch
@@ -187,7 +197,7 @@ export function GeneralSettings() {
               <div className="min-w-0">
                 <Label htmlFor="budget-split-budget-toggle">{t("budgetSplitInBudgetLabel")}</Label>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {t("budgetSplitInBudgetDescription")}
+                  {t("budgetSplitInBudgetDescription", { split: splitLabel })}
                 </p>
               </div>
               <Switch
@@ -214,8 +224,19 @@ export function GeneralSettings() {
             </div>
           </div>
 
+          {/* Target percentages */}
+          <BudgetSplitTargets
+            targets={{
+              needsTarget: settings?.needsTarget ?? 50,
+              wantsTarget: settings?.wantsTarget ?? 30,
+              savingsTarget: settings?.savingsTarget ?? 20,
+            }}
+            disabled={!(settings?.budgetSplitEnabled ?? true)}
+            onSaved={handleTargetsSaved}
+          />
+
           {/* Unclassified categories */}
-          <UnclassifiedCategories enabled={settings?.budgetSplitEnabled ?? true} />
+          <UnclassifiedCategories enabled={settings?.budgetSplitEnabled ?? true} splitLabel={splitLabel} />
         </CardContent>
       </Card>
 
