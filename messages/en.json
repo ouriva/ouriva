@@ -350,7 +350,13 @@
     "languageEnglish": "English",
     "languagePortuguese": "Português",
     "bucketColorsLabel": "Budget bucket colours",
-    "bucketColorsDescription": "Colour-code each budget category row by its 50/30/20 bucket (Needs, Wants, Savings)."
+    "bucketColorsDescription": "Colour-code each budget category row by its 50/30/20 bucket (Needs, Wants, Savings).",
+    "budgetSplitEnabledLabel": "50/30/20 Budget Rule",
+    "budgetSplitEnabledDescription": "Track spending against the Needs/Wants/Savings rule across the app.",
+    "budgetSplitInSummaryLabel": "Show in Summary",
+    "budgetSplitInSummaryDescription": "Adds a 50·30·20 tab to the monthly and annual summary.",
+    "budgetSplitInBudgetLabel": "Show in Budget",
+    "budgetSplitInBudgetDescription": "Shows the planned 50·30·20 breakdown on the Budget page."
   },
   "currencies": {
     "pageTitle": "Currencies",

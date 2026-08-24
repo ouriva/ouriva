@@ -26,6 +26,9 @@ import { useTranslations, useLocale } from "next-intl";
 interface Settings {
   transferBalance: number;
   nonTrackedBalance: number;
+  budgetSplitEnabled: boolean;
+  budgetSplitInSummary: boolean;
+  budgetSplitInBudget: boolean;
 }
 
 function handleLocaleChange(newLocale: string) {
@@ -84,6 +87,20 @@ export function GeneralSettings() {
     setShowBucketColors(checked);
     localStorage.setItem("budget.bucketColors", String(checked));
     window.dispatchEvent(new StorageEvent("storage", { key: "budget.bucketColors", newValue: String(checked) }));
+  }
+
+  // Server-backed toggle: updates optimistically, then persists via PATCH.
+  // Reverts on failure so the switch never drifts from the saved state.
+  async function handleBudgetSplitToggle(field: keyof Pick<Settings, "budgetSplitEnabled" | "budgetSplitInSummary" | "budgetSplitInBudget">, checked: boolean) {
+    setSettings((prev) => (prev ? { ...prev, [field]: checked } : prev));
+    const res = await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: checked }),
+    });
+    if (!res.ok) {
+      setSettings((prev) => (prev ? { ...prev, [field]: !checked } : prev));
+    }
   }
 
   // isLoading starts true; we only set it false after fetch resolves.
@@ -147,6 +164,57 @@ export function GeneralSettings() {
               checked={showBucketColors}
               onCheckedChange={handleBucketColorsToggle}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 50/30/20 Budget Rule visibility */}
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <Label htmlFor="budget-split-enabled-toggle">{t("budgetSplitEnabledLabel")}</Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("budgetSplitEnabledDescription")}
+              </p>
+            </div>
+            <Switch
+              id="budget-split-enabled-toggle"
+              checked={settings?.budgetSplitEnabled ?? true}
+              onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitEnabled", checked)}
+            />
+          </div>
+
+          <div className="space-y-4 border-l pl-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="budget-split-summary-toggle">{t("budgetSplitInSummaryLabel")}</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("budgetSplitInSummaryDescription")}
+                </p>
+              </div>
+              <Switch
+                id="budget-split-summary-toggle"
+                checked={settings?.budgetSplitInSummary ?? true}
+                disabled={!(settings?.budgetSplitEnabled ?? true)}
+                onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitInSummary", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="budget-split-budget-toggle">{t("budgetSplitInBudgetLabel")}</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("budgetSplitInBudgetDescription")}
+                </p>
+              </div>
+              <Switch
+                id="budget-split-budget-toggle"
+                checked={settings?.budgetSplitInBudget ?? true}
+                disabled={!(settings?.budgetSplitEnabled ?? true)}
+                onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitInBudget", checked)}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -1,12 +1,17 @@
-// API: GET /api/settings
-// ======================
+// API: GET/PATCH /api/settings
+// =============================
 // Singleton app settings. The "singleton" row is auto-created on
 // first read via upsert. GET also computes:
 //   - transferBalance: net of Transfer In minus Transfer Out (0 = balanced)
 //   - nonTrackedBalance: net sum across ALL categories marked excludeFromStats
+//
+// PATCH applies a partial update — used by the General Settings page to
+// flip the 50/30/20 visibility toggles (budgetSplitEnabled/InSummary/InBudget).
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod/v4";
 import { prisma } from "@/lib/prisma";
+import { updateSettingsSchema } from "@/validators/settings";
 
 export async function GET() {
   try {
@@ -69,6 +74,40 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/settings error:", error);
+    return NextResponse.json(
+      { error: { message: "Internal server error", code: "INTERNAL_ERROR" } },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const result = updateSettingsSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          error: {
+            message: "Validation failed",
+            code: "VALIDATION_ERROR",
+            details: z.treeifyError(result.error),
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    const settings = await prisma.appSettings.upsert({
+      where: { id: "singleton" },
+      update: result.data,
+      create: { id: "singleton", ...result.data },
+    });
+
+    return NextResponse.json({ data: settings });
+  } catch (error) {
+    console.error("PATCH /api/settings error:", error);
     return NextResponse.json(
       { error: { message: "Internal server error", code: "INTERNAL_ERROR" } },
       { status: 500 }

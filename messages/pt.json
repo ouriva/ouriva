@@ -350,7 +350,13 @@
     "languageEnglish": "English",
     "languagePortuguese": "Português",
     "bucketColorsLabel": "Cores de secção do orçamento",
-    "bucketColorsDescription": "Mostra cada categoria do orçamento com a cor da sua secção 50/30/20 (Necessidades, Desejos, Poupanças)."
+    "bucketColorsDescription": "Mostra cada categoria do orçamento com a cor da sua secção 50/30/20 (Necessidades, Desejos, Poupanças).",
+    "budgetSplitEnabledLabel": "Regra Orçamental 50/30/20",
+    "budgetSplitEnabledDescription": "Acompanhe as suas despesas em relação à regra Necessidades/Desejos/Poupança em toda a aplicação.",
+    "budgetSplitInSummaryLabel": "Mostrar no Resumo",
+    "budgetSplitInSummaryDescription": "Adiciona um separador 50·30·20 ao resumo mensal e anual.",
+    "budgetSplitInBudgetLabel": "Mostrar no Orçamento",
+    "budgetSplitInBudgetDescription": "Mostra a alocação 50·30·20 planeada na página de Orçamento."
   },
   "currencies": {
     "pageTitle": "Moedas",

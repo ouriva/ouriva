@@ -123,9 +123,14 @@ model ImportProfile {
 }
 
 model AppSettings {
-  id        String   @id @default("singleton")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id @default("singleton")
+  // 50/30/20 Budget Rule visibility — budgetSplitEnabled is the master
+  // switch; the two "in*" flags only take effect while it's on.
+  budgetSplitEnabled   Boolean  @default(true)
+  budgetSplitInSummary Boolean  @default(true)
+  budgetSplitInBudget  Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model CategoryRule {
