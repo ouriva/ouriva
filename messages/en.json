@@ -230,6 +230,7 @@
     "noDataPeriod": "No data for this period",
     "budgetSplit50Target": "Needs target: 50%",
     "budgetSplit30Target": "Wants target: 30% → 80% cumulative",
+    "budgetSplit20Target": "Savings target: 20% → 100% cumulative",
     "needs": "Needs",
     "wants": "Wants",
     "savings": "Savings",

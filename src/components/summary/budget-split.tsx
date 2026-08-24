@@ -181,7 +181,9 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
             />
           )}
         </div>
-        {/* Target markers */}
+        {/* Target markers — one per bucket, colour-matched to its segment
+            above, so the cumulative 50/30/20 split reads at a glance
+            without relying on the hover-only title tooltip. */}
         <div className="relative mt-1 h-2">
           <div
             className="absolute top-0 h-2 w-px bg-blue-400 opacity-60"
@@ -192,6 +194,11 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
             className="absolute top-0 h-2 w-px bg-amber-400 opacity-60"
             style={{ left: "80%" }}
             title={t("budgetSplit30Target")}
+          />
+          <div
+            className="absolute top-0 h-2 w-px bg-emerald-400 opacity-60"
+            style={{ left: "100%" }}
+            title={t("budgetSplit20Target")}
           />
         </div>
       </div>

@@ -230,6 +230,7 @@
     "noDataPeriod": "Sem dados para este período",
     "budgetSplit50Target": "Meta necessidades: 50%",
     "budgetSplit30Target": "Meta desejos: 30% → 80% cumulativo",
+    "budgetSplit20Target": "Meta poupança: 20% → 100% cumulativo",
     "needs": "Necessidades",
     "wants": "Desejos",
     "savings": "Poupança",
