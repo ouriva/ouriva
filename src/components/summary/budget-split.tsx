@@ -107,6 +107,12 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
   const pct = (amount: number) =>
     Math.round((amount / totalIncome) * 1000) / 10; // one decimal
 
+  // Total spent across all buckets — uncapped, used to detect overspending
+  // that the capped stacked-bar segments below would otherwise hide.
+  const totalSpent = breakdown.NEEDS + breakdown.WANTS + breakdown.SAVINGS + breakdown.unclassified;
+  const totalPct = pct(totalSpent);
+  const isOverIncome = totalPct > 100;
+
   // Stacked bar segments — each bucket as % of income, capped at 100% total
   const needsPct = Math.min(pct(breakdown.NEEDS), 100);
   const wantsPct = Math.min(pct(breakdown.WANTS), 100 - needsPct);
@@ -120,12 +126,36 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
     <div className="space-y-6">
       {/* Stacked bar — visual proportion of income */}
       <div>
+        <div className="mb-1.5 flex items-center justify-between text-xs">
+          <span className="font-medium text-muted-foreground">{t("totalSpentLabel")}</span>
+          <span
+            className={cn(
+              "font-semibold",
+              isOverIncome ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+            )}
+          >
+            {isOverIncome
+              ? t("totalOverIncome", {
+                  pct: formatPercent(totalPct, 1, locale),
+                  symbol: "€",
+                  amount: formatAmount(totalSpent - totalIncome, locale),
+                })
+              : t("totalWithinIncome", { pct: formatPercent(totalPct, 1, locale) })}
+          </span>
+        </div>
         <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
           <span>0%</span>
           <span>50%</span>
           <span>{t("pctOfIncome", { pct: 100 })}</span>
         </div>
-        <div className="flex h-4 w-full overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn(
+            "flex h-4 w-full overflow-hidden rounded-full border",
+            isOverIncome
+              ? "border-red-300 bg-red-100 dark:border-red-800 dark:bg-red-950/40"
+              : "border-transparent bg-muted"
+          )}
+        >
           {needsPct > 0 && (
             <div
               className="bg-blue-500 transition-all"
