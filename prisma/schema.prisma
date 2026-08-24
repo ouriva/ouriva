@@ -124,11 +124,17 @@ model ImportProfile {
 
 model AppSettings {
   id                   String   @id @default("singleton")
-  // 50/30/20 Budget Rule visibility — budgetSplitEnabled is the master
-  // switch; the two "in*" flags only take effect while it's on.
+  // Budget Split visibility — budgetSplitEnabled is the master switch; the
+  // two "in*" flags only take effect while it's on.
   budgetSplitEnabled   Boolean  @default(true)
   budgetSplitInSummary Boolean  @default(true)
   budgetSplitInBudget  Boolean  @default(true)
+  // Budget Split targets — how income should divide across the three
+  // buckets. Default to the classic 50/30/20 rule; must sum to 100
+  // whenever changed (enforced in updateSettingsSchema, not the schema).
+  needsTarget          Int      @default(50)
+  wantsTarget          Int      @default(30)
+  savingsTarget        Int      @default(20)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
