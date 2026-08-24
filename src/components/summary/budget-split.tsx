@@ -251,8 +251,20 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
                 <div className="mb-1 flex justify-between text-xs text-muted-foreground">
                   <span>{t("pctOfIncome", { pct: formatPercent(actualPct, 1, locale) })}</span>
                   <span className={cn("font-medium", STATUS_CLASSES[status])}>
-                    {diff > 0 && t("differenceOver", { diff: formatPercent(diff, 1, locale) })}
-                    {diff < 0 && t("differenceUnder", { diff: formatPercent(Math.abs(diff), 1, locale) })}
+                    {isOverTarget && bucket.key === "SAVINGS" &&
+                      t("differenceUnderAmount", {
+                        diff: formatPercent(Math.abs(diff), 1, locale),
+                        symbol: "€",
+                        amount: formatAmount(amountGap, locale),
+                      })}
+                    {isOverTarget && bucket.key !== "SAVINGS" &&
+                      t("differenceOverAmount", {
+                        diff: formatPercent(diff, 1, locale),
+                        symbol: "€",
+                        amount: formatAmount(amountGap, locale),
+                      })}
+                    {!isOverTarget && diff > 0 && t("differenceOver", { diff: formatPercent(diff, 1, locale) })}
+                    {!isOverTarget && diff < 0 && t("differenceUnder", { diff: formatPercent(Math.abs(diff), 1, locale) })}
                     {diff === 0 && t("differenceExact")}
                   </span>
                 </div>
@@ -262,13 +274,6 @@ export function BudgetSplit({ breakdown, totalIncome }: Readonly<BudgetSplitProp
                     style={{ width: `${Math.min(actualPct / bucket.target, 1) * 100}%` }}
                   />
                 </div>
-                {isOverTarget && (
-                  <p className="mt-1 text-right text-xs font-medium text-red-600 dark:text-red-400">
-                    {bucket.key === "SAVINGS"
-                      ? t("amountShortOfTarget", { symbol: "€", amount: formatAmount(amountGap, locale) })
-                      : t("amountOverTarget", { symbol: "€", amount: formatAmount(amountGap, locale) })}
-                  </p>
-                )}
               </div>
             </div>
           );
