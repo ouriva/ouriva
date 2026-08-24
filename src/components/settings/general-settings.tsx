@@ -213,11 +213,11 @@ export function GeneralSettings() {
               />
             </div>
           </div>
+
+          {/* Unclassified categories */}
+          <UnclassifiedCategories enabled={settings?.budgetSplitEnabled ?? true} />
         </CardContent>
       </Card>
-
-      {/* Unclassified categories */}
-      <UnclassifiedCategories enabled={settings?.budgetSplitEnabled ?? true} />
 
       {/* Transfer Balance */}
       <Card>
