@@ -1047,6 +1047,8 @@ Columns: `Date, Type, Amount, Currency, Description, Category, Account, Notes`
 
 **`bucketBreakdown`** — Totals broken down by `CategoryBucket` value, plus `unclassified` for expenses in categories that have no bucket assignment (including via parent inheritance). This field drives the `BudgetSplit` component's 50/30/20 view. The annual summary API returns the same `bucketBreakdown` field, but aggregated across the full year.
 
+**Netting** — `totalIncome`, `totalExpense`, and `bucketBreakdown` all accumulate the same `CategoryType`-routed, netted amount used to build `categories`/`incomeCategories` (see "CategoryType Drives Budget Routing" above) — not the raw transaction amount. An INCOME transaction in an EXPENSE category (a reimbursement) reduces that category's expense total, `totalExpense`, and its bucket total together; it does not add to `totalIncome`. Symmetrically, an EXPENSE transaction in an INCOME category (a correction) reduces `totalIncome` and does not add to `totalExpense` or any bucket. This keeps `NEEDS + WANTS + SAVINGS + unclassified` always equal to `totalExpense`, and keeps every figure on the page reconciling with the category breakdown tables.
+
 #### `GET /api/budgets/[year]` — Budget vs Actual
 
 Merges budget targets with actual spending. For each category:
@@ -1066,6 +1068,8 @@ The `percentage` drives the progress bar color: green (<75%), yellow (75-100%), 
 **Split transactions**: Split parents have no category of their own (`categoryId: null`). The API fetches top-level transactions with their split children included, then replaces each split parent with its children. This means each child's amount is attributed to its own category, so a single split transaction can contribute to multiple budget rows simultaneously.
 
 **Reimbursement/correction netoff**: routing is driven by `Category.type`, not `Transaction.type` (see "CategoryType Drives Budget Routing" above). Income transactions assigned to an EXPENSE category (e.g. an insurance reimbursement categorised as "Health") are treated as contra-expenses: the expense `actual` = gross expenses − reimbursements in that category, giving the true out-of-pocket cost. Symmetrically, expense transactions assigned to an INCOME category (e.g. paying back a salary overpayment) are treated as contra-income: the income `actual` = gross income − corrections in that category. Either way, the netted-off transaction is excluded from the opposite tab so it is not double-counted.
+
+**`plannedBucketBreakdown`** — The planned counterpart to the summary endpoints' `bucketBreakdown`: sums each active leaf EXPENSE category's *budgeted* amount (not actual spend) into `NEEDS`/`WANTS`/`SAVINGS`/`unclassified`, using the same effective-bucket inheritance (`category.bucket ?? category.parent?.bucket ?? null`). Drives the `BudgetSplit` component on the Budget page, compared against `income.totalBudgeted`. Only budgets on *active* leaf categories count, matching the universe used for `expense.totalBudgeted` — a budget left over on a category that's since been marked inactive (`isActive: false`) is excluded from both, so the two figures always reconcile.
 
 #### `POST /api/budgets` — Bulk Upsert
 
