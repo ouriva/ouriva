@@ -62,7 +62,7 @@ jobs:
       # Skipped when snyk.sarif is absent (e.g. Docker build failed before
       # Snyk ran and had a chance to write the file).
       - name: Upload Snyk results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v4.37.3
         if: always() && hashFiles('snyk.sarif') != ''
         with:
           sarif_file: snyk.sarif
