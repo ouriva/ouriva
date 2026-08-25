@@ -67,7 +67,7 @@
   "transactions": {
     "pageTitle": "Transações",
     "importButton": "Importar",
-    "addAriaLabel": "Adicionar transação",
+    "addButton": "Adicionar",
     "searchPlaceholder": "Pesquisar transações...",
     "tabAll": "Todas",
     "tabIncome": "Entradas",

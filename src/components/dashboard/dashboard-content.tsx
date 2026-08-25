@@ -387,7 +387,7 @@ export function DashboardContent() {
               <TrendingUp className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="outline" size="sm" asChild>
+          <Button size="sm" asChild>
             <Link href="/transactions/new">
               <Plus className="mr-2 h-4 w-4" />
               {t("addTransaction")}
