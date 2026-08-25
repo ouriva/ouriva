@@ -32,6 +32,7 @@ All defined in `src/app/globals.css` as OKLCH custom properties (light value in 
 | `wants` / `wants-bar` / `wants-tint` / `wants-border` | Dusty mauve — Budget Split **Wants** bucket identity. | The Wants bucket bar/card/tag. Deliberately *not* amber — Wants used to share the exact brand gold value, which meant "this is a button" and "this is the Wants bucket" were visually the same thing. |
 | Neutral ramp (`background`, `card`, `popover`, `muted`, `secondary`, `accent`, `border`, `input`) | Backgrounds, surfaces, dividers, secondary text. | Everywhere. Warmed from a cool blue-violet cast (OKLCH hue 286 — accidental, not chosen) to a hue near the brand's (80), at very low chroma. Lighter and airier in light mode, closer to a Revolut-style neutral than Tailwind Zinc's default. |
 | `cat-zinc` … `cat-red` (12) | Muted counterpart of the category color picker — see below. Not part of the "7 semantic colors," a separate parallel set. | `CATEGORY_COLORS` in `category-icons.ts`; the category icon circle wherever it renders. |
+| `hero` / `hero-foreground` / `hero-muted` / `hero-chip` / `hero-chip-foreground` / `hero-positive` / `hero-danger` | The dashboard net-worth card's own fixed palette — see below. Not light/dark-reactive. | `NetWorthHero` in `dashboard-content.tsx` only. |
 
 `amber`/`orange` (caution: "uncategorized," "approaching budget limit," "needs review," bucket-target warnings) intentionally stay as **plain Tailwind `amber-*` classes**, not a token — they're Tailwind's own well-designed, already dual-mode-safe shade ramp, and caution sharing gold's hue with brand is a deliberate pairing (see "Two reds" below), not a leftover duplicate.
 
@@ -60,9 +61,13 @@ The `CATEGORY_COLORS` keys (`"zinc"`, `"blue"`, …) are unchanged from the orig
 
 The **category-breakdown rotating palettes** (`PALETTE` arrays in `category-breakdown.tsx` / `net-category-breakdown.tsx`) — an 8-color qualitative sequence assigned by list position for chart legends, not tied to a category's chosen color — were muted to match in the same pass, as literal hex (Recharts-style components, same SVG constraint as the charts above; not worth a dedicated token for an 8-color rotation used in two places).
 
-## What's deliberately left alone
+## The net-worth hero — a fixed sub-palette, not themed
 
-- **The net-worth hero card's gradient** (`from-zinc-800 to-amber-950` in `dashboard-content.tsx`) — a deliberate always-dark treatment (it doesn't have `dark:` variants and stays dark even in light mode), not a themed surface. Left alone rather than forced onto the light/dark-reactive neutral tokens, which would break the effect.
+The dashboard's net-worth card is the one piece of UI meant to carry more visual weight than everything around it, so unlike the rest of the app it stays a solid dark surface in both light and dark mode — same reasoning as before (it never had `dark:` variants), but the surface itself changed: the old two-stop diagonal gradient (`from-zinc-800 to-amber-950`, a stock "dark hero card" look with no relationship to the rest of the palette) is now a solid warm charcoal (`--hero`, same hue family as the neutral ramp) with one restrained radial gold glow anchored at the top-right corner and a hairline top edge, both applied via inline `style` (`var(--hero-glow)`, `var(--hero-hairline)`) since they're gradients, not solid-color utilities.
+
+Because this card is *always* dark regardless of the app's theme, it can't use the theme-reactive `--positive`/`--danger` tokens for its new delta line — those resolve to their light-mode (darker, low-contrast) values whenever the app itself is in light mode, even though the card underneath them stays dark. `--hero-positive` and `--hero-danger` are pinned to the dark-mode positive/danger values instead, so the delta line stays legible no matter what theme the rest of the app is in.
+
+**The delta line is new**, not just a restyle: `useDashboardData` now also fetches `/api/analytics/net-worth?period=1m` (the same endpoint the Net Worth analytics chart already uses) and computes a trailing-30-day delta, shown as "▲ €320.00 (2.2%) this month" beneath the total. It's suppressed entirely when there's fewer than two data points (a new account with no transaction history yet) rather than showing a meaningless "+€0.00 (0.0%)."
 
 ## Before / after
 
@@ -70,5 +75,6 @@ Full before-state audit (every color, every file) and the visual comparisons use
 
 - **Ouriva Palette Bench** — danger-red and bucket-color comparisons against real components, light/dark toggle.
 - **Ouriva Color Audit** — the full inventory this document is the resolution of, including the merge-mapping table (old class → new token) for every single change.
+- **Net Worth Hero Redesign** — three real-data mockups for the dashboard card above; "Quiet premium" is the one that shipped.
 
 Ask for the links if you don't have them handy — they aren't checked into the repo.
