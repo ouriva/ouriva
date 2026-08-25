@@ -151,10 +151,11 @@ export function EditButton({
 }: Readonly<{
   onClick?: () => void;
 }>) {
+  const tCommon = useTranslations("common");
   return (
-    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClick}>
-      <Pencil className="h-4 w-4" />
-      <span className="sr-only">Edit</span>
+    <Button variant="ghost" size="icon" onClick={onClick}>
+      <Pencil className="h-5 w-5" />
+      <span className="sr-only">{tCommon("edit")}</span>
     </Button>
   );
 }

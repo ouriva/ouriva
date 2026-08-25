@@ -29,7 +29,7 @@ export function PeriodSelector({ value, onChange }: Readonly<PeriodSelectorProps
           className={cn(
             "rounded-full px-3 py-1 text-xs font-semibold transition-colors",
             value === option.value
-              ? "bg-amber-500 text-black"
+              ? "bg-primary text-primary-foreground"
               : "bg-muted text-muted-foreground hover:bg-muted/80"
           )}
         >

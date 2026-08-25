@@ -63,35 +63,35 @@ function buildBucketConfig(targets: BudgetSplitTargets) {
     {
       key: "NEEDS" as const,
       target: targets.NEEDS,
-      color: "bg-blue-500",
-      textColor: "text-blue-700 dark:text-blue-300",
-      bgColor: "bg-blue-50 dark:bg-blue-950/30",
-      borderColor: "border-blue-200 dark:border-blue-800",
+      color: "bg-needs-bar",
+      textColor: "text-needs",
+      bgColor: "bg-needs-tint",
+      borderColor: "border-needs-border",
       statusFn: makeCeilingStatusFn(targets.NEEDS),
     },
     {
       key: "WANTS" as const,
       target: targets.WANTS,
-      color: "bg-amber-500",
-      textColor: "text-amber-700 dark:text-amber-300",
-      bgColor: "bg-amber-50 dark:bg-amber-950/30",
-      borderColor: "border-amber-200 dark:border-amber-500/50",
+      color: "bg-wants-bar",
+      textColor: "text-wants",
+      bgColor: "bg-wants-tint",
+      borderColor: "border-wants-border",
       statusFn: makeCeilingStatusFn(targets.WANTS),
     },
     {
       key: "SAVINGS" as const,
       target: targets.SAVINGS,
-      color: "bg-emerald-500",
-      textColor: "text-emerald-700 dark:text-emerald-300",
-      bgColor: "bg-emerald-50 dark:bg-emerald-950/30",
-      borderColor: "border-emerald-200 dark:border-emerald-800",
+      color: "bg-positive-bar",
+      textColor: "text-positive",
+      bgColor: "bg-positive-tint",
+      borderColor: "border-positive-border",
       statusFn: makeFloorStatusFn(targets.SAVINGS),
     },
   ] as const;
 }
 
 const STATUS_CLASSES = {
-  good: "text-emerald-600 dark:text-emerald-400",
+  good: "text-positive",
   warn: "text-amber-600 dark:text-amber-400",
   bad: "text-red-600 dark:text-red-400",
 };
@@ -176,19 +176,19 @@ export function BudgetSplit({ breakdown, totalIncome, targets }: Readonly<Budget
         >
           {needsPct > 0 && (
             <div
-              className="bg-blue-500 transition-all"
+              className="bg-needs-bar transition-all"
               style={{ width: `${needsPct}%` }}
             />
           )}
           {wantsPct > 0 && (
             <div
-              className="bg-amber-500 transition-all"
+              className="bg-wants-bar transition-all"
               style={{ width: `${wantsPct}%` }}
             />
           )}
           {savingsPct > 0 && (
             <div
-              className="bg-emerald-500 transition-all"
+              className="bg-positive-bar transition-all"
               style={{ width: `${savingsPct}%` }}
             />
           )}
@@ -205,17 +205,17 @@ export function BudgetSplit({ breakdown, totalIncome, targets }: Readonly<Budget
             hover-only title tooltip. */}
         <div className="relative mt-1 h-2">
           <div
-            className="absolute top-0 h-2 w-px bg-blue-400 opacity-60"
+            className="absolute top-0 h-2 w-px bg-needs-bar opacity-60"
             style={{ left: `${targets.NEEDS}%` }}
             title={t("budgetSplitNeedsTarget", { pct: targets.NEEDS })}
           />
           <div
-            className="absolute top-0 h-2 w-px bg-amber-400 opacity-60"
+            className="absolute top-0 h-2 w-px bg-wants-bar opacity-60"
             style={{ left: `${targets.NEEDS + targets.WANTS}%` }}
             title={t("budgetSplitWantsTarget", { pct: targets.WANTS, cumulative: targets.NEEDS + targets.WANTS })}
           />
           <div
-            className="absolute top-0 h-2 w-px bg-emerald-400 opacity-60"
+            className="absolute top-0 h-2 w-px bg-positive-bar opacity-60"
             style={{ left: "100%" }}
             title={t("budgetSplitSavingsTarget", { pct: targets.SAVINGS, cumulative: 100 })}
           />

@@ -76,7 +76,7 @@ export default async function EditTransactionPage({
           <Button variant="ghost" size="icon" asChild>
             <Link href={`/transactions/new?from=${id}`}>
               <Copy className="h-5 w-5" />
-              <span className="sr-only">Duplicate transaction</span>
+              <span className="sr-only">{t("duplicateAriaLabel")}</span>
             </Link>
           </Button>
           <DeleteTransactionButton transactionId={id} />

@@ -147,7 +147,7 @@ export function AnnualCategoryTable({
                       )}
                       {category.id === "__uncategorized__" ? (
                         <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                          <TriangleAlert className="h-3.5 w-3.5" />
+                          <TriangleAlert className="h-4 w-4" />
                           {category.name}
                         </span>
                       ) : (
@@ -158,7 +158,7 @@ export function AnnualCategoryTable({
                   <td
                     className={cn(
                       "px-3 py-2 text-right tabular-nums font-semibold",
-                      signedValues && category.total >= 0 && "text-emerald-600 dark:text-emerald-400"
+                      signedValues && category.total >= 0 && "text-positive"
                     )}
                   >
                     {signedValues && category.total >= 0 ? "+" : signedValues ? "−" : ""}
@@ -205,7 +205,7 @@ export function AnnualCategoryTable({
                       <td
                         className={cn(
                           "px-3 py-2 text-right tabular-nums",
-                          signedValues && child.total >= 0 && "text-emerald-600 dark:text-emerald-400"
+                          signedValues && child.total >= 0 && "text-positive"
                         )}
                       >
                         {signedValues && child.total >= 0 ? "+" : signedValues ? "−" : ""}
@@ -238,7 +238,7 @@ export function AnnualCategoryTable({
             <td
               className={cn(
                 "px-3 py-2 text-right tabular-nums",
-                signedValues && grandTotal >= 0 && "text-emerald-600 dark:text-emerald-400"
+                signedValues && grandTotal >= 0 && "text-positive"
               )}
             >
               {signedValues && grandTotal >= 0 ? "+" : signedValues ? "−" : ""}

@@ -23,12 +23,12 @@ export function BudgetProgressBar({
 }: Readonly<BudgetProgressBarProps>) {
   let colorClass: string;
 
-  if (inverse && percentage >= 100) colorClass = "bg-emerald-500";
+  if (inverse && percentage >= 100) colorClass = "bg-positive-bar";
   else if (inverse && percentage >= 75) colorClass = "bg-amber-500";
   else if (inverse) colorClass = "bg-red-500";
   else if (percentage > 100) colorClass = "bg-red-500";
   else if (percentage >= 75) colorClass = "bg-amber-500";
-  else colorClass = "bg-emerald-500";
+  else colorClass = "bg-positive-bar";
 
   const visualWidth = Math.min(percentage, 100);
 

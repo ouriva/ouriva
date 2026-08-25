@@ -20,15 +20,18 @@ import { TriangleAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+// Muted, nature-toned rotation — matches the --cat-* category picker
+// palette in spirit (same hue families, desaturated) without being tied
+// to it, since this rotates by list position, not by chosen color.
 const PALETTE = [
-  "#3b82f6",
-  "#8b5cf6",
-  "#f59e0b",
-  "#10b981",
-  "#f43f5e",
-  "#06b6d4",
-  "#f97316",
-  "#ec4899",
+  "#5c7a9e", // dusty blue
+  "#8471a8", // dusty violet
+  "#b58a3e", // muted gold
+  "#4f9c82", // muted emerald
+  "#b0637a", // dusty rose
+  "#4e92a3", // muted teal
+  "#bc7346", // muted terracotta-orange
+  "#bd6e93", // dusty pink
 ];
 const UNCATEGORIZED_COLOR = "#f59e0b";
 
@@ -136,7 +139,7 @@ export function NetCategoryBreakdown({
                     isUncategorized && "inline-flex items-center gap-1 text-amber-600 dark:text-amber-400"
                   )}
                 >
-                  {isUncategorized && <TriangleAlert className="h-3.5 w-3.5 shrink-0" />}
+                  {isUncategorized && <TriangleAlert className="h-4 w-4 shrink-0" />}
                   {category.name}
                 </span>
                 <div className="flex shrink-0 items-baseline gap-1.5">
@@ -144,7 +147,7 @@ export function NetCategoryBreakdown({
                   <span
                     className={cn(
                       "font-semibold tabular-nums",
-                      isNetIncome && "text-emerald-600 dark:text-emerald-400"
+                      isNetIncome && "text-positive"
                     )}
                   >
                     {isNetIncome ? "+" : "−"}€{formatAmount(Math.abs(category.net), locale)}
@@ -172,7 +175,7 @@ export function NetCategoryBreakdown({
                           <span
                             className={cn(
                               "tabular-nums text-muted-foreground",
-                              childIsNetIncome && "text-emerald-600 dark:text-emerald-400"
+                              childIsNetIncome && "text-positive"
                             )}
                           >
                             {childIsNetIncome ? "+" : ""}

@@ -252,7 +252,7 @@ const ReviewRow = memo(function ReviewRow({
 
       <span
         className={`whitespace-nowrap text-sm font-semibold ${
-          row.amount >= 0 ? "text-green-600" : "text-red-600"
+          row.amount >= 0 ? "text-positive" : "text-danger"
         }`}
       >
         {row.amount >= 0 ? "+" : "−"}
@@ -548,7 +548,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
             </div>
             <div>
               <p className="text-muted-foreground">{t("balanceChange")}</p>
-              <p className={`mt-0.5 font-semibold tabular-nums ${netChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+              <p className={`mt-0.5 font-semibold tabular-nums ${netChange >= 0 ? "text-positive" : "text-danger"}`}>
                 {netChange >= 0 ? "+" : "−"}{accountCurrency.symbol}{formatAmount(Math.abs(netChange), locale)}
               </p>
             </div>

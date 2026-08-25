@@ -548,11 +548,12 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => removeSplit(index)}
                   disabled={splitFields.length <= 2}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">{t("removeSplitAriaLabel")}</span>
                 </Button>
               </div>
             ))}
@@ -574,7 +575,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
               className={cn(
                 "rounded-md border px-3 py-2 text-sm tabular-nums",
                 isFullyAllocated
-                  ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400"
+                  ? "border-positive-border bg-positive-tint text-positive"
                   : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
               )}
             >

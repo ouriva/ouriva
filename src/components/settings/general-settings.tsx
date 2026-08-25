@@ -56,7 +56,7 @@ function BalanceIndicator({ label, balance, zeroLabel, nonZeroLabel }: Readonly<
       <p
         className={`text-2xl font-bold tabular-nums ${
           balance === 0
-            ? "text-green-600 dark:text-green-400"
+            ? "text-positive"
             : "text-amber-600 dark:text-amber-400"
         }`}
       >

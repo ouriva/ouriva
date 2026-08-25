@@ -148,14 +148,14 @@ export function MonthlySummaryContent() {
             <StatCard
               label={t("income")}
               value={data.totalIncome}
-              valueClass="text-emerald-600 dark:text-emerald-400"
+              valueClass="text-positive"
               delta={prevData ? computeDelta(data.totalIncome, prevData.totalIncome) : null}
               deltaPositiveIsGood
             />
             <StatCard
               label={t("expenses")}
               value={data.totalExpense}
-              valueClass="text-red-600 dark:text-red-400"
+              valueClass="text-danger"
               delta={prevData ? computeDelta(data.totalExpense, prevData.totalExpense) : null}
               deltaPositiveIsGood={false}
             />
@@ -235,8 +235,8 @@ function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood }: Read
   if (delta) {
     const isGood = deltaPositiveIsGood ? delta.pct > 0 : delta.pct < 0;
     deltaClass = isGood
-      ? "text-emerald-600 dark:text-emerald-400"
-      : "text-red-600 dark:text-red-400";
+      ? "text-positive"
+      : "text-danger";
   }
 
   return (
@@ -273,8 +273,8 @@ function NetStatCard({ value, prevNet, prevLabel }: Readonly<NetStatCardProps>) 
   const locale = useLocale();
   const valueClass =
     value >= 0
-      ? "text-emerald-600 dark:text-emerald-400"
-      : "text-red-600 dark:text-red-400";
+      ? "text-positive"
+      : "text-danger";
 
   const delta =
     prevNet === null
@@ -293,8 +293,8 @@ function NetStatCard({ value, prevNet, prevLabel }: Readonly<NetStatCardProps>) 
               className={cn(
                 "text-[10px] font-medium",
                 delta.positive
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-red-600 dark:text-red-400"
+                  ? "text-positive"
+                  : "text-danger"
               )}
             >
               {delta.positive ? "↑" : "↓"} €{formatAmount(Math.abs(delta.diff), locale)} vs {prevLabel}

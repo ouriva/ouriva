@@ -243,9 +243,9 @@ function CategoryEditSheet({
             <div className="flex gap-2">
               {buckets.map(({ key, label }) => {
                 let activeClass: string;
-                if (key === "NEEDS") activeClass = "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300";
-                else if (key === "WANTS") activeClass = "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300";
-                else activeClass = "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300";
+                if (key === "NEEDS") activeClass = "bg-needs-tint text-needs";
+                else if (key === "WANTS") activeClass = "bg-wants-tint text-wants";
+                else activeClass = "bg-positive-tint text-positive";
                 return (
                   <button
                     key={key}
@@ -390,7 +390,7 @@ function AddCategorySheet({ onSuccess }: Readonly<{ onSuccess: () => void }>) {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
           {tCommon("add")}
         </Button>
@@ -555,7 +555,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                       <Badge variant="outline" className="text-muted-foreground">{t("inactiveBadge")}</Badge>
                     )}
                     {parent.children.length === 0 && parent.excludeFromStats && (
-                      <Badge variant="outline" className="border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400">
+                      <Badge variant="outline" className="text-muted-foreground">
                         {t("nonTrackedBadge")}
                       </Badge>
                     )}
@@ -569,8 +569,9 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                     apiEndpoint="/api/categories"
                     onSuccess={() => setRefreshKey((k) => k + 1)}
                     trigger={
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Plus className="h-4 w-4" />
+                      <Button variant="ghost" size="icon">
+                        <Plus className="h-5 w-5" />
+                        <span className="sr-only">{t("addSubcategoryAriaLabel")}</span>
                       </Button>
                     }
                   />
@@ -596,7 +597,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                           <Badge variant="outline" className="text-xs text-muted-foreground">{t("inactiveBadge")}</Badge>
                         )}
                         {child.excludeFromStats && (
-                          <Badge variant="outline" className="border-purple-300 text-xs text-purple-700 dark:border-purple-700 dark:text-purple-400">
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
                             {t("nonTrackedBadge")}
                           </Badge>
                         )}

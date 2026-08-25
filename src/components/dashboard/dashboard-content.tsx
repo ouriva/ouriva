@@ -56,6 +56,12 @@ interface MonthlySummary {
   currencySymbol: string | null;
 }
 
+interface NetWorthTrend {
+  delta: number;
+  deltaPercent: number | null;
+  isPositive: boolean;
+}
+
 interface RecentTransaction {
   id: string;
   type: string;
@@ -74,15 +80,15 @@ interface RecentTransaction {
 const TX_CONFIG = {
   INCOME: {
     icon: ArrowDownLeft,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
-    amountColor: "text-emerald-600 dark:text-emerald-400",
+    color: "text-positive",
+    bgColor: "bg-positive-tint",
+    amountColor: "text-positive",
     sign: "+",
   },
   EXPENSE: {
     icon: ArrowUpRight,
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
+    color: "text-danger",
+    bgColor: "bg-danger-tint",
     amountColor: "",
     sign: "−",
   },
@@ -145,7 +151,7 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
   let barColor: string;
   if (spentPct > 100) barColor = "bg-red-500";
   else if (spentPct > 80) barColor = "bg-amber-500";
-  else barColor = "bg-emerald-500";
+  else barColor = "bg-positive-bar";
   const symbol = monthly.currencySymbol ?? "";
 
   return (
@@ -154,13 +160,13 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
         <div className="flex justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("income")}</p>
-            <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <p className="text-xl font-bold tabular-nums text-positive">
               {symbol}{formatAmount(monthly.totalIncome, locale)}
             </p>
           </div>
           <div className="text-right">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("expenses")}</p>
-            <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+            <p className="text-xl font-bold tabular-nums text-danger">
               {symbol}{formatAmount(monthly.totalExpense, locale)}
             </p>
           </div>
@@ -172,7 +178,7 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
             </div>
             <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
               <span>{t("pctSpent", { pct: formatPercent(spentPct, 0, locale) })}</span>
-              <span className={cn("font-semibold", monthly.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+              <span className={cn("font-semibold", monthly.net >= 0 ? "text-positive" : "text-danger")}>
                 {monthly.net >= 0
                   ? t("saved", { symbol, amount: formatAmount(monthly.net, locale) })
                   : t("over", { symbol, amount: formatAmount(Math.abs(monthly.net), locale) })}
@@ -194,6 +200,7 @@ function useDashboardData() {
   const [balancesData, setBalancesData] = useState<BalancesData | null>(null);
   const [monthly, setMonthly] = useState<MonthlySummary | null>(null);
   const [recentTx, setRecentTx] = useState<RecentTransaction[]>([]);
+  const [netWorthTrend, setNetWorthTrend] = useState<NetWorthTrend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -204,10 +211,11 @@ function useDashboardData() {
         const year = now.getFullYear();
         const month = now.getMonth() + 1;
 
-        const [balRes, monthRes, txRes] = await Promise.all([
+        const [balRes, monthRes, txRes, trendRes] = await Promise.all([
           fetch("/api/accounts/balances"),
           fetch(`/api/summary/monthly?year=${year}&month=${month}`),
           fetch("/api/transactions?limit=5"),
+          fetch("/api/analytics/net-worth?period=1m"),
         ]);
 
         if (balRes.ok) setBalancesData(await balRes.json());
@@ -216,6 +224,18 @@ function useDashboardData() {
           const data = await txRes.json();
           setRecentTx(data.data);
         }
+        if (trendRes.ok) {
+          const trend: { data: { netWorth: number }[]; currentNetWorth: number | null } = await trendRes.json();
+          const firstValue = trend.data[0]?.netWorth ?? 0;
+          if (trend.currentNetWorth !== null && trend.data.length > 1) {
+            const delta = trend.currentNetWorth - firstValue;
+            setNetWorthTrend({
+              delta,
+              deltaPercent: firstValue !== 0 ? (delta / Math.abs(firstValue)) * 100 : null,
+              isPositive: delta >= 0,
+            });
+          }
+        }
       } finally {
         setIsLoading(false);
       }
@@ -223,7 +243,7 @@ function useDashboardData() {
     fetchAll();
   }, []);
 
-  return { balancesData, monthly, recentTx, isLoading };
+  return { balancesData, monthly, recentTx, netWorthTrend, isLoading };
 }
 
 // ─── Net Worth Hero ───────────────────────────────────────────────────────────
@@ -235,30 +255,50 @@ interface NetWorthHeroProps {
   balances: CurrencyGroup[];
   aggregatedTotal: number | null;
   defaultCurrency: { code: string; symbol: string } | null;
+  trend: NetWorthTrend | null;
   locale: string;
 }
 
-function NetWorthHero({ balances, aggregatedTotal, defaultCurrency, locale }: Readonly<NetWorthHeroProps>) {
+function NetWorthHero({ balances, aggregatedTotal, defaultCurrency, trend, locale }: Readonly<NetWorthHeroProps>) {
   const t = useTranslations("dashboard");
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-zinc-800 to-amber-950 p-5 text-white shadow-lg">
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-400">
+    <div className="relative overflow-hidden rounded-2xl bg-hero p-5 text-hero-foreground shadow-lg">
+      {/* Decorative layers: a single restrained corner glow + a top hairline,
+          in place of the old two-stop diagonal gradient. Plain inline style
+          because these are gradients, not solid-color utilities. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: "radial-gradient(120% 90% at 100% 0%, var(--hero-glow), transparent 60%)" }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-5 top-0 h-px"
+        style={{ background: "linear-gradient(90deg, transparent, var(--hero-hairline), transparent)" }}
+      />
+
+      <p className="relative text-[10px] font-semibold uppercase tracking-widest text-hero-muted">
         {t("netWorth")}
       </p>
       {aggregatedTotal !== null && defaultCurrency ? (
-        <div className="mt-2">
+        <div className="relative mt-2">
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-bold tabular-nums">
               {defaultCurrency.symbol}{formatAmount(aggregatedTotal, locale)}
             </span>
-            <span className="text-sm text-zinc-500">{defaultCurrency.code}</span>
+            <span className="text-sm text-hero-muted">{defaultCurrency.code}</span>
           </div>
-          {/* Per-currency breakdown shown as smaller secondary lines when more than one currency */}
+          {trend && (
+            <p className={cn("mt-1 text-xs font-semibold", trend.isPositive ? "text-hero-positive" : "text-hero-danger")}>
+              {trend.isPositive ? "▲" : "▼"} {defaultCurrency.symbol}{formatAmount(Math.abs(trend.delta), locale)}
+              {trend.deltaPercent !== null && ` (${formatPercent(Math.abs(trend.deltaPercent), 1, locale)}%)`}
+              {" "}{t("trendThisMonth")}
+            </p>
+          )}
+          {/* Per-currency breakdown shown as translucent chips when more than one currency */}
           {balances.length > 1 && (
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-0.5">
+            <div className="mt-3 flex flex-wrap gap-2">
               {balances.map((group) => (
-                <span key={group.code} className="text-xs text-zinc-400 tabular-nums">
+                <span key={group.code} className="rounded-lg bg-hero-chip px-2 py-1.5 text-xs tabular-nums text-hero-chip-foreground">
                   {formatCurrency(group.total, group.code, locale)} {group.code}
                 </span>
               ))}
@@ -267,13 +307,13 @@ function NetWorthHero({ balances, aggregatedTotal, defaultCurrency, locale }: Re
         </div>
       ) : (
         // Single currency or no default set — show each currency on its own line
-        <div className="mt-2 space-y-0.5">
+        <div className="relative mt-2 space-y-0.5">
           {balances.map((group) => (
             <div key={group.code} className="flex items-baseline gap-2">
               <span className="text-3xl font-bold tabular-nums">
                 {formatCurrency(group.total, group.code, locale)}
               </span>
-              <span className="text-sm text-zinc-500">{group.code}</span>
+              <span className="text-sm text-hero-muted">{group.code}</span>
             </div>
           ))}
         </div>
@@ -316,7 +356,7 @@ function formatTxDate(dateStr: string): string {
 export function DashboardContent() {
   const t = useTranslations("dashboard");
   const locale = useLocale();
-  const { balancesData, monthly, recentTx, isLoading } = useDashboardData();
+  const { balancesData, monthly, recentTx, netWorthTrend, isLoading } = useDashboardData();
 
   const balances = balancesData?.byCurrency ?? [];
   const aggregatedTotal = balancesData?.aggregatedTotal ?? null;
@@ -347,7 +387,7 @@ export function DashboardContent() {
               <TrendingUp className="h-5 w-5" />
             </Link>
           </Button>
-          <Button variant="outline" size="sm" asChild>
+          <Button size="sm" asChild>
             <Link href="/transactions/new">
               <Plus className="mr-2 h-4 w-4" />
               {t("addTransaction")}
@@ -360,7 +400,7 @@ export function DashboardContent() {
       {!isLoading && balances.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed p-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Landmark className="h-7 w-7 text-primary" />
+            <Landmark className="h-8 w-8 text-primary" />
           </div>
           <h2 className="text-lg font-semibold">{t("emptyTitle")}</h2>
           <p className="mx-auto mt-1.5 max-w-[260px] text-sm text-muted-foreground">
@@ -379,6 +419,7 @@ export function DashboardContent() {
           balances={balances}
           aggregatedTotal={aggregatedTotal}
           defaultCurrency={defaultCurrency}
+          trend={netWorthTrend}
           locale={locale}
         />
       )}

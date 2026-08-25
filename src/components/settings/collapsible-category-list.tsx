@@ -51,7 +51,7 @@ export function CollapsibleCategoryList({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {rows.length === 0 ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="h-4 w-4 text-positive" />
             ) : (
               <span className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">
                 {countText}
