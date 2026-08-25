@@ -157,7 +157,7 @@ export function NetWorthChart() {
                   "mt-0.5 text-xs font-semibold",
                   isPositive
                     ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-red-600 dark:text-red-400"
+                    : "text-danger"
                 )}
               >
                 {isPositive ? "+" : "−"}

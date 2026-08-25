@@ -213,7 +213,7 @@ export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
                   {expenseCount} {t("statTransactions")}
                 </span>
               </div>
-              <span className="font-semibold text-red-600">
+              <span className="font-semibold text-danger">
                 −{formatAmount(totalExpense, locale)}
               </span>
             </div>

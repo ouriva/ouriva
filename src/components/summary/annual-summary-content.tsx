@@ -202,7 +202,7 @@ export function AnnualSummaryContent() {
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                   {t("expenses")}
                 </p>
-                <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+                <p className="mt-1 text-xl font-bold tabular-nums text-danger">
                   €{formatAmount(data.totalExpense, locale)}
                 </p>
               </CardContent>
@@ -219,7 +219,7 @@ export function AnnualSummaryContent() {
                   "mt-1 text-xl font-bold tabular-nums",
                   data.net >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-red-600 dark:text-red-400"
+                    : "text-danger"
                 )}
               >
                 €{formatAmount(data.net, locale)}

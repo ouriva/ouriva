@@ -81,8 +81,8 @@ const TX_CONFIG = {
   },
   EXPENSE: {
     icon: ArrowUpRight,
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
+    color: "text-danger",
+    bgColor: "bg-danger-tint",
     amountColor: "",
     sign: "−",
   },
@@ -160,7 +160,7 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
           </div>
           <div className="text-right">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("expenses")}</p>
-            <p className="text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+            <p className="text-xl font-bold tabular-nums text-danger">
               {symbol}{formatAmount(monthly.totalExpense, locale)}
             </p>
           </div>
@@ -172,7 +172,7 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
             </div>
             <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
               <span>{t("pctSpent", { pct: formatPercent(spentPct, 0, locale) })}</span>
-              <span className={cn("font-semibold", monthly.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+              <span className={cn("font-semibold", monthly.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-danger")}>
                 {monthly.net >= 0
                   ? t("saved", { symbol, amount: formatAmount(monthly.net, locale) })
                   : t("over", { symbol, amount: formatAmount(Math.abs(monthly.net), locale) })}

@@ -438,7 +438,7 @@ function BudgetStatCards({ data, locale }: Readonly<BudgetStatCardsProps>) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {t("budgetedExpenses")}
             </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+            <p className="mt-1 text-xl font-bold tabular-nums text-danger">
               €{formatAmount(data.expense.totalBudgeted, locale)}
             </p>
             <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
