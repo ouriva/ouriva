@@ -31,6 +31,7 @@ All defined in `src/app/globals.css` as OKLCH custom properties (light value in 
 | `needs` / `needs-bar` / `needs-tint` / `needs-border` | Dusty blue — Budget Split **Needs** bucket identity. The app's only blue. | The Needs bucket bar/card/tag, and reused as the annual chart's single-category trend line rather than inventing a third blue. |
 | `wants` / `wants-bar` / `wants-tint` / `wants-border` | Dusty mauve — Budget Split **Wants** bucket identity. | The Wants bucket bar/card/tag. Deliberately *not* amber — Wants used to share the exact brand gold value, which meant "this is a button" and "this is the Wants bucket" were visually the same thing. |
 | Neutral ramp (`background`, `card`, `popover`, `muted`, `secondary`, `accent`, `border`, `input`) | Backgrounds, surfaces, dividers, secondary text. | Everywhere. Warmed from a cool blue-violet cast (OKLCH hue 286 — accidental, not chosen) to a hue near the brand's (80), at very low chroma. Lighter and airier in light mode, closer to a Revolut-style neutral than Tailwind Zinc's default. |
+| `cat-zinc` … `cat-red` (12) | Muted counterpart of the category color picker — see below. Not part of the "7 semantic colors," a separate parallel set. | `CATEGORY_COLORS` in `category-icons.ts`; the category icon circle wherever it renders. |
 
 `amber`/`orange` (caution: "uncategorized," "approaching budget limit," "needs review," bucket-target warnings) intentionally stay as **plain Tailwind `amber-*` classes**, not a token — they're Tailwind's own well-designed, already dual-mode-safe shade ramp, and caution sharing gold's hue with brand is a deliberate pairing (see "Two reds" below), not a leftover duplicate.
 
@@ -51,10 +52,16 @@ The Needs bucket, the annual chart's category-detail line, and (before this pass
 
 `annual-bar-chart.tsx` and `net-worth-chart.tsx` use Recharts, which renders SVG `fill`/`stroke` as presentation attributes — these do **not** resolve CSS custom properties, only literal values. So the chart components hand-roll HSL strings that approximate the token hues (see the comment above `incomeColor`/`expenseColor`/`lineColor` in `annual-bar-chart.tsx`). If you retune a token in `globals.css`, check whether the matching hardcoded HSL value in those two files should move with it — there's no automatic link between them.
 
-## What's deliberately *not* tokenized
+## The category color picker — a second, parallel palette
 
-- **The category color picker** (`src/lib/category-icons.ts`, `CATEGORY_COLORS`) — 12 Tailwind colors a person chooses from per category, so their categories stay visually distinct from each other. This is supposed to have a lot of colors; it's the opposite problem from the one this document solves.
-- **The category-breakdown rotating palettes** (`PALETTE` arrays in `category-breakdown.tsx` / `net-category-breakdown.tsx`) — an 8-color qualitative sequence assigned by list position for chart legends, not a semantic indicator. Same reasoning as the picker above.
+`src/lib/category-icons.ts` (`CATEGORY_COLORS`) is 12 colors a person chooses from per category, so their categories stay visually distinct from each other — this is *supposed* to have a lot of colors, the opposite problem from the semantic sprawl the rest of this document solves. It's still been given the same muted, nature-toned treatment as everything else (12 new `--cat-*` tokens in `globals.css`), for visual consistency with the rest of the app — but it's a **deliberately separate set of tokens**, not aliases to `needs`/`wants`/`positive`/etc., even where a hue is close (`--cat-blue` vs `--needs`, `--cat-amber` vs `--primary`). Semantic meaning and arbitrary per-category identity are different concerns and need to be free to diverge later without one dragging the other along.
+
+The `CATEGORY_COLORS` keys (`"zinc"`, `"blue"`, …) are unchanged from the original Tailwind-backed version — only what each key renders as. Existing categories' stored `color` values still resolve correctly; nothing needed migrating.
+
+The **category-breakdown rotating palettes** (`PALETTE` arrays in `category-breakdown.tsx` / `net-category-breakdown.tsx`) — an 8-color qualitative sequence assigned by list position for chart legends, not tied to a category's chosen color — were muted to match in the same pass, as literal hex (Recharts-style components, same SVG constraint as the charts above; not worth a dedicated token for an 8-color rotation used in two places).
+
+## What's deliberately left alone
+
 - **The net-worth hero card's gradient** (`from-zinc-800 to-amber-950` in `dashboard-content.tsx`) — a deliberate always-dark treatment (it doesn't have `dark:` variants and stays dark even in light mode), not a themed surface. Left alone rather than forced onto the light/dark-reactive neutral tokens, which would break the effect.
 
 ## Before / after

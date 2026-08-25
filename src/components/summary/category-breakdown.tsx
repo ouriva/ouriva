@@ -16,16 +16,18 @@ import { TriangleAlert } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-// Matches the color palette used in the old pie chart
+// Muted, nature-toned rotation — matches the --cat-* category picker
+// palette in spirit (same hue families, desaturated) without being tied
+// to it, since this rotates by list position, not by chosen color.
 const PALETTE = [
-  "#3b82f6", // blue-500
-  "#8b5cf6", // violet-500
-  "#f59e0b", // amber-500
-  "#10b981", // emerald-500
-  "#f43f5e", // rose-500
-  "#06b6d4", // cyan-500
-  "#f97316", // orange-500
-  "#ec4899", // pink-500
+  "#5c7a9e", // dusty blue
+  "#8471a8", // dusty violet
+  "#b58a3e", // muted gold
+  "#4f9c82", // muted emerald
+  "#b0637a", // dusty rose
+  "#4e92a3", // muted teal
+  "#bc7346", // muted terracotta-orange
+  "#bd6e93", // dusty pink
 ];
 
 const UNCATEGORIZED_COLOR = "#f59e0b"; // amber — matches existing warning treatment

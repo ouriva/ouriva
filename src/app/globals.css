@@ -27,6 +27,18 @@
   --color-wants-bar: var(--wants-bar);
   --color-wants-tint: var(--wants-tint);
   --color-wants-border: var(--wants-border);
+  --color-cat-zinc: var(--cat-zinc);
+  --color-cat-blue: var(--cat-blue);
+  --color-cat-violet: var(--cat-violet);
+  --color-cat-rose: var(--cat-rose);
+  --color-cat-orange: var(--cat-orange);
+  --color-cat-amber: var(--cat-amber);
+  --color-cat-lime: var(--cat-lime);
+  --color-cat-emerald: var(--cat-emerald);
+  --color-cat-teal: var(--cat-teal);
+  --color-cat-sky: var(--cat-sky);
+  --color-cat-pink: var(--cat-pink);
+  --color-cat-red: var(--cat-red);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -95,6 +107,26 @@
   --border: oklch(0.93 0.006 80);
   --input: oklch(0.93 0.006 80);
   --ring: oklch(0.769 0.188 70.08);
+
+  /* Category color picker — 12 muted, nature-toned swatches a person
+     chooses from per category. Deliberately theme-invariant (a category
+     keeps its color regardless of light/dark) and kept separate from the
+     semantic tokens above, even where a hue is close to one of them
+     (--cat-blue vs --needs, --cat-amber vs --primary) — this palette is
+     arbitrary per-category identity, not app-wide meaning, so the two
+     must be free to diverge later without touching each other. */
+  --cat-zinc: oklch(0.56 0.012 80);
+  --cat-blue: oklch(0.56 0.08 245);
+  --cat-violet: oklch(0.56 0.09 300);
+  --cat-rose: oklch(0.58 0.09 10);
+  --cat-orange: oklch(0.58 0.1 55);
+  --cat-amber: oklch(0.62 0.1 75);
+  --cat-lime: oklch(0.58 0.09 125);
+  --cat-emerald: oklch(0.55 0.09 165);
+  --cat-teal: oklch(0.55 0.08 195);
+  --cat-sky: oklch(0.58 0.08 225);
+  --cat-pink: oklch(0.6 0.09 350);
+  --cat-red: oklch(0.55 0.12 25);
 }
 
 .dark {
