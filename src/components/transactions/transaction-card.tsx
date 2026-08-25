@@ -1,7 +1,7 @@
 // Transaction Card
 // ================
 // Displays a single transaction as a card in the list.
-// Amount color: emerald for income, default foreground for expenses.
+// Amount color: positive (sage) for income, default foreground for expenses.
 //
 // For split transactions, each split is shown as its own sub-row
 // below the main row, so the user can see exactly how much was
@@ -27,9 +27,9 @@ interface TransactionCardProps {
 const typeConfig = {
   INCOME: {
     icon: ArrowDownLeft,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
-    amountColor: "text-emerald-600 dark:text-emerald-400",
+    color: "text-positive",
+    bgColor: "bg-positive-tint",
+    amountColor: "text-positive",
     sign: "+",
   },
   EXPENSE: {
@@ -133,7 +133,7 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
             {transaction.needsReview && (
               <>
                 <span className="mx-1">·</span>
-                <span className="inline-flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                   <CircleDot className="h-3.5 w-3.5" />
                   {t("reviewBadge")}
                 </span>

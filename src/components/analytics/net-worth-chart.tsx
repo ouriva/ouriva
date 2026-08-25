@@ -156,7 +156,7 @@ export function NetWorthChart() {
                 className={cn(
                   "mt-0.5 text-xs font-semibold",
                   isPositive
-                    ? "text-emerald-600 dark:text-emerald-400"
+                    ? "text-positive"
                     : "text-danger"
                 )}
               >

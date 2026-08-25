@@ -144,7 +144,7 @@ export function NetCategoryBreakdown({
                   <span
                     className={cn(
                       "font-semibold tabular-nums",
-                      isNetIncome && "text-emerald-600 dark:text-emerald-400"
+                      isNetIncome && "text-positive"
                     )}
                   >
                     {isNetIncome ? "+" : "−"}€{formatAmount(Math.abs(category.net), locale)}
@@ -172,7 +172,7 @@ export function NetCategoryBreakdown({
                           <span
                             className={cn(
                               "tabular-nums text-muted-foreground",
-                              childIsNetIncome && "text-emerald-600 dark:text-emerald-400"
+                              childIsNetIncome && "text-positive"
                             )}
                           >
                             {childIsNetIncome ? "+" : ""}

@@ -74,9 +74,9 @@ interface RecentTransaction {
 const TX_CONFIG = {
   INCOME: {
     icon: ArrowDownLeft,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
-    amountColor: "text-emerald-600 dark:text-emerald-400",
+    color: "text-positive",
+    bgColor: "bg-positive-tint",
+    amountColor: "text-positive",
     sign: "+",
   },
   EXPENSE: {
@@ -145,7 +145,7 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
   let barColor: string;
   if (spentPct > 100) barColor = "bg-red-500";
   else if (spentPct > 80) barColor = "bg-amber-500";
-  else barColor = "bg-emerald-500";
+  else barColor = "bg-positive-bar";
   const symbol = monthly.currencySymbol ?? "";
 
   return (
@@ -154,7 +154,7 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
         <div className="flex justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("income")}</p>
-            <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <p className="text-xl font-bold tabular-nums text-positive">
               {symbol}{formatAmount(monthly.totalIncome, locale)}
             </p>
           </div>
@@ -172,7 +172,7 @@ function SpendingMeter({ monthly, locale }: Readonly<SpendingMeterProps>) {
             </div>
             <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
               <span>{t("pctSpent", { pct: formatPercent(spentPct, 0, locale) })}</span>
-              <span className={cn("font-semibold", monthly.net >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-danger")}>
+              <span className={cn("font-semibold", monthly.net >= 0 ? "text-positive" : "text-danger")}>
                 {monthly.net >= 0
                   ? t("saved", { symbol, amount: formatAmount(monthly.net, locale) })
                   : t("over", { symbol, amount: formatAmount(Math.abs(monthly.net), locale) })}

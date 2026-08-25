@@ -9,25 +9,24 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-danger: var(--danger);
   --color-danger-tint: var(--danger-tint);
+  --color-positive: var(--positive);
+  --color-positive-bar: var(--positive-bar);
+  --color-positive-tint: var(--positive-tint);
+  --color-positive-border: var(--positive-border);
+  --color-needs: var(--needs);
+  --color-needs-bar: var(--needs-bar);
+  --color-needs-tint: var(--needs-tint);
+  --color-needs-border: var(--needs-border);
+  --color-wants: var(--wants);
+  --color-wants-bar: var(--wants-bar);
+  --color-wants-tint: var(--wants-tint);
+  --color-wants-border: var(--wants-border);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -49,6 +48,19 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* ============================================================
+   Color system — see docs/COLOR_SYSTEM.md for the full rationale.
+   One neutral ramp + 7 semantic colors, each with a single job:
+     primary            brand actions, active states, caution
+     destructive         real problems: over-limit alerts, deletes
+     danger / danger-tint routine "this is an expense" labeling
+     positive / *-bar/-tint/-border   income, on-track, Savings bucket
+     needs   / *-bar/-tint/-border    Budget Split "Needs" identity
+     wants   / *-bar/-tint/-border    Budget Split "Wants" identity
+   Neutral (background/card/muted/secondary/accent/border) is warmed
+   toward the brand hue (~80) instead of Tailwind Zinc's cool 286.
+   ============================================================ */
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -59,31 +71,30 @@
   --popover-foreground: oklch(0.141 0.005 285.823);
   --primary: oklch(0.769 0.188 70.08);
   --primary-foreground: oklch(0.145 0.005 285.823);
-  --secondary: oklch(0.967 0.001 286.375);
+  --secondary: oklch(0.975 0.004 80);
   --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
+  --muted: oklch(0.975 0.004 80);
+  --muted-foreground: oklch(0.62 0.012 80);
+  --accent: oklch(0.975 0.004 80);
   --accent-foreground: oklch(0.21 0.006 285.885);
   --destructive: oklch(0.577 0.245 27.325);
   --danger: oklch(0.53 0.13 38);
   --danger-tint: oklch(0.94 0.03 42);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
+  --positive: oklch(0.45 0.09 150);
+  --positive-bar: oklch(0.58 0.1 150);
+  --positive-tint: oklch(0.95 0.025 150);
+  --positive-border: oklch(0.84 0.04 150);
+  --needs: oklch(0.42 0.08 250);
+  --needs-bar: oklch(0.55 0.09 250);
+  --needs-tint: oklch(0.96 0.015 250);
+  --needs-border: oklch(0.85 0.035 250);
+  --wants: oklch(0.45 0.09 350);
+  --wants-bar: oklch(0.58 0.09 350);
+  --wants-tint: oklch(0.96 0.015 350);
+  --wants-border: oklch(0.85 0.035 350);
+  --border: oklch(0.93 0.006 80);
+  --input: oklch(0.93 0.006 80);
   --ring: oklch(0.769 0.188 70.08);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
 }
 
 .dark {
@@ -95,31 +106,30 @@
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.828 0.189 84.429);
   --primary-foreground: oklch(0.141 0.005 285.823);
-  --secondary: oklch(0.274 0.006 286.033);
+  --secondary: oklch(0.26 0.008 80);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
+  --muted: oklch(0.26 0.008 80);
+  --muted-foreground: oklch(0.72 0.013 80);
+  --accent: oklch(0.26 0.008 80);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --danger: oklch(0.74 0.115 38);
   --danger-tint: oklch(0.32 0.06 38 / 32%);
+  --positive: oklch(0.78 0.075 150);
+  --positive-bar: oklch(0.68 0.09 150);
+  --positive-tint: oklch(0.28 0.035 150 / 32%);
+  --positive-border: oklch(0.5 0.05 150 / 50%);
+  --needs: oklch(0.8 0.06 250);
+  --needs-bar: oklch(0.68 0.085 250);
+  --needs-tint: oklch(0.28 0.03 250 / 35%);
+  --needs-border: oklch(0.5 0.05 250 / 55%);
+  --wants: oklch(0.82 0.07 350);
+  --wants-bar: oklch(0.7 0.085 350);
+  --wants-tint: oklch(0.3 0.035 350 / 35%);
+  --wants-border: oklch(0.5 0.06 350 / 55%);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.828 0.189 84.429);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
 }
 
 @layer base {

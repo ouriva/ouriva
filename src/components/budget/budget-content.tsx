@@ -26,9 +26,9 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 
 const BUCKET_COLORS: Record<string, string> = {
-  NEEDS:   "#3B82F6",
-  WANTS:   "#F59E0B",
-  SAVINGS: "#10B981",
+  NEEDS:   "var(--needs-bar)",
+  WANTS:   "var(--wants-bar)",
+  SAVINGS: "var(--positive-bar)",
 };
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -142,11 +142,11 @@ function GroupHeader({ group }: Readonly<GroupHeaderProps>) {
   let remainingClass: string;
   if (group.isIncome) {
     remainingClass = group.actual >= group.budgeted
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-muted-foreground";
   } else {
     remainingClass = group.remaining >= 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-red-600 dark:text-red-400";
   }
 
@@ -242,11 +242,11 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
   let remainingClass: string;
   if (category.isIncome) {
     remainingClass = remaining <= 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-muted-foreground";
   } else {
     remainingClass = remaining >= 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-red-600 dark:text-red-400";
   }
 
@@ -424,7 +424,7 @@ function BudgetStatCards({ data, locale }: Readonly<BudgetStatCardsProps>) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {t("budgetedIncome")}
             </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <p className="mt-1 text-xl font-bold tabular-nums text-positive">
               €{formatAmount(data.income.totalBudgeted, locale)}
             </p>
             <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
@@ -457,7 +457,7 @@ function BudgetStatCards({ data, locale }: Readonly<BudgetStatCardsProps>) {
             className={cn(
               "mt-1 text-xl font-bold tabular-nums",
               data.budgetBalance >= 0
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-positive"
                 : "text-red-600 dark:text-red-400"
             )}
           >

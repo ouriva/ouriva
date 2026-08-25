@@ -574,7 +574,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
               className={cn(
                 "rounded-md border px-3 py-2 text-sm tabular-nums",
                 isFullyAllocated
-                  ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400"
+                  ? "border-positive-border bg-positive-tint text-positive"
                   : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
               )}
             >

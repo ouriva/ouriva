@@ -467,7 +467,7 @@ function TransactionListContent({
                 className={cn(
                   "text-xs font-semibold tabular-nums",
                   dayNet >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
+                    ? "text-positive"
                     : "text-muted-foreground"
                 )}
               >

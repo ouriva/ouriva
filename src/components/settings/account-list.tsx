@@ -213,7 +213,7 @@ export function AccountList({ pageTitle, pageDescription }: Readonly<AccountList
                 title={account.isActive ? t("deactivate") : t("activate")}
               >
                 {account.isActive ? (
-                  <ToggleRight className="h-5 w-5 text-green-600" />
+                  <ToggleRight className="h-5 w-5 text-positive" />
                 ) : (
                   <ToggleLeft className="h-5 w-5 text-muted-foreground" />
                 )}

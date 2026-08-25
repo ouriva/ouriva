@@ -130,7 +130,7 @@ export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center py-12 text-center">
-          <CheckCircle2 className="mb-4 h-16 w-16 text-green-500" />
+          <CheckCircle2 className="mb-4 h-16 w-16 text-positive" />
           <h3 className="text-xl font-semibold">{t("successTitle")}</h3>
           <p className="mt-2 text-muted-foreground">
             {t("successMessage", { count: result.imported ?? 0 })}
@@ -200,7 +200,7 @@ export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
                   {incomeCount} {t("statTransactions")}
                 </span>
               </div>
-              <span className="font-semibold text-green-600">
+              <span className="font-semibold text-positive">
                 +{formatAmount(totalIncome, locale)}
               </span>
             </div>
