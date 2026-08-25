@@ -40,7 +40,7 @@ export function BudgetSplitTargets({ targets, disabled, onSaved }: Readonly<Budg
     setNeeds(targets.needsTarget);
     setWants(targets.wantsTarget);
     setSavings(targets.savingsTarget);
-  }, [targets]);
+  }, [targets.needsTarget, targets.wantsTarget, targets.savingsTarget]);
 
   const sum = needs + wants + savings;
   const isDirty = needs !== targets.needsTarget || wants !== targets.wantsTarget || savings !== targets.savingsTarget;
