@@ -55,13 +55,8 @@
     "typescript": "^6"
   },
   "overrides": {
-    "@hono/node-server": "^2.0.12",
-    "hono": "^4.12.18",
-    "express-rate-limit": "^8.5.1",
     "postcss": "^8.5.23",
     "sharp": "^0.35.3",
-    "fast-uri": "^3.1.4",
-    "brace-expansion": "^1.1.16",
-    "nanoid": "^3.3.17"
+    "deepmerge-ts": "^8.0.2"
   }
 }
