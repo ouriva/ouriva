@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "AppSettings" ADD COLUMN     "needsTarget" INTEGER NOT NULL DEFAULT 50,
+ADD COLUMN     "savingsTarget" INTEGER NOT NULL DEFAULT 20,
+ADD COLUMN     "wantsTarget" INTEGER NOT NULL DEFAULT 30;

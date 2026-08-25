@@ -54,7 +54,7 @@ function computeUnclassified(categories: Category[]): CategoryListRow[] {
   });
 }
 
-export function UnclassifiedCategories({ enabled }: Readonly<{ enabled: boolean }>) {
+export function UnclassifiedCategories({ enabled, splitLabel }: Readonly<{ enabled: boolean; splitLabel: string }>) {
   const t = useTranslations("generalSettings");
   const [rows, setRows] = useState<CategoryListRow[] | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -81,7 +81,7 @@ export function UnclassifiedCategories({ enabled }: Readonly<{ enabled: boolean 
   return (
     <CollapsibleCategoryList
       label={t("unclassifiedCategoriesLabel")}
-      description={t("unclassifiedCategoriesDescription")}
+      description={t("unclassifiedCategoriesDescription", { split: splitLabel })}
       rows={rows}
       countText={count === 1 ? t("unclassifiedCountSingle") : t("unclassifiedCountPlural", { count })}
       emptyMessage={t("unclassifiedCategoriesEmpty")}
