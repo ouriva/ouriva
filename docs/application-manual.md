@@ -731,9 +731,17 @@ model Budget {
 ```prisma
 model AppSettings {
   id                   String   @id @default("singleton")
+  // Budget Split visibility — budgetSplitEnabled is the master switch; the
+  // two "in*" flags only take effect while it's on.
   budgetSplitEnabled   Boolean  @default(true)
   budgetSplitInSummary Boolean  @default(true)
   budgetSplitInBudget  Boolean  @default(true)
+  // Budget Split targets — how income should divide across the three
+  // buckets. Default to the classic 50/30/20 rule; must sum to 100
+  // whenever changed (enforced in updateSettingsSchema, not the schema).
+  needsTarget          Int      @default(50)
+  wantsTarget          Int      @default(30)
+  savingsTarget        Int      @default(20)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
@@ -1446,7 +1454,7 @@ A reusable icon circle component used in both `TransactionCard` and `DashboardCo
 
 The app-wide preferences panel, accessible from Settings > General. Includes:
 
-- **50·30·20 Budget Rule** — a single card holding everything related to the feature. A master toggle (`budgetSplitEnabled`) plus three scoped sub-rows, indented under the master switch: "Show in Summary" (`budgetSplitInSummary`), "Show in Budget" (`budgetSplitInBudget`), and "Budget bucket colours" (a `localStorage`-only, per-device preference read by the Budget page's category rows — unrelated to `AppSettings`, just co-located here since it's meaningless without the feature it colour-codes). All three sub-rows render `disabled` (and visually dimmed) whenever the master switch is off, but keep their own last-set value rather than resetting, so turning the master switch back on restores whatever was previously chosen. The two `AppSettings`-backed toggles update optimistically, then `PATCH` `/api/settings` with just that one field; on a failed request the local state reverts so the switch never drifts from what's actually persisted.
+- **Budget Split** — a single card holding everything related to the feature. A master toggle (`budgetSplitEnabled`) plus three scoped sub-rows, indented under the master switch: "Show in Summary" (`budgetSplitInSummary`), "Show in Budget" (`budgetSplitInBudget`), and "Budget bucket colours" (a `localStorage`-only, per-device preference read by the Budget page's category rows — unrelated to `AppSettings`, just co-located here since it's meaningless without the feature it colour-codes). All three sub-rows render `disabled` (and visually dimmed) whenever the master switch is off, but keep their own last-set value rather than resetting, so turning the master switch back on restores whatever was previously chosen. The two `AppSettings`-backed toggles update optimistically, then `PATCH` `/api/settings` with just that one field; on a failed request the local state reverts so the switch never drifts from what's actually persisted.
 
   Below a divider in the same card sits **`UnclassifiedCategories`** (`src/components/settings/unclassified-categories.tsx`) — a collapsible list of active EXPENSE categories whose *effective* bucket is null, i.e. the same set that falls into `BudgetSplit`'s `unclassified` slice. Two different rules, matching how `effectiveBucket` actually resolves: a root category is listed only if it has no children (a root with children isn't meaningfully unclassified on its own — its bucket only matters as a fallback for children that don't set their own); a child category is listed only if *both* its own bucket and its parent's bucket are null, since a child with no bucket but a bucketed parent already counts toward that bucket. Renders nothing when the 50·30·20 feature is disabled.
 
@@ -1687,7 +1695,7 @@ The 50·30·20 Budget Rule visualization. Rendered in the third tab of both mont
 
 Displays:
 - **Total readout + stacked bar** — one bar, 100% = income. Segments show each bucket's share of income, in priority order (Needs, then Wants, then Savings, then unclassified) — a bucket only gets whatever room is left after the ones before it, deliberately: Needs is essential spending and should visually "win" the available space over discretionary buckets when you're over budget, rather than all three shrinking proportionally. A text readout above the bar always states the total ("68% of income spent"), and turns red with the €-over figure ("115% of income spent — €5,400 over") plus a red-tinted track when total spending exceeds income — the segment shapes alone can't be trusted to show that once one bucket has consumed all the remaining room.
-- **Target markers** — three thin vertical lines under the bar at the cumulative 50·30·20 boundaries (50%, 80%, 100%), colour-matched to their segment (blue/amber/emerald) so the ideal split reads at a glance.
+- **Target markers** — three thin vertical lines under the bar at the configured cumulative boundaries (`needsTarget`, `needsTarget + wantsTarget`, and always 100%), colour-matched to their segment (blue/amber/emerald) so the ideal split reads at a glance.
 - **Three stat cards** — NEEDS, WANTS, SAVINGS. Each shows the actual amount, its % of income, an On track/Review/Off track badge, and a target-relative progress bar (`min(actual/target, 1) * 100`, i.e. a full bar means you've hit your target — not "double your target," which an earlier version of this formula used). The bar and badge turn red together when off target; for Savings specifically, "off target" means falling *short* of the 20% floor, not exceeding it, so the red condition is inverted relative to Needs/Wants. When off target, the percentage line also grows a currency figure ("+15.0% — €5,400.00 over" / "15.0% — €5,400.00 short"), matching the top bar's phrasing.
 - **Unclassified warning** — If any expenses fall into categories with no bucket assignment, a warning badge shows the unclassified total and prompts the user to assign buckets in Settings > Categories.
 
