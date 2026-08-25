@@ -1,7 +1,9 @@
 // Transactions Page
 // =================
-// Shows the list of all transactions with a floating "+" button
-// to create new ones.
+// Shows the list of all transactions, with "Import" and "Add" actions
+// in the page header — Add is the primary (amber) action, matching the
+// same pairing used on the dashboard, rather than a floating button
+// disconnected from the rest of the header row.
 //
 // This page is a Server Component — it renders the layout and
 // delegates interactive parts to Client Components (TransactionList).
@@ -26,12 +28,20 @@ export default async function TransactionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("pageTitle")}>
-        <Link href="/transactions/import">
-          <Button variant="outline" size="sm">
-            <Upload className="mr-2 h-4 w-4" />
-            {t("importButton")}
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/transactions/import">
+            <Button variant="outline" size="sm">
+              <Upload className="mr-2 h-4 w-4" />
+              {t("importButton")}
+            </Button>
+          </Link>
+          <Link href="/transactions/new">
+            <Button size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              {t("addButton")}
+            </Button>
+          </Link>
+        </div>
       </PageHeader>
 
       {/* Transaction list (Client Component)
@@ -44,20 +54,6 @@ export default async function TransactionsPage() {
       }>
         <TransactionList />
       </Suspense>
-
-      {/* Floating Action Button (FAB)
-          Fixed position at bottom-right, above the nav bar.
-          The "asChild" pattern isn't needed here since we wrap
-          the Button in a Link — we use the button as a Link child. */}
-      <Link href="/transactions/new">
-        <Button
-          size="icon"
-          className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
-        >
-          <Plus className="h-6 w-6" />
-          <span className="sr-only">{t("addAriaLabel")}</span>
-        </Button>
-      </Link>
     </div>
   );
 }

@@ -1,18 +1,16 @@
 // General Settings
 // ================
-// App-wide preferences. Currently supports selecting a "transfer
-// category" whose transactions are excluded from summaries and budgets.
-// Shows a Transfer Balance indicator (should be 0 if matched).
-//
-// Non-tracked categories are now configured per-category in
-// Settings > Categories (via the excludeFromStats flag). This page
-// shows the combined Non-tracked Balance across all such categories.
+// App-wide preferences. Shows Transfer Balance (net of Transfer In minus
+// Transfer Out — zero means balanced, non-zero flags a missing side) and
+// Non-tracked Balance. Non-tracked categories are configured per-category
+// in Settings > Categories (via the excludeFromStats flag).
 
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -20,52 +18,45 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CategorySelectOptions } from "@/components/ui/category-select-options";
 import { Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
-import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
-
-interface Category {
-  id: string;
-  name: string;
-  parentId: string | null;
-}
+import { UnclassifiedCategories } from "./unclassified-categories";
+import { NonTrackedCategories } from "./non-tracked-categories";
+import { BudgetSplitTargets } from "./budget-split-targets";
 
 interface Settings {
-  transferCategoryId: string | null;
-  transferCategory: { id: string; name: string } | null;
   transferBalance: number;
   nonTrackedBalance: number;
+  budgetSplitEnabled: boolean;
+  budgetSplitInSummary: boolean;
+  budgetSplitInBudget: boolean;
+  needsTarget: number;
+  wantsTarget: number;
+  savingsTarget: number;
 }
 
-// Set the NEXT_LOCALE cookie directly. The next-intl middleware reads
-// this cookie on every request and makes the locale available to all
-// Server Components and Client Components. A full page reload is
-// required so the server re-renders with the new locale's message bundle.
 function handleLocaleChange(newLocale: string) {
   document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
   globalThis.location.reload();
 }
 
 interface BalanceIndicatorProps {
+  label: string;
   balance: number;
   zeroLabel: string;
   nonZeroLabel: string;
 }
 
-// Defined at module scope (not inside GeneralSettings) to avoid React creating
-// a new component identity on every render (S6478).
-function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
-  const t = useTranslations("generalSettings");
+function BalanceIndicator({ label, balance, zeroLabel, nonZeroLabel }: Readonly<BalanceIndicatorProps>) {
   const locale = useLocale();
   return (
     <div className="rounded-lg border p-4">
-      <p className="text-sm text-muted-foreground">{t("balanceLabel")}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <p
         className={`text-2xl font-bold tabular-nums ${
           balance === 0
-            ? "text-green-600 dark:text-green-400"
+            ? "text-positive"
             : "text-amber-600 dark:text-amber-400"
         }`}
       >
@@ -80,59 +71,66 @@ function BalanceIndicator({ balance, zeroLabel, nonZeroLabel }: Readonly<Balance
 
 export function GeneralSettings() {
   const t = useTranslations("generalSettings");
-  const tCommon = useTranslations("common");
   const locale = useLocale();
-  const [categories, setCategories] = useState<Category[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [showBucketColors, setShowBucketColors] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("budget.bucketColors") === "true"
+  );
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    const [catRes, settingsRes] = await Promise.all([
-      fetch("/api/categories"),
-      fetch("/api/settings"),
-    ]);
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === "budget.bucketColors") {
+        setShowBucketColors(e.newValue === "true");
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
-    if (catRes.ok) {
-      const data = await catRes.json();
-      setCategories(data.data || data);
+  function handleBucketColorsToggle(checked: boolean) {
+    setShowBucketColors(checked);
+    localStorage.setItem("budget.bucketColors", String(checked));
+    window.dispatchEvent(new StorageEvent("storage", { key: "budget.bucketColors", newValue: String(checked) }));
+  }
+
+  // Server-backed toggle: updates optimistically, then persists via PATCH.
+  // Reverts on failure so the switch never drifts from the saved state.
+  async function handleBudgetSplitToggle(field: keyof Pick<Settings, "budgetSplitEnabled" | "budgetSplitInSummary" | "budgetSplitInBudget">, checked: boolean) {
+    setSettings((prev) => (prev ? { ...prev, [field]: checked } : prev));
+    const res = await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: checked }),
+    });
+    if (!res.ok) {
+      setSettings((prev) => (prev ? { ...prev, [field]: !checked } : prev));
     }
-    if (settingsRes.ok) {
-      const data = await settingsRes.json();
-      setSettings(data.data);
+  }
+
+  function handleTargetsSaved(saved: { needsTarget: number; wantsTarget: number; savingsTarget: number }) {
+    setSettings((prev) => (prev ? { ...prev, ...saved } : prev));
+  }
+
+  // isLoading starts true; we only set it false after fetch resolves.
+  // fetchData is stable — referenced by useEffect below.
+  const fetchData = useCallback(() => {
+    async function load() {
+      const res = await fetch("/api/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data.data);
+      }
+      setIsLoading(false);
     }
-    setIsLoading(false);
+    load();
   }, []);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  async function handleCategoryChange(value: string) {
-    const categoryId = value === "none" ? null : value;
-    setIsSaving(true);
-
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transferCategoryId: categoryId }),
-      });
-
-      if (res.ok) {
-        const settingsRes = await fetch("/api/settings");
-        if (settingsRes.ok) {
-          const data = await settingsRes.json();
-          setSettings(data.data);
-        }
-      }
-    } catch {
-      alert("Failed to save setting.");
-    } finally {
-      setIsSaving(false);
-    }
-  }
+  const splitLabel = `${settings?.needsTarget ?? 50}·${settings?.wantsTarget ?? 30}·${settings?.savingsTarget ?? 20}`;
 
   if (isLoading) {
     return (
@@ -141,10 +139,6 @@ export function GeneralSettings() {
       </div>
     );
   }
-
-  // Build category options grouped by parent
-  const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories = categories.filter((c) => c.parentId);
 
   return (
     <div className="space-y-6">
@@ -166,38 +160,101 @@ export function GeneralSettings() {
         </CardContent>
       </Card>
 
-      {/* Transfer Category */}
+      {/* 50·30·20 Budget Rule visibility */}
+      <Card>
+        <CardContent className="space-y-4 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <Label htmlFor="budget-split-enabled-toggle">{t("budgetSplitEnabledLabel")}</Label>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t("budgetSplitEnabledDescription")}
+              </p>
+            </div>
+            <Switch
+              id="budget-split-enabled-toggle"
+              checked={settings?.budgetSplitEnabled ?? true}
+              onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitEnabled", checked)}
+            />
+          </div>
+
+          <div className="space-y-4 border-l pl-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="budget-split-summary-toggle">{t("budgetSplitInSummaryLabel")}</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("budgetSplitInSummaryDescription", { split: splitLabel })}
+                </p>
+              </div>
+              <Switch
+                id="budget-split-summary-toggle"
+                checked={settings?.budgetSplitInSummary ?? true}
+                disabled={!(settings?.budgetSplitEnabled ?? true)}
+                onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitInSummary", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="budget-split-budget-toggle">{t("budgetSplitInBudgetLabel")}</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("budgetSplitInBudgetDescription", { split: splitLabel })}
+                </p>
+              </div>
+              <Switch
+                id="budget-split-budget-toggle"
+                checked={settings?.budgetSplitInBudget ?? true}
+                disabled={!(settings?.budgetSplitEnabled ?? true)}
+                onCheckedChange={(checked) => handleBudgetSplitToggle("budgetSplitInBudget", checked)}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <Label htmlFor="bucket-colors-toggle">{t("bucketColorsLabel")}</Label>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("bucketColorsDescription")}
+                </p>
+              </div>
+              <Switch
+                id="bucket-colors-toggle"
+                checked={showBucketColors}
+                disabled={!(settings?.budgetSplitEnabled ?? true)}
+                onCheckedChange={handleBucketColorsToggle}
+              />
+            </div>
+          </div>
+
+          {/* Target percentages */}
+          <BudgetSplitTargets
+            targets={{
+              needsTarget: settings?.needsTarget ?? 50,
+              wantsTarget: settings?.wantsTarget ?? 30,
+              savingsTarget: settings?.savingsTarget ?? 20,
+            }}
+            disabled={!(settings?.budgetSplitEnabled ?? true)}
+            onSaved={handleTargetsSaved}
+          />
+
+          {/* Unclassified categories */}
+          <UnclassifiedCategories enabled={settings?.budgetSplitEnabled ?? true} splitLabel={splitLabel} />
+        </CardContent>
+      </Card>
+
+      {/* Transfer Balance */}
       <Card>
         <CardContent className="space-y-4 p-4">
           <div>
-            <Label>{t("transferCategoryLabel")}</Label>
+            <Label>{t("transferBalanceLabel")}</Label>
             <p className="mt-1 text-sm text-muted-foreground">
-              {t("transferCategoryDescription")}
+              {t("transferBalanceDescription")}
             </p>
-            <Select
-              value={settings?.transferCategoryId ?? "none"}
-              onValueChange={handleCategoryChange}
-              disabled={isSaving}
-            >
-              <SelectTrigger className="mt-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{tCommon("none")}</SelectItem>
-                <CategorySelectOptions
-                  parentCategories={parentCategories}
-                  childCategories={childCategories}
-                />
-              </SelectContent>
-            </Select>
           </div>
-          {settings?.transferCategoryId && (
-            <BalanceIndicator
-              balance={settings.transferBalance}
-              zeroLabel={t("balanceZero")}
-              nonZeroLabel={t("balanceNonZero")}
-            />
-          )}
+          <BalanceIndicator
+            label={t("transferBalanceValueLabel")}
+            balance={settings?.transferBalance ?? 0}
+            zeroLabel={t("balanceZero")}
+            nonZeroLabel={t("balanceNonZero")}
+          />
         </CardContent>
       </Card>
 
@@ -209,17 +266,15 @@ export function GeneralSettings() {
             <p className="mt-1 text-sm text-muted-foreground">
               {t("nonTrackedDescription")}
             </p>
-            <p className="mt-2 text-sm">
-              <Link href="/settings/categories" className="underline underline-offset-2">
-                {t("nonTrackedLink")}
-              </Link>
-            </p>
           </div>
           <BalanceIndicator
+            label={t("nonTrackedValueLabel")}
             balance={settings?.nonTrackedBalance ?? 0}
             zeroLabel={t("nonTrackedZero")}
             nonZeroLabel={t("nonTrackedNonZero")}
           />
+
+          <NonTrackedCategories />
         </CardContent>
       </Card>
     </div>

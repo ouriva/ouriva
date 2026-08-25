@@ -23,7 +23,7 @@ import type { TransactionQuery } from "@/validators/transaction";
 // represents the API response, not the raw database row.
 export interface TransactionWithRelations {
   id: string;
-  type: "INCOME" | "EXPENSE";
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
   amount: string; // Decimal comes as string from JSON
   description: string | null;
   friendlyName: string | null;

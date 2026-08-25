@@ -31,6 +31,7 @@ import {
 import { Loader2, Pencil, Plus, Trash2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/hooks/use-confirm";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ interface Category {
   id: string;
   name: string;
   parentId: string | null;
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
 }
 
 interface CategoryRulesListProps {
@@ -74,6 +76,8 @@ function categoryDisplayName(rule: CategoryRule): string {
 
 export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<CategoryRulesListProps>) {
   const t = useTranslations("settings.categoryRules");
+  const tCommon = useTranslations("common");
+  const { confirm } = useConfirm();
   const [rules, setRules]           = useState<CategoryRule[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
@@ -96,7 +100,14 @@ export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<Categ
   }, [refreshKey]);
 
   async function deleteRule(id: string) {
-    if (!confirm(t("deleteConfirm"))) return;
+    const ok = await confirm({
+      variant: "sheet",
+      destructive: true,
+      title: t("deleteConfirm"),
+      confirmLabel: tCommon("delete"),
+      cancelLabel: tCommon("cancel"),
+    });
+    if (!ok) return;
     await fetch(`/api/category-rules/${id}`, { method: "DELETE" });
     setRefreshKey((k) => k + 1);
   }
@@ -167,10 +178,11 @@ export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<Categ
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive"
                     onClick={() => deleteRule(rule.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-5 w-5" />
+                    <span className="sr-only">{tCommon("delete")}</span>
                   </Button>
                 </div>
               </CardContent>
@@ -243,8 +255,9 @@ function RuleForm({ categories, rule, onSuccess, trigger }: Readonly<RuleFormPro
     }
   }
 
-  const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories  = categories.filter((c) => c.parentId);
+  // Exclude TRANSFER-type system categories — rules should only target INCOME/EXPENSE categories.
+  const parentCategories = categories.filter((c) => !c.parentId && c.type !== "TRANSFER");
+  const childCategories  = categories.filter((c) => !!c.parentId && c.type !== "TRANSFER");
 
   return (
     <Sheet
@@ -256,7 +269,7 @@ function RuleForm({ categories, rule, onSuccess, trigger }: Readonly<RuleFormPro
     >
       <SheetTrigger asChild>
         {trigger || (
-          <Button variant="outline" size="sm">
+          <Button size="sm">
             <Plus className="mr-2 h-4 w-4" />
             {t("addButton")}
           </Button>

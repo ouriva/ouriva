@@ -39,7 +39,7 @@ export interface ImportState {
   // Step 3: Review
   selectedRows: boolean[];
   categoryIds: (string | undefined)[];
-  transactionTypes: ("INCOME" | "EXPENSE")[];
+  transactionTypes: ("INCOME" | "EXPENSE" | "TRANSFER")[];
   importRefs: string[];
   duplicateRefs: Set<string>;
   friendlyNames: (string | undefined)[];

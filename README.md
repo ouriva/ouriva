@@ -20,7 +20,7 @@ Ouriva is a mobile-first PWA for tracking multi-currency bank accounts, categori
 - **Split transactions** — One bank charge, multiple categories (e.g., a supermarket trip split across Food, Household, Health)
 - **Annual budgets** — Set yearly targets per category; income in expense categories is netted off as reimbursements
 - **Monthly & annual summaries** — Charts and breakdowns of income vs. expenses with category drill-down
-- **50/30/20 budget rule** — Assign categories to Needs / Wants / Savings buckets and see how your spending aligns
+- **Budget Split** — Assign categories to Needs / Wants / Savings buckets and see how your spending aligns against configurable targets (defaults to the classic 50/30/20 rule)
 - **Review flag** — Mark transactions that need attention (pending refunds, split bills, suspicious charges)
 - **CSV export** — Export filtered transactions; split transactions are expanded to one row per child
 - **PWA** — Install on iPhone or Android home screen, works offline

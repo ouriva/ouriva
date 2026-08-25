@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Trash2, Plus, Star } from "lucide-react";
 import { SettingsItemForm } from "./settings-item-form";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/hooks/use-confirm";
 
 interface Field {
   name: string;
@@ -50,6 +51,7 @@ export function SimpleSettingsList({
   setDefaultAction,
 }: Readonly<SimpleSettingsListProps>) {
   const tCommon = useTranslations("common");
+  const { confirm } = useConfirm();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,7 +84,14 @@ export function SimpleSettingsList({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(tCommon("deleteConfirm", { title: title.toLowerCase() }))) return;
+    const ok = await confirm({
+      variant: "sheet",
+      destructive: true,
+      title: tCommon("deleteConfirm", { title: title.toLowerCase() }),
+      confirmLabel: tCommon("delete"),
+      cancelLabel: tCommon("cancel"),
+    });
+    if (!ok) return;
 
     const res = await fetch(`${apiEndpoint}/${id}`, { method: "DELETE" });
     if (!res.ok) {
@@ -116,7 +125,7 @@ export function SimpleSettingsList({
           apiEndpoint={apiEndpoint}
           onSuccess={() => setRefreshKey((k) => k + 1)}
           trigger={
-            <Button variant="outline" size="sm">
+            <Button size="sm">
               <Plus className="mr-2 h-4 w-4" />
               {tCommon("add")}
             </Button>
@@ -159,12 +168,13 @@ export function SimpleSettingsList({
                 {isDefaultField && setDefaultAction && !item[isDefaultField] && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     className="text-muted-foreground"
                     onClick={() => handleSetDefault(item.id)}
-                    title="Set as default currency"
+                    title={tCommon("setAsDefault")}
                   >
-                    <Star className="h-4 w-4" />
+                    <Star className="h-5 w-5" />
+                    <span className="sr-only">{tCommon("setAsDefault")}</span>
                   </Button>
                 )}
                 <SettingsItemForm
@@ -183,10 +193,11 @@ export function SimpleSettingsList({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive"
+                  className="text-destructive"
                   onClick={() => handleDelete(item.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
+                  <span className="sr-only">{tCommon("delete")}</span>
                 </Button>
               </div>
             </CardContent>

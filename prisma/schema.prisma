@@ -49,6 +49,7 @@ model Category {
   name             String
   isActive         Boolean         @default(true)
   excludeFromStats Boolean         @default(false)
+  type             CategoryType    @default(EXPENSE)
   bucket           CategoryBucket?
   icon             String?
   color            String?
@@ -60,10 +61,10 @@ model Category {
   children            Category[]     @relation("CategoryParent")
   transactions        Transaction[]
   rules               CategoryRule[]
-  transferAppSettings AppSettings[]  @relation("TransferCategory")
 
   @@index([parentId])
   @@index([excludeFromStats])
+  @@index([type])
 }
 
 model Transaction {
@@ -96,17 +97,16 @@ model Transaction {
 }
 
 model Budget {
-  id         String     @id @default(uuid())
+  id         String   @id @default(uuid())
   year       Int
-  type       BudgetType @default(EXPENSE)
-  amount     Decimal    @db.Decimal(12, 2)
-  note       String?    @db.Text
+  amount     Decimal  @db.Decimal(12, 2)
+  note       String?  @db.Text
   categoryId String
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  category   Category   @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  category   Category @relation(fields: [categoryId], references: [id])
 
-  @@unique([year, categoryId, type])
+  @@unique([year, categoryId])
   @@index([year])
 }
 
@@ -123,11 +123,20 @@ model ImportProfile {
 }
 
 model AppSettings {
-  id                 String    @id @default("singleton")
-  transferCategoryId String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  transferCategory   Category? @relation("TransferCategory", fields: [transferCategoryId], references: [id], onDelete: SetNull)
+  id                   String   @id @default("singleton")
+  // Budget Split visibility — budgetSplitEnabled is the master switch; the
+  // two "in*" flags only take effect while it's on.
+  budgetSplitEnabled   Boolean  @default(true)
+  budgetSplitInSummary Boolean  @default(true)
+  budgetSplitInBudget  Boolean  @default(true)
+  // Budget Split targets — how income should divide across the three
+  // buckets. Default to the classic 50/30/20 rule; must sum to 100
+  // whenever changed (enforced in updateSettingsSchema, not the schema).
+  needsTarget          Int      @default(50)
+  wantsTarget          Int      @default(30)
+  savingsTarget        Int      @default(20)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model CategoryRule {
@@ -149,17 +158,19 @@ model CategoryRule {
 enum TransactionType {
   INCOME
   EXPENSE
+  TRANSFER
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER
 }
 
 enum CategoryBucket {
   NEEDS
   WANTS
   SAVINGS
-}
-
-enum BudgetType {
-  EXPENSE
-  INCOME
 }
 
 enum MatchType {

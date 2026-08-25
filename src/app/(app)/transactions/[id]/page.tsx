@@ -49,7 +49,7 @@ export default async function EditTransactionPage({
   // Transform the Prisma result into the shape the form expects
   const initialData = {
     id: transaction.id,
-    type: transaction.type as "INCOME" | "EXPENSE",
+    type: transaction.type as "INCOME" | "EXPENSE" | "TRANSFER",
     amount: Number(transaction.amount),
     description: transaction.description || "",
     friendlyName: transaction.friendlyName || "",
@@ -76,7 +76,7 @@ export default async function EditTransactionPage({
           <Button variant="ghost" size="icon" asChild>
             <Link href={`/transactions/new?from=${id}`}>
               <Copy className="h-5 w-5" />
-              <span className="sr-only">Duplicate transaction</span>
+              <span className="sr-only">{t("duplicateAriaLabel")}</span>
             </Link>
           </Button>
           <DeleteTransactionButton transactionId={id} />

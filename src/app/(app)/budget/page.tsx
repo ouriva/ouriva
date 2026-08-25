@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PageHeader } from "@/components/layout/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BudgetContent } from "@/components/budget/budget-content";
-import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Budget",
@@ -12,6 +10,10 @@ export const metadata: Metadata = {
 function BudgetFallback() {
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-9 w-32 rounded-lg" />
+      </div>
       <Skeleton className="h-9 w-full rounded-lg" />
       <div className="grid grid-cols-2 gap-3">
         <Skeleton className="h-[72px] rounded-xl" />
@@ -25,11 +27,9 @@ function BudgetFallback() {
   );
 }
 
-export default async function BudgetPage() {
-  const t = await getTranslations("nav");
+export default function BudgetPage() {
   return (
     <div className="space-y-4">
-      <PageHeader title={t("budget")} />
       <Suspense fallback={<BudgetFallback />}>
         <BudgetContent />
       </Suspense>

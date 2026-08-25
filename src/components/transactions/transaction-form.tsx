@@ -60,6 +60,7 @@ interface Category {
   id: string;
   name: string;
   parentId: string | null;
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
   children?: Category[];
 }
 
@@ -69,7 +70,7 @@ interface Category {
 // when absent the form POSTs a new record (create/duplicate).
 interface TransactionFormData {
   id?: string;
-  type: "INCOME" | "EXPENSE";
+  type: "INCOME" | "EXPENSE" | "TRANSFER";
   amount: number;
   description?: string;
   friendlyName?: string;
@@ -79,6 +80,7 @@ interface TransactionFormData {
   categoryId?: string;
   needsReview?: boolean;
   exchangeRate?: number | null;
+  // splits are only applicable to INCOME/EXPENSE
   splits?: SplitEntry[];
 }
 
@@ -88,6 +90,7 @@ interface CategorySelectProps {
   placeholder?: string;
   parentCategories: Category[];
   childCategories: Category[];
+  showNone?: boolean;
 }
 
 // Reusable category select rendered inside split rows and single-category mode.
@@ -99,18 +102,23 @@ function CategorySelect({
   placeholder,
   parentCategories,
   childCategories,
+  showNone = true,
 }: Readonly<CategorySelectProps>) {
   const t = useTranslations("transactionForm");
   return (
     <Select
-      value={value || "none"}
+      // Only fall back to the "none" sentinel when a "none" SelectItem is
+      // actually rendered (showNone). Otherwise Radix is given a value with
+      // no matching item, which suppresses the placeholder and renders the
+      // trigger blank instead of showing "Select category".
+      value={value || (showNone ? "none" : "")}
       onValueChange={(v) => onChange(v === "none" ? "" : v)}
     >
       <SelectTrigger>
         <SelectValue placeholder={placeholder ?? t("selectCategoryPlaceholder")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
+        {showNone && <SelectItem value="none">{t("noCategoryOption")}</SelectItem>}
         <CategorySelectOptions
           parentCategories={parentCategories}
           childCategories={childCategories}
@@ -153,6 +161,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     handleSubmit,  // wraps your submit handler with validation
     watch,         // reactively watch a field's value
     setValue,      // programmatically set a field's value
+    clearErrors,   // explicitly clear field errors after the user corrects them
     control,       // passed to useFieldArray to share form state
     formState: { errors }, // validation errors per field
   } = useForm<CreateTransactionFormInput>({
@@ -161,7 +170,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     // CreateTransactionFormInput uses z.input types (pre-coercion), so
     // date is string | number | Date here, matching what the input produces.
     // z.coerce.date() handles the string→Date conversion on submit.
-    defaultValues: initialData
+    defaultValues: (initialData
       ? {
           ...initialData,
           date: format(initialData.date, "yyyy-MM-dd"),
@@ -169,7 +178,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           splits: initialData.splits ?? [],
         }
       : {
-          type: "EXPENSE" as const,
+          type: "EXPENSE",
           amount: undefined,
           description: "",
           friendlyName: "",
@@ -179,7 +188,8 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           categoryId: undefined,
           exchangeRate: undefined,
           splits: [],
-        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }) as any,
   });
 
   // useFieldArray manages the dynamic list of split rows.
@@ -256,7 +266,8 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
   // validation and coercion by the time this function is called, so the values
   // are actually the post-coercion CreateTransactionInput shape at runtime.
   // We cast here to get correct types for the API payload.
-  async function onSubmit(rawData: CreateTransactionFormInput) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function onSubmit(rawData: any) {
     const data = rawData as unknown as CreateTransactionInput;
     setIsSubmitting(true);
     try {
@@ -299,11 +310,22 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
     }
   }
 
+  // INCOME and EXPENSE transactions share a single merged category list (both
+  // INCOME and EXPENSE categories), because either direction can land in the
+  // "wrong" type as a contra entry: an INCOME transaction in an EXPENSE
+  // category nets as a reimbursement, and an EXPENSE transaction in an INCOME
+  // category nets as a correction/refund of income (see CLAUDE.md "Category
+  // routing"). TRANSFER transactions keep their own restricted list — the two
+  // system entries (Transfer In / Transfer Out).
+  const filteredCategories = categories.filter((c) =>
+    transactionType === "TRANSFER" ? c.type === "TRANSFER" : c.type === "INCOME" || c.type === "EXPENSE"
+  );
+
   // Leaf-only assignment: parents with children become non-selectable group
   // headers (SelectGroup/SelectLabel). Standalone parents (no children) are
-  // selectable directly. This matches the industry standard (YNAB, Mint, etc.).
-  const parentCategories = categories.filter((c) => !c.parentId);
-  const childCategories = categories.filter((c) => c.parentId);
+  // selectable directly.
+  const parentCategories = filteredCategories.filter((c) => !c.parentId);
+  const childCategories = filteredCategories.filter((c) => c.parentId);
 
   function handleToggleSplitMode() {
     if (isSplitMode) {
@@ -326,14 +348,26 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
         <Label>{t("typeLabel")}</Label>
         <Tabs
           value={transactionType}
-          onValueChange={(value) =>
-            setValue("type", value as CreateTransactionInput["type"])
-          }
+          onValueChange={(value) => {
+            setValue("type", value as CreateTransactionInput["type"]);
+            // Switching type clears the category (INCOME/EXPENSE/TRANSFER each have
+            // different category lists) and always exits split mode for TRANSFER.
+            setValue("categoryId", undefined);
+            // Clear any stale categoryId error — the new type may have different
+            // requirements (INCOME/EXPENSE: optional, TRANSFER: required) and the
+            // user hasn't had a chance to pick a category for the new type yet.
+            clearErrors("categoryId");
+            if (value === "TRANSFER") {
+              setValue("splits" as Path<CreateTransactionFormInput>, []);
+              setIsSplitMode(false);
+            }
+          }}
           className="mt-2"
         >
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="EXPENSE">{t("typeLabelExpense")}</TabsTrigger>
             <TabsTrigger value="INCOME">{t("typeLabelIncome")}</TabsTrigger>
+            <TabsTrigger value="TRANSFER">{t("typeLabelTransfer")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -460,19 +494,22 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
         </div>
       )}
 
-      {/* Category / Split section */}
+      {/* Category / Split section — for TRANSFER only the two system Transfer In/Out
+          categories appear; for INCOME/EXPENSE full category list + split mode. */}
       <div>
         <div className="flex items-center justify-between">
           <Label>{isSplitMode ? t("splitCategoryLabel") : t("categoryLabel")}</Label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={handleToggleSplitMode}
-          >
-            {isSplitMode ? t("singleCategoryButton") : t("splitTransactionButton")}
-          </Button>
+          {transactionType !== "TRANSFER" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleToggleSplitMode}
+            >
+              {isSplitMode ? t("singleCategoryButton") : t("splitTransactionButton")}
+            </Button>
+          )}
         </div>
 
         {isSplitMode ? (
@@ -511,11 +548,12 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                  className="shrink-0 text-muted-foreground hover:text-destructive"
                   onClick={() => removeSplit(index)}
                   disabled={splitFields.length <= 2}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">{t("removeSplitAriaLabel")}</span>
                 </Button>
               </div>
             ))}
@@ -537,7 +575,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
               className={cn(
                 "rounded-md border px-3 py-2 text-sm tabular-nums",
                 isFullyAllocated
-                  ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400"
+                  ? "border-positive-border bg-positive-tint text-positive"
                   : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-400"
               )}
             >
@@ -570,9 +608,16 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           <div className="mt-2">
             <CategorySelect
               value={watch("categoryId")}
-              onChange={(v) => setValue("categoryId", v === "none" ? undefined : v)}
+              onChange={(v) => {
+                const next = v === "none" ? undefined : v;
+                setValue("categoryId", next);
+                // Clear the validation error as soon as the user picks a category,
+                // so the "Invalid category" message doesn't linger after correction.
+                if (next) clearErrors("categoryId");
+              }}
               parentCategories={parentCategories}
               childCategories={childCategories}
+              showNone={transactionType !== "TRANSFER"}
             />
             {errors.categoryId && (
               <p className="mt-1 text-sm text-destructive">

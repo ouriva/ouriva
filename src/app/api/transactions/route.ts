@@ -108,10 +108,10 @@ export async function GET(request: NextRequest) {
       where.fromAccountId = accountId;
     }
     if (categoryId === "uncategorized") {
-      // Show only transactions with no category and no splits.
-      // These are simple transactions where categoryId was never set
-      // or was cleared by the leaf-only migration.
-      andConditions.push({ categoryId: null, splits: { none: {} } });
+      // Show transactions with no category and no splits, excluding TRANSFER.
+      // TRANSFER transactions have no category by design — they are not missing
+      // one. Only INCOME/EXPENSE transactions with no category need attention.
+      andConditions.push({ categoryId: null, splits: { none: {} }, type: { not: "TRANSFER" } });
     } else if (categoryId) {
       // For split transactions the parent has no categoryId, but its children do.
       // We match if the transaction itself has the category OR if any of its

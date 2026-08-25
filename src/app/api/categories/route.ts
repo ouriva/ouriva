@@ -5,17 +5,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod/v4";
 import { createCategorySchema } from "@/validators/category";
+import type { CategoryType } from "@/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
-    const showAll = request.nextUrl.searchParams.get("all") === "true";
+    const showAll  = request.nextUrl.searchParams.get("all") === "true";
+    const typeParam = request.nextUrl.searchParams.get("type");
+    const typeFilter = typeParam === "INCOME" || typeParam === "EXPENSE" || typeParam === "TRANSFER" ? typeParam : undefined;
 
     const categories = await prisma.category.findMany({
-      where: showAll ? {} : { isActive: true },
+      where: {
+        ...(showAll ? {} : { isActive: true }),
+        ...(typeFilter ? { type: typeFilter } : {}),
+      },
       include: {
         parent: true,
         children: {
-          where: showAll ? {} : { isActive: true },
+          where: {
+            ...(showAll ? {} : { isActive: true }),
+            ...(typeFilter ? { type: typeFilter } : {}),
+          },
           orderBy: { name: "asc" },
         },
       },
@@ -50,7 +59,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Enforce max 2 levels: if parentId is set, the parent must not have a parent
+    // Enforce max 2 levels: if parentId is set, the parent must not have a parent.
+    // Subcategories inherit the parent's CategoryType so the tree stays consistent.
+    let resolvedType: CategoryType = parsed.data.type;
     if (parsed.data.parentId) {
       const parent = await prisma.category.findUnique({
         where: { id: parsed.data.parentId },
@@ -66,10 +77,11 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      if (parent) resolvedType = parent.type;
     }
 
     const category = await prisma.category.create({
-      data: parsed.data,
+      data: { ...parsed.data, type: resolvedType },
       include: { parent: true, children: true },
     });
 

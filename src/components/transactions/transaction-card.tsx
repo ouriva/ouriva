@@ -1,7 +1,7 @@
 // Transaction Card
 // ================
 // Displays a single transaction as a card in the list.
-// Amount color: emerald for income, default foreground for expenses.
+// Amount color: positive (sage) for income, default foreground for expenses.
 //
 // For split transactions, each split is shown as its own sub-row
 // below the main row, so the user can see exactly how much was
@@ -27,15 +27,15 @@ interface TransactionCardProps {
 const typeConfig = {
   INCOME: {
     icon: ArrowDownLeft,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
-    amountColor: "text-emerald-600 dark:text-emerald-400",
+    color: "text-positive",
+    bgColor: "bg-positive-tint",
+    amountColor: "text-positive",
     sign: "+",
   },
   EXPENSE: {
     icon: ArrowUpRight,
-    color: "text-red-600 dark:text-red-400",
-    bgColor: "bg-red-100 dark:bg-red-900/30",
+    color: "text-danger",
+    bgColor: "bg-danger-tint",
     amountColor: "",
     sign: "-",
   },
@@ -55,9 +55,17 @@ function splitCategoryName(
 export function TransactionCard({ transaction, onClick }: Readonly<TransactionCardProps>) {
   const t = useTranslations("transactions");
   const locale = useLocale();
-  const config = typeConfig[transaction.type];
+  // TRANSFER direction is encoded in the category name:
+  // "Transfer In" → INCOME styling (money arriving), anything else → EXPENSE styling.
+  const config =
+    transaction.type === "TRANSFER"
+      ? transaction.category?.name === "Transfer In"
+        ? typeConfig.INCOME
+        : typeConfig.EXPENSE
+      : typeConfig[transaction.type];
   const Icon = config.icon;
   const currency = transaction.fromAccount.currency;
+  const displayAmount = Number(transaction.amount);
 
   const isSplit = transaction.splits.length > 0;
 
@@ -71,20 +79,20 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
     subtitleText = transaction.category.name;
   }
 
-  const isUncategorized = !isSplit && !transaction.category;
+  const isUncategorized = !isSplit && !transaction.category && transaction.type !== "TRANSFER";
 
   let categoryIndicator: React.ReactNode;
   if (isUncategorized) {
     categoryIndicator = (
       <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-        <TriangleAlert className="h-3.5 w-3.5" />
+        <TriangleAlert className="h-4 w-4" />
         {t("uncategorizedLabel")}
       </span>
     );
   } else if (isSplit) {
     categoryIndicator = (
       <span className="inline-flex items-center gap-1">
-        <Split className="h-3.5 w-3.5" />
+        <Split className="h-4 w-4" />
         {t("splitBadge")}
       </span>
     );
@@ -125,8 +133,8 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
             {transaction.needsReview && (
               <>
                 <span className="mx-1">·</span>
-                <span className="inline-flex items-center gap-1 text-orange-600 dark:text-orange-400">
-                  <CircleDot className="h-3.5 w-3.5" />
+                <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <CircleDot className="h-4 w-4" />
                   {t("reviewBadge")}
                 </span>
               </>
@@ -138,7 +146,7 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
         <div className="text-right">
           <p className={cn("font-semibold tabular-nums", config.amountColor)}>
             {config.sign}
-            {formatCurrency(transaction.amount, currency.code, locale)}
+            {formatCurrency(displayAmount, currency.code, locale)}
           </p>
         </div>
       </div>

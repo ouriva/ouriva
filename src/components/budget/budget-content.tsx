@@ -1,6 +1,6 @@
 // Budget Content
 // ==============
-// Annual budget planner with income + expense sides and 50/30/20 validation.
+// Annual budget planner with income + expense sides and 50·30·20 validation.
 //
 // Layout:
 //   1. Year picker
@@ -13,7 +13,7 @@
 //        • Standalone  — root categories with no children, fully editable
 //      Expense tab seeds from ALL active leaf categories so users can plan
 //      ahead even before their first transaction.
-//   4. 50/30/20 panel — always visible; shows guidance when no income budget set
+//   4. 50·30·20 panel — always visible; shows guidance when no income budget set
 //
 // Editing pattern — "optimistic local state":
 //   Budget amounts → tracked in `edits` keyed by "TYPE:categoryId".
@@ -24,6 +24,12 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+
+const BUCKET_COLORS: Record<string, string> = {
+  NEEDS:   "var(--needs-bar)",
+  WANTS:   "var(--wants-bar)",
+  SAVINGS: "var(--positive-bar)",
+};
 import { useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { formatAmount } from "@/lib/formatters";
@@ -36,8 +42,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Loader2, MessageSquare, Save } from "lucide-react";
 import { MonthYearPicker } from "@/components/summary/month-year-picker";
 import { BudgetSplit } from "@/components/summary/budget-split";
+import { useBudgetSplitVisibility } from "@/hooks/use-budget-split-visibility";
 import { BudgetProgressBar } from "./budget-progress-bar";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/layout/page-header";
+import { CopyPreviousYearButton } from "./copy-previous-year-button";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -50,6 +59,7 @@ interface BudgetCategory {
   percentage: number;
   isIncome: boolean;
   note: string | null;
+  bucket: "NEEDS" | "WANTS" | "SAVINGS" | null;
 }
 
 // A group is either a parent category (with children[]) or a standalone leaf
@@ -81,32 +91,23 @@ interface BudgetData {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function editKey(type: "EXPENSE" | "INCOME", categoryId: string): string {
-  return `${type}:${categoryId}`;
-}
-
 // Flatten a group list to leaf-level budget entries, applying any pending edits.
 function collectLeaves(
   groups: BudgetGroup[],
-  type: "EXPENSE" | "INCOME",
   edits: Record<string, number>,
   noteEdits: Record<string, string>
-): { categoryId: string; type: "EXPENSE" | "INCOME"; amount: number; note?: string }[] {
+): { categoryId: string; amount: number; note?: string }[] {
   return groups.flatMap((g) => {
     const leaves: BudgetCategory[] =
       g.children.length > 0
         ? g.children
         : [{ ...g, categoryId: g.groupId, categoryName: g.groupName }];
 
-    return leaves.map((c) => {
-      const key = editKey(type, c.categoryId);
-      return {
-        categoryId: c.categoryId,
-        type,
-        amount: edits[key] ?? c.budgeted,
-        note: key in noteEdits ? noteEdits[key] : c.note ?? undefined,
-      };
-    });
+    return leaves.map((c) => ({
+      categoryId: c.categoryId,
+      amount: edits[c.categoryId] ?? c.budgeted,
+      note: c.categoryId in noteEdits ? noteEdits[c.categoryId] : c.note ?? undefined,
+    }));
   });
 }
 
@@ -141,11 +142,11 @@ function GroupHeader({ group }: Readonly<GroupHeaderProps>) {
   let remainingClass: string;
   if (group.isIncome) {
     remainingClass = group.actual >= group.budgeted
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-muted-foreground";
   } else {
     remainingClass = group.remaining >= 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-red-600 dark:text-red-400";
   }
 
@@ -198,9 +199,10 @@ interface CategoryRowProps {
   onChange: (value: string) => void;
   onNoteChange: (value: string) => void;
   isChild?: boolean;
+  showBucketColors?: boolean;
 }
 
-function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild }: Readonly<CategoryRowProps>) {
+function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isChild, showBucketColors }: Readonly<CategoryRowProps>) {
   const t = useTranslations("budget");
   const locale = useLocale();
   const [noteState, setNoteState] = useState<NoteState>("closed");
@@ -240,11 +242,11 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
   let remainingClass: string;
   if (category.isIncome) {
     remainingClass = remaining <= 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-muted-foreground";
   } else {
     remainingClass = remaining >= 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "text-positive"
       : "text-red-600 dark:text-red-400";
   }
 
@@ -259,8 +261,13 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
       : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) });
   }
 
+  const bucketColor = showBucketColors && category.bucket ? BUCKET_COLORS[category.bucket] : undefined;
+
   return (
-    <div className={cn("space-y-2 py-3", isChild ? "pl-7 pr-4" : "px-4")}>
+    <div
+      className={cn("space-y-2 py-3", isChild ? "pl-7 pr-4" : "px-4", bucketColor && "border-l-4")}
+      style={bucketColor ? { borderLeftColor: bucketColor } : undefined}
+    >
       {/* Name + note icon + actual */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-1.5">
@@ -276,7 +283,7 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
               >
                 <MessageSquare
                   className={cn(
-                    "h-3.5 w-3.5 transition-colors",
+                    "h-4 w-4 transition-colors",
                     note
                       ? "text-primary"
                       : "text-muted-foreground/30 hover:text-muted-foreground"
@@ -355,45 +362,45 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
 
 interface BudgetGroupItemProps {
   group: BudgetGroup;
-  type: "EXPENSE" | "INCOME";
   edits: Record<string, number>;
   noteEdits: Record<string, string>;
-  onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
-  onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  onAmountChange: (categoryId: string, value: string) => void;
+  onNoteChange: (categoryId: string, value: string) => void;
+  showBucketColors?: boolean;
 }
 
-function BudgetGroupItem({ group, type, edits, noteEdits, onAmountChange, onNoteChange }: Readonly<BudgetGroupItemProps>) {
+function BudgetGroupItem({ group, edits, noteEdits, onAmountChange, onNoteChange, showBucketColors }: Readonly<BudgetGroupItemProps>) {
   if (group.children.length > 0) {
     return (
       <div key={group.groupId}>
         <GroupHeader group={group} />
-        {group.children.map((cat) => {
-          const key = editKey(type, cat.categoryId);
-          return (
+        <div className="divide-y">
+          {group.children.map((cat) => (
             <CategoryRow
               key={cat.categoryId}
               category={cat}
-              editedBudget={edits[key] ?? cat.budgeted}
-              note={key in noteEdits ? noteEdits[key] : cat.note}
-              onChange={(v) => onAmountChange(type, cat.categoryId, v)}
-              onNoteChange={(v) => onNoteChange(type, cat.categoryId, v)}
+              editedBudget={edits[cat.categoryId] ?? cat.budgeted}
+              note={cat.categoryId in noteEdits ? noteEdits[cat.categoryId] : cat.note}
+              onChange={(v) => onAmountChange(cat.categoryId, v)}
+              onNoteChange={(v) => onNoteChange(cat.categoryId, v)}
               isChild
+              showBucketColors={showBucketColors}
             />
-          );
-        })}
+          ))}
+        </div>
       </div>
     );
   }
 
-  const key = editKey(type, group.groupId);
   return (
     <CategoryRow
       key={group.groupId}
       category={{ ...group, categoryId: group.groupId, categoryName: group.groupName }}
-      editedBudget={edits[key] ?? group.budgeted}
-      note={key in noteEdits ? noteEdits[key] : group.note}
-      onChange={(v) => onAmountChange(type, group.groupId, v)}
-      onNoteChange={(v) => onNoteChange(type, group.groupId, v)}
+      editedBudget={edits[group.groupId] ?? group.budgeted}
+      note={group.groupId in noteEdits ? noteEdits[group.groupId] : group.note}
+      onChange={(v) => onAmountChange(group.groupId, v)}
+      onNoteChange={(v) => onNoteChange(group.groupId, v)}
+      showBucketColors={showBucketColors}
     />
   );
 }
@@ -417,7 +424,7 @@ function BudgetStatCards({ data, locale }: Readonly<BudgetStatCardsProps>) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {t("budgetedIncome")}
             </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <p className="mt-1 text-xl font-bold tabular-nums text-positive">
               €{formatAmount(data.income.totalBudgeted, locale)}
             </p>
             <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
@@ -431,7 +438,7 @@ function BudgetStatCards({ data, locale }: Readonly<BudgetStatCardsProps>) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {t("budgetedExpenses")}
             </p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">
+            <p className="mt-1 text-xl font-bold tabular-nums text-danger">
               €{formatAmount(data.expense.totalBudgeted, locale)}
             </p>
             <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
@@ -450,7 +457,7 @@ function BudgetStatCards({ data, locale }: Readonly<BudgetStatCardsProps>) {
             className={cn(
               "mt-1 text-xl font-bold tabular-nums",
               data.budgetBalance >= 0
-                ? "text-emerald-600 dark:text-emerald-400"
+                ? "text-positive"
                 : "text-red-600 dark:text-red-400"
             )}
           >
@@ -473,12 +480,13 @@ interface BudgetCategoryTabsProps {
   data: BudgetData;
   edits: Record<string, number>;
   noteEdits: Record<string, string>;
-  onAmountChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
-  onNoteChange: (type: "EXPENSE" | "INCOME", categoryId: string, value: string) => void;
+  onAmountChange: (categoryId: string, value: string) => void;
+  onNoteChange: (categoryId: string, value: string) => void;
   year: number;
+  showBucketColors?: boolean;
 }
 
-function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChange, year }: Readonly<BudgetCategoryTabsProps>) {
+function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChange, year, showBucketColors }: Readonly<BudgetCategoryTabsProps>) {
   const t = useTranslations("budget");
   return (
     <Tabs defaultValue="expenses">
@@ -498,11 +506,11 @@ function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChan
               <BudgetGroupItem
                 key={g.groupId}
                 group={g}
-                type="EXPENSE"
                 edits={edits}
                 noteEdits={noteEdits}
                 onAmountChange={onAmountChange}
                 onNoteChange={onNoteChange}
+                showBucketColors={showBucketColors}
               />
             ))}
           </div>
@@ -520,11 +528,11 @@ function BudgetCategoryTabs({ data, edits, noteEdits, onAmountChange, onNoteChan
               <BudgetGroupItem
                 key={g.groupId}
                 group={g}
-                type="INCOME"
                 edits={edits}
                 noteEdits={noteEdits}
                 onAmountChange={onAmountChange}
                 onNoteChange={onNoteChange}
+                showBucketColors={showBucketColors}
               />
             ))}
           </div>
@@ -563,14 +571,14 @@ function useBudgetData(year: number) {
 
   const hasEdits = Object.keys(edits).length > 0 || Object.keys(noteEdits).length > 0;
 
-  function handleChange(type: "EXPENSE" | "INCOME", categoryId: string, value: string) {
+  function handleChange(categoryId: string, value: string) {
     const amount = Number.parseFloat(value);
     if (Number.isNaN(amount) || amount < 0) return;
-    setEdits((prev) => ({ ...prev, [editKey(type, categoryId)]: amount }));
+    setEdits((prev) => ({ ...prev, [categoryId]: amount }));
   }
 
-  function handleNoteChange(type: "EXPENSE" | "INCOME", categoryId: string, value: string) {
-    setNoteEdits((prev) => ({ ...prev, [editKey(type, categoryId)]: value }));
+  function handleNoteChange(categoryId: string, value: string) {
+    setNoteEdits((prev) => ({ ...prev, [categoryId]: value }));
   }
 
   async function handleSave() {
@@ -578,8 +586,8 @@ function useBudgetData(year: number) {
     setIsSaving(true);
     try {
       const budgets = [
-        ...collectLeaves(data.expense.groups, "EXPENSE", edits, noteEdits),
-        ...collectLeaves(data.income.groups, "INCOME", edits, noteEdits),
+        ...collectLeaves(data.expense.groups, edits, noteEdits),
+        ...collectLeaves(data.income.groups, edits, noteEdits),
       ];
       const res = await fetch("/api/budgets", {
         method: "POST",
@@ -597,22 +605,41 @@ function useBudgetData(year: number) {
     }
   }
 
-  return { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave };
+  return { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave, fetchData };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function BudgetContent() {
   const t = useTranslations("budget");
+  const tNav = useTranslations("nav");
   const locale = useLocale();
   const searchParams = useSearchParams();
   const now = new Date();
   const year = Number.parseInt(searchParams.get("year") || String(now.getFullYear()));
 
-  const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave } = useBudgetData(year);
+  const [showBucketColors, setShowBucketColors] = useState(
+    () => typeof window !== "undefined" && localStorage.getItem("budget.bucketColors") === "true"
+  );
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === "budget.bucketColors") {
+        setShowBucketColors(e.newValue === "true");
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  const { data, isLoading, isSaving, edits, noteEdits, hasEdits, handleChange, handleNoteChange, handleSave, fetchData } = useBudgetData(year);
+  const { showInBudget: showBudgetSplit, targets } = useBudgetSplitVisibility();
 
   return (
     <div className="space-y-6">
+      <PageHeader title={tNav("budget")}>
+        <CopyPreviousYearButton year={year} onCopied={fetchData} />
+      </PageHeader>
+
       <MonthYearPicker mode="year" basePath="/budget" />
 
       {/* Unsaved changes banner — sticky so it's never off-screen on mobile */}
@@ -649,26 +676,30 @@ export function BudgetContent() {
             onAmountChange={handleChange}
             onNoteChange={handleNoteChange}
             year={year}
+            showBucketColors={showBucketColors}
           />
 
-          {/* ── Planned 50/30/20 ────────────────────────────────────── */}
-          <Card className="py-0">
-            <CardContent className="p-3 pb-4">
-              <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("planned503020")}
-              </p>
-              {data.income.totalBudgeted === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("set503020Hint")}
+          {/* ── Planned 50·30·20 ────────────────────────────────────── */}
+          {showBudgetSplit && (
+            <Card className="py-0">
+              <CardContent className="p-3 pb-4">
+                <p className="mb-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("planned503020", { split: `${targets.NEEDS}·${targets.WANTS}·${targets.SAVINGS}` })}
                 </p>
-              ) : (
-                <BudgetSplit
-                  breakdown={data.plannedBucketBreakdown}
-                  totalIncome={data.income.totalBudgeted}
-                />
-              )}
-            </CardContent>
-          </Card>
+                {data.income.totalBudgeted === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("set503020Hint", { split: `${targets.NEEDS}·${targets.WANTS}·${targets.SAVINGS}` })}
+                  </p>
+                ) : (
+                  <BudgetSplit
+                    breakdown={data.plannedBucketBreakdown}
+                    totalIncome={data.income.totalBudgeted}
+                    targets={targets}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>

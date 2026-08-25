@@ -14,7 +14,7 @@
 # This keeps the final image small (~150MB vs ~1GB+ with full
 # node_modules and source code).
 #
-# The base image is node:22-alpine (Node.js LTS + Alpine Linux), pinned
+# The base image is node:26-alpine (Node.js Current + Alpine Linux), pinned
 # to a specific digest rather than a mutable tag. A supply chain attack
 # on Docker Hub (e.g. the March 2026 Trivy compromise) that pushed a
 # malicious image under the same tag would produce a different hash —
@@ -24,7 +24,7 @@
 # ------------------------------------
 # Stage 1: Install dependencies
 # ------------------------------------
-FROM node:22-alpine@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd AS deps
+FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS deps
 
 # Set working directory inside the container
 WORKDIR /app
@@ -41,7 +41,7 @@ RUN npm ci
 # ------------------------------------
 # Stage 2: Build the application
 # ------------------------------------
-FROM node:22-alpine@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd AS builder
+FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS builder
 
 WORKDIR /app
 
@@ -66,7 +66,7 @@ RUN npm run build
 # ------------------------------------
 # Stage 3: Production runner
 # ------------------------------------
-FROM node:22-alpine@sha256:ab07539e0988b63558ff621f5fbe1077054c39d9809112974fb79993949d41cd AS runner
+FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS runner
 
 WORKDIR /app
 

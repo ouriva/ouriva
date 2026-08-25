@@ -2,8 +2,11 @@
 // ============
 // Two modes:
 //
-// Overview (default): two lines — income (emerald) and expenses (red) —
+// Overview (default): two lines — income (sage) and expenses (terracotta) —
 // over the months of the year. The gap between them communicates savings.
+// These are hand-picked HSL approximations of the --positive and --danger
+// tokens (see globals.css / docs/COLOR_SYSTEM.md) — Recharts can't read
+// CSS custom properties, so the hues are kept in sync by hand.
 //
 // Category detail: a single line for one category's monthly values,
 // shown when the user selects a row in the category table below.
@@ -106,7 +109,10 @@ export function AnnualBarChart({
       .slice(0, maxMonth ?? 12)
       .map((amount, i) => ({ name: MONTH_LABELS[i], amount }));
 
-    const lineColor = isDark ? "hsl(220, 70%, 65%)" : "hsl(220, 70%, 55%)";
+    // Reuses the --needs dusty-blue family — the app's one blue accent,
+    // shared between this generic per-category trend line and the Budget
+    // Split "Needs" bucket, rather than a third unrelated blue.
+    const lineColor = isDark ? "hsl(224, 40%, 68%)" : "hsl(224, 35%, 48%)";
 
     return (
       <ResponsiveContainer width="100%" height={240}>
@@ -135,8 +141,8 @@ export function AnnualBarChart({
   }
 
   // ── Overview mode: two lines (income vs expense) ───────────────────
-  const incomeColor = isDark ? "hsl(160, 55%, 62%)" : "hsl(160, 60%, 40%)";
-  const expenseColor = isDark ? "hsl(0, 70%, 68%)" : "hsl(0, 65%, 50%)";
+  const incomeColor = isDark ? "hsl(150, 28%, 62%)" : "hsl(150, 30%, 38%)";
+  const expenseColor = isDark ? "hsl(18, 55%, 68%)" : "hsl(18, 50%, 46%)";
 
   const chartData = data
     .slice(0, maxMonth ?? 12)

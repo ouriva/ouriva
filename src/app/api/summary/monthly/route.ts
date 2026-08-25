@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     let totalIncome = 0;
     let totalExpense = 0;
 
-    // 50/30/20 bucket breakdown — expenses only.
+    // 50·30·20 bucket breakdown — expenses only.
     // Effective bucket = category.bucket ?? parent.bucket ?? null (unclassified).
     const bucketTotals = initBucketTotals();
 
@@ -77,15 +77,27 @@ export async function GET(request: NextRequest) {
     for (const tx of transactions) {
       const amount = effectiveAmount(tx, defaultCurrency);
 
-      if (tx.type === "INCOME") {
-        totalIncome += amount;
-      } else {
-        totalExpense += amount;
-        addToBucket(bucketTotals, tx.category, amount);
-      }
+      // Route by category type, not transaction type.
+      // INCOME transactions in EXPENSE categories are reimbursements — they
+      // reduce that category's expense total rather than polluting the income tab.
+      // Symmetrically, EXPENSE transactions in INCOME categories are contra-income
+      // (refund/correction of income already received) and reduce that category's
+      // income total instead of appearing as a new expense.
+      const categoryType = tx.category?.type ?? (tx.type === "INCOME" ? "INCOME" : "EXPENSE");
+      const displayAmount = categoryType !== tx.type ? -amount : amount;
+      const targetMap = categoryType === "EXPENSE" ? categoryMap : incomeCategoryMap;
 
-      const targetMap = tx.type === "EXPENSE" ? categoryMap : incomeCategoryMap;
-      updateCategoryMap(targetMap, tx.category, amount);
+      // Totals and the 50·30·20 bucket breakdown use the same netted
+      // displayAmount as the category maps, so they always reconcile with
+      // the category breakdown tables (NEEDS + WANTS + SAVINGS + unclassified
+      // sums to totalExpense).
+      if (categoryType === "EXPENSE") {
+        totalExpense += displayAmount;
+        addToBucket(bucketTotals, tx.category, displayAmount);
+      } else {
+        totalIncome += displayAmount;
+      }
+      updateCategoryMap(targetMap, tx.category, displayAmount);
     }
 
     return NextResponse.json({

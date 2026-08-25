@@ -23,7 +23,7 @@ import {
   // Travel
   MapPin, Hotel, Luggage, Globe, Compass,
   // Finance
-  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3,
+  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3, ArrowLeftRight,
   // Work
   Briefcase, Laptop, Building2, Phone, GraduationCap,
   // Family
@@ -51,7 +51,7 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
   // Travel
   MapPin, Hotel, Luggage, Globe, Compass,
   // Finance
-  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3,
+  Banknote, CreditCard, PiggyBank, TrendingUp, Wallet, BarChart3, ArrowLeftRight,
   // Work
   Briefcase, Laptop, Building2, Phone, GraduationCap,
   // Family
@@ -69,7 +69,7 @@ export const ICON_GROUPS: { label: string; icons: string[] }[] = [
   { label: "Shopping",       icons: ["ShoppingCart", "ShoppingBag", "Package", "Tag", "Shirt"] },
   { label: "Entertainment",  icons: ["Music", "Tv", "Gamepad2", "Film", "Ticket", "BookOpen", "Headphones"] },
   { label: "Travel",         icons: ["MapPin", "Hotel", "Luggage", "Globe", "Compass"] },
-  { label: "Finance",        icons: ["Banknote", "CreditCard", "PiggyBank", "TrendingUp", "Wallet", "BarChart3"] },
+  { label: "Finance",        icons: ["Banknote", "CreditCard", "PiggyBank", "TrendingUp", "Wallet", "BarChart3", "ArrowLeftRight"] },
   { label: "Work",           icons: ["Briefcase", "Laptop", "Building2", "Phone", "GraduationCap"] },
   { label: "Family",         icons: ["Baby", "Dog", "Cat", "Users"] },
   { label: "Misc",           icons: ["Gift", "Star", "Leaf", "Sun", "Moon", "Scissors", "Sparkles"] },
@@ -77,18 +77,22 @@ export const ICON_GROUPS: { label: string; icons: string[] }[] = [
 
 // ─── Colors ──────────────────────────────────────────────────────────────────
 // Full class strings — never use template literals like `bg-${key}-500`.
+// Values are the muted --cat-* tokens from globals.css, not raw Tailwind
+// colors — see docs/COLOR_SYSTEM.md. Keys are unchanged from the original
+// Tailwind-backed palette so existing categories' stored `color` values
+// still resolve; only what each key renders as has changed.
 
 export const CATEGORY_COLORS: { key: string; bg: string }[] = [
-  { key: "zinc",    bg: "bg-zinc-500"    },
-  { key: "blue",    bg: "bg-blue-500"    },
-  { key: "violet",  bg: "bg-violet-500"  },
-  { key: "rose",    bg: "bg-rose-500"    },
-  { key: "orange",  bg: "bg-orange-500"  },
-  { key: "amber",   bg: "bg-amber-500"   },
-  { key: "lime",    bg: "bg-lime-500"    },
-  { key: "emerald", bg: "bg-emerald-500" },
-  { key: "teal",    bg: "bg-teal-500"    },
-  { key: "sky",     bg: "bg-sky-500"     },
-  { key: "pink",    bg: "bg-pink-500"    },
-  { key: "red",     bg: "bg-red-500"     },
+  { key: "zinc",    bg: "bg-cat-zinc"    },
+  { key: "blue",    bg: "bg-cat-blue"    },
+  { key: "violet",  bg: "bg-cat-violet"  },
+  { key: "rose",    bg: "bg-cat-rose"    },
+  { key: "orange",  bg: "bg-cat-orange"  },
+  { key: "amber",   bg: "bg-cat-amber"   },
+  { key: "lime",    bg: "bg-cat-lime"    },
+  { key: "emerald", bg: "bg-cat-emerald" },
+  { key: "teal",    bg: "bg-cat-teal"    },
+  { key: "sky",     bg: "bg-cat-sky"     },
+  { key: "pink",    bg: "bg-cat-pink"    },
+  { key: "red",     bg: "bg-cat-red"     },
 ];

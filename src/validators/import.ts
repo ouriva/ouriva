@@ -11,6 +11,7 @@
 // that users can reuse across imports from the same bank.
 
 import { z } from "zod/v4";
+import { categoryIdSchema } from "./transaction";
 
 // --- Column Mapping ---
 // Maps file column indices to transaction fields.
@@ -52,14 +53,14 @@ export type CheckDuplicatesInput = z.infer<typeof checkDuplicatesSchema>;
 // The client sends the fully-mapped, user-approved list from Step 4.
 
 export const importTransactionSchema = z.object({
-  type: z.enum(["INCOME", "EXPENSE"]),
+  type: z.enum(["INCOME", "EXPENSE", "TRANSFER"]),
   amount: z.number().positive(),
   description: z.string().optional(),
   friendlyName: z.string().max(255).optional(),
   notes: z.string().max(1000).optional(),
   date: z.string(), // ISO date string, parsed server-side
   fromAccountId: z.uuid(),
-  categoryId: z.uuid().optional(),
+  categoryId: categoryIdSchema.optional(),
   importRef: z.string(),
   needsReview: z.boolean().optional(),
   exchangeRate: z.number().positive().optional(),

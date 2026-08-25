@@ -40,7 +40,7 @@ export default async function NewTransactionPage({
       //   - omit `id` so the form POSTs a new record instead of PUTting
       //   - set date to today so the duplicate starts on the current date
       initialData = {
-        type: source.type as "INCOME" | "EXPENSE",
+        type: source.type as "INCOME" | "EXPENSE" | "TRANSFER",
         amount: Number(source.amount),
         description: source.description || "",
         friendlyName: source.friendlyName || "",

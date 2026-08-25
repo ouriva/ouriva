@@ -19,7 +19,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MonthYearPicker } from "./month-year-picker";
 import { CategoryBreakdown } from "./category-breakdown";
+import { NetCategoryBreakdown } from "./net-category-breakdown";
 import { BudgetSplit } from "./budget-split";
+import { useBudgetSplitVisibility } from "@/hooks/use-budget-split-visibility";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ export function MonthlySummaryContent() {
   const [data, setData] = useState<MonthlySummary | null>(null);
   const [prevData, setPrevData] = useState<Pick<MonthlySummary, "totalIncome" | "totalExpense" | "net"> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { showInSummary: showBudgetSplit, targets } = useBudgetSplitVisibility();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -145,14 +148,14 @@ export function MonthlySummaryContent() {
             <StatCard
               label={t("income")}
               value={data.totalIncome}
-              valueClass="text-emerald-600 dark:text-emerald-400"
+              valueClass="text-positive"
               delta={prevData ? computeDelta(data.totalIncome, prevData.totalIncome) : null}
               deltaPositiveIsGood
             />
             <StatCard
               label={t("expenses")}
               value={data.totalExpense}
-              valueClass="text-red-600 dark:text-red-400"
+              valueClass="text-danger"
               delta={prevData ? computeDelta(data.totalExpense, prevData.totalExpense) : null}
               deltaPositiveIsGood={false}
             />
@@ -165,12 +168,23 @@ export function MonthlySummaryContent() {
           />
 
           {/* ── Tabs ───────────────────────────────────────────────────── */}
-          <Tabs defaultValue="expenses">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="overview">
+            <TabsList className={cn("grid w-full", showBudgetSplit ? "grid-cols-4" : "grid-cols-3")}>
+              <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
               <TabsTrigger value="expenses">{t("tabExpenses")}</TabsTrigger>
               <TabsTrigger value="income">{t("tabIncome")}</TabsTrigger>
-              <TabsTrigger value="budget">{t("tab5030")}</TabsTrigger>
+              {showBudgetSplit && (
+                <TabsTrigger value="budget">{`${targets.NEEDS}·${targets.WANTS}·${targets.SAVINGS}`}</TabsTrigger>
+              )}
             </TabsList>
+
+            <TabsContent value="overview" className="mt-4">
+              <NetCategoryBreakdown
+                expenseCategories={data.categories}
+                incomeCategories={data.incomeCategories || []}
+                totalCashflow={data.totalIncome + data.totalExpense}
+              />
+            </TabsContent>
 
             <TabsContent value="expenses" className="mt-4">
               <CategoryBreakdown
@@ -188,12 +202,15 @@ export function MonthlySummaryContent() {
               />
             </TabsContent>
 
-            <TabsContent value="budget" className="mt-4">
-              <BudgetSplit
-                breakdown={data.bucketBreakdown}
-                totalIncome={data.totalIncome}
-              />
-            </TabsContent>
+            {showBudgetSplit && (
+              <TabsContent value="budget" className="mt-4">
+                <BudgetSplit
+                  breakdown={data.bucketBreakdown}
+                  totalIncome={data.totalIncome}
+                  targets={targets}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         </>
       )}
@@ -218,8 +235,8 @@ function StatCard({ label, value, valueClass, delta, deltaPositiveIsGood }: Read
   if (delta) {
     const isGood = deltaPositiveIsGood ? delta.pct > 0 : delta.pct < 0;
     deltaClass = isGood
-      ? "text-emerald-600 dark:text-emerald-400"
-      : "text-red-600 dark:text-red-400";
+      ? "text-positive"
+      : "text-danger";
   }
 
   return (
@@ -256,8 +273,8 @@ function NetStatCard({ value, prevNet, prevLabel }: Readonly<NetStatCardProps>) 
   const locale = useLocale();
   const valueClass =
     value >= 0
-      ? "text-emerald-600 dark:text-emerald-400"
-      : "text-red-600 dark:text-red-400";
+      ? "text-positive"
+      : "text-danger";
 
   const delta =
     prevNet === null
@@ -276,8 +293,8 @@ function NetStatCard({ value, prevNet, prevLabel }: Readonly<NetStatCardProps>) 
               className={cn(
                 "text-[10px] font-medium",
                 delta.positive
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-red-600 dark:text-red-400"
+                  ? "text-positive"
+                  : "text-danger"
               )}
             >
               {delta.positive ? "↑" : "↓"} €{formatAmount(Math.abs(delta.diff), locale)} vs {prevLabel}

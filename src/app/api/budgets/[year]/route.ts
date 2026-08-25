@@ -10,6 +10,16 @@
 //       children[]  — leaf categories under this parent (empty if standalone leaf)
 //         categoryId, categoryName, budgeted, actual, remaining, percentage, isIncome, note
 //
+// Category routing:
+//   • Transactions are routed to expense or income based on Category.type (not TransactionType).
+//   • An INCOME transaction in an EXPENSE category is a contra-expense (reimbursement)
+//     and reduces the expense actual for that category — the net-out-of-pocket model.
+//   • An EXPENSE transaction in an INCOME category is a contra-income (refund/correction
+//     of income already received) and reduces the income actual for that category.
+//   • An INCOME transaction in an INCOME category is real income; an EXPENSE transaction
+//     in an EXPENSE category is real spending.
+//   • TRANSFER transactions are excluded entirely — they never appear in budget reports.
+//
 // Grouping rules:
 //   • Categories with a parent  → children[] of the parent group
 //   • Root categories           → standalone group (children: [])
@@ -18,22 +28,21 @@
 //       actual   = parent's own transactions + sum of children's transactions
 //
 // Expense vs income seeding:
-//   • Expense groups are seeded from ALL active leaf categories — every leaf
+//   • Expense groups are seeded from ALL active leaf EXPENSE categories — every leaf
 //     appears even with 0 budget and 0 actual, so users can plan ahead.
-//   • Income groups are seeded only from categories with income budgets or
-//     income transactions (existing behaviour — income sources are stable).
+//   • Income groups are seeded only from INCOME categories with income budgets or
+//     income transactions (income sources are stable, no need to show empty rows).
 //
 // Actual tracking: transactions are kept at their assigned category level —
 //   no rollup to parent. Each child shows its own progress independently.
 //
-// Planned 50/30/20 breakdown: uses only leaf-level budget entries so parent
+// Planned 50·30·20 breakdown: uses only leaf-level budget entries so parent
 //   budgets (if any remain from before the migration) are not double-counted.
 //
 // Effective bucket: category.bucket ?? category.parent?.bucket ?? null
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getTransferCategoryId } from "@/lib/settings";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -48,6 +57,7 @@ interface LeafEntry {
   percentage: number;
   isIncome: boolean;
   note: string | null;
+  bucket: BucketKey;
 }
 
 interface GroupEntry extends LeafEntry {
@@ -75,7 +85,8 @@ function buildGroupsFromSeeds(
   seedLeaves: { id: string; name: string; parentId?: string | null; parentName?: string | null }[],
   budgetMap: Map<string, { amount: number; note: string | null }>,
   actualMap: Map<string, number>,
-  isIncome: boolean
+  isIncome: boolean,
+  bucketMap?: Map<string, string | null>
 ): GroupEntry[] {
   type RawGroup = {
     groupId: string; groupName: string;
@@ -133,14 +144,9 @@ function buildGroupsFromSeeds(
   }
 
   // Also add actual from transactions assigned directly to parent categories
-  // (those parent categories are not in seedLeaves, so we handle them here)
   for (const [catId, total] of actualMap) {
-    // If this category appears in a group as a child, it's already counted.
-    // If it's a key in groups, it's a standalone — already counted.
-    // We only need to add actuals for categories not covered by seedLeaves.
     const isCoveredBySeed = seedLeaves.some(l => l.id === catId);
     if (!isCoveredBySeed) {
-      // This is a parent category with direct transactions — add to its group actual
       const group = groups.get(catId);
       if (group) {
         group.actual = Math.round((group.actual + Math.round(total * 100) / 100) * 100) / 100;
@@ -163,6 +169,7 @@ function buildGroupsFromSeeds(
             categoryId: c.id, categoryName: c.name,
             budgeted: c.budgeted, actual: c.actual,
             remaining: rem, percentage: pct, isIncome, note: c.note,
+            bucket: (bucketMap?.get(c.id) ?? null) as BucketKey,
           };
         });
 
@@ -171,17 +178,19 @@ function buildGroupsFromSeeds(
         categoryId: g.groupId, categoryName: g.groupName,
         budgeted: g.budgeted, actual: g.actual,
         remaining, percentage, isIncome, note: g.note, children,
+        bucket: (bucketMap?.get(g.groupId) ?? null) as BucketKey,
       };
     })
     .toSorted((a, b) => a.groupName.localeCompare(b.groupName));
 }
 
-// Income groups are seeded from the union of budget+actual keys (existing behaviour).
-// This keeps the income tab focused on known income sources.
+// Income groups are seeded from the union of budget+actual keys.
+// Only INCOME categories appear here (filtered upstream).
 function buildGroupsFromUnion(
   budgetMap: Map<string, { amount: number; note: string | null; name?: string; parentId?: string; parentName?: string }>,
   actualMap: Map<string, { total: number; name?: string; parentId?: string; parentName?: string }>,
-  isIncome: boolean
+  isIncome: boolean,
+  bucketMap?: Map<string, string | null>
 ): GroupEntry[] {
   const allIds = new Set([...budgetMap.keys(), ...actualMap.keys()]);
   const seeds = Array.from(allIds).map((id) => {
@@ -195,47 +204,31 @@ function buildGroupsFromUnion(
     };
   });
 
-  // Reuse budgetMap but adapt actualMap to match the signature
   const flatActualMap = new Map<string, number>();
   for (const [id, a] of actualMap) flatActualMap.set(id, a.total);
 
-  return buildGroupsFromSeeds(seeds, budgetMap, flatActualMap, isIncome);
+  return buildGroupsFromSeeds(seeds, budgetMap, flatActualMap, isIncome, bucketMap);
 }
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
 
-// Fetches top-level EXPENSE or INCOME transactions with their split children
-// included so the caller can flatMap parents into children.
-//
-// The transfer-category filter uses OR rather than a plain `{ not: id }` because
-// split parents have categoryId: null, and SQL evaluates NULL != 'x' as NULL
-// (not TRUE), which silently drops those rows. The OR form explicitly keeps
-// null-category rows while still excluding the transfer category.
+// Fetches top-level EXPENSE or INCOME transactions with their split children.
+// TRANSFER transactions are automatically excluded by filtering on type.
 function fetchTopLevelTransactions(
   startDate: Date,
   endDate: Date,
-  type: "EXPENSE" | "INCOME",
-  transferCategoryId: string | null
+  type: "EXPENSE" | "INCOME"
 ) {
   return prisma.transaction.findMany({
     where: {
       date: { gte: startDate, lte: endDate },
       type,
       parentTransactionId: null,
-      ...(transferCategoryId && {
-        OR: [
-          { categoryId: null },
-          { categoryId: { not: transferCategoryId } },
-        ],
-      }),
     },
     include: {
       category: { include: { parent: true } },
       splits: {
         include: { category: { include: { parent: true } } },
-        ...(transferCategoryId && {
-          where: { categoryId: { not: transferCategoryId } },
-        }),
       },
     },
   });
@@ -246,42 +239,76 @@ type TransactionWithCategory = {
   category: { id: string; name: string; parent?: { id: string; name: string } | null } | null;
 };
 
+// Build expense actual map using CategoryType-aware routing:
+//   • EXPENSE transactions in EXPENSE categories → add to actual (spending)
+//   • INCOME transactions in EXPENSE categories → subtract from actual (reimbursements)
+//   • Transactions in INCOME categories are ignored here (handled separately)
+//
+// This is the "contra-expense" model: a health insurance reimbursement recorded as
+// an INCOME transaction in the "Doctor" (EXPENSE) category reduces your net doctor
+// expense. No manual netting step needed — the routing is driven by CategoryType.
 function buildExpenseActualMap(
-  transactions: TransactionWithCategory[]
+  expenseTransactions: TransactionWithCategory[],
+  incomeTransactions: TransactionWithCategory[],
+  expenseCategoryIds: Set<string>
 ): Map<string, number> {
   const map = new Map<string, number>();
-  for (const tx of transactions) {
+
+  for (const tx of expenseTransactions) {
     if (!tx.category) continue;
+    if (!expenseCategoryIds.has(tx.category.id)) continue;
     map.set(tx.category.id, (map.get(tx.category.id) ?? 0) + Number(tx.amount));
   }
+
+  // Net off: income in expense categories = contra-expense (reimbursement)
+  for (const tx of incomeTransactions) {
+    if (!tx.category) continue;
+    if (!expenseCategoryIds.has(tx.category.id)) continue;
+    map.set(tx.category.id, (map.get(tx.category.id) ?? 0) - Number(tx.amount));
+  }
+
   return map;
 }
 
+// Build income actual map using CategoryType-aware routing:
+//   • INCOME transactions in INCOME categories → add to actual (real income)
+//   • EXPENSE transactions in INCOME categories → subtract from actual (contra-income:
+//     a refund or correction of income already received)
+//   • Transactions in EXPENSE categories are ignored here (handled separately)
 function buildIncomeActualMap(
-  transactions: TransactionWithCategory[]
+  incomeTransactions: TransactionWithCategory[],
+  expenseTransactions: TransactionWithCategory[],
+  incomeCategoryIds: Set<string>
 ): Map<string, { total: number; name?: string; parentId?: string; parentName?: string }> {
   const map = new Map<string, { total: number; name?: string; parentId?: string; parentName?: string }>();
-  for (const tx of transactions) {
-    if (!tx.category) continue;
+
+  function addToMap(tx: TransactionWithCategory, sign: 1 | -1) {
+    if (!tx.category) return;
+    if (!incomeCategoryIds.has(tx.category.id)) return;
     const id = tx.category.id;
     const entry = map.get(id) ?? {
       total: 0,
       name: tx.category.name,
-      parentId: tx.category.parent?.id,
-      parentName: tx.category.parent?.name,
+      parentId: (tx.category as { parent?: { id: string } | null }).parent?.id,
+      parentName: (tx.category as { parent?: { name: string } | null }).parent?.name,
     };
-    entry.total += Number(tx.amount);
+    entry.total += sign * Number(tx.amount);
     map.set(id, entry);
   }
+
+  for (const tx of incomeTransactions) addToMap(tx, 1);
+
+  // Net off: expense in income categories = contra-income (refund/correction)
+  for (const tx of expenseTransactions) addToMap(tx, -1);
   return map;
 }
 
 type BudgetWithCategory = {
   categoryId: string;
-  type: string;
   amount: unknown;
   note?: string | null;
   category: {
+    type: string;
     name: string;
     parent?: { id: string; name: string } | null;
     children: { id: string }[];
@@ -296,7 +323,7 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
   const incomeBudgetMap = new Map<string, { amount: number; note: string | null; parentId?: string; parentName?: string; name?: string }>();
 
   for (const b of budgets) {
-    if (b.type === "INCOME") {
+    if (b.category.type === "INCOME") {
       incomeBudgetMap.set(b.categoryId, {
         amount: Number(b.amount),
         note: b.note ?? null,
@@ -310,26 +337,6 @@ function buildBudgetMaps(budgets: BudgetWithCategory[]): {
   }
 
   return { expenseBudgetMap, incomeBudgetMap };
-}
-
-function netOffReimbursements(
-  actualExpenseMap: Map<string, number>,
-  actualIncomeMap: Map<string, { total: number }>,
-  incomeTransactions: TransactionWithCategory[],
-  expenseBudgetMap: Map<string, { amount: number; note: string | null }>
-): void {
-  for (const tx of incomeTransactions) {
-    if (!tx.category) continue;
-    const catId = tx.category.id;
-    if (actualExpenseMap.has(catId) || expenseBudgetMap.has(catId)) {
-      actualExpenseMap.set(catId, (actualExpenseMap.get(catId) ?? 0) - Number(tx.amount));
-      const incEntry = actualIncomeMap.get(catId);
-      if (incEntry) {
-        incEntry.total -= Number(tx.amount);
-        if (incEntry.total <= 0) actualIncomeMap.delete(catId);
-      }
-    }
-  }
 }
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -352,28 +359,20 @@ export async function GET(
     const startDate = new Date(year, 0, 1);
     const endDate   = new Date(year, 11, 31);
 
-    const transferCategoryId = await getTransferCategoryId();
-
-    // Fetch all active categories (for expense seed), budgets, and transactions in parallel.
+    // Fetch all active categories, budgets, and transactions in parallel.
+    // TRANSFER transactions are excluded from both fetches (type filter).
     const [allCategories, budgets, expenseTransactionsRaw, incomeTransactionsRaw] =
       await Promise.all([
-        // All active leaf categories — seed for expense groups
         prisma.category.findMany({
-          where: {
-            isActive: true,
-            ...(transferCategoryId && { id: { not: transferCategoryId } }),
-          },
+          where: { isActive: true },
           include: {
-            parent: { select: { id: true, name: true } },
+            parent: { select: { id: true, name: true, bucket: true } },
             children: { where: { isActive: true }, select: { id: true } },
           },
           orderBy: { name: "asc" },
         }),
         prisma.budget.findMany({
-          where: {
-            year,
-            ...(transferCategoryId && { categoryId: { not: transferCategoryId } }),
-          },
+          where: { year },
           include: {
             category: {
               include: {
@@ -383,8 +382,8 @@ export async function GET(
             },
           },
         }),
-        fetchTopLevelTransactions(startDate, endDate, "EXPENSE", transferCategoryId),
-        fetchTopLevelTransactions(startDate, endDate, "INCOME", transferCategoryId),
+        fetchTopLevelTransactions(startDate, endDate, "EXPENSE"),
+        fetchTopLevelTransactions(startDate, endDate, "INCOME"),
       ]);
 
     // Replace split parents with their children so each child's amount is
@@ -396,8 +395,14 @@ export async function GET(
       tx.splits.length > 0 ? tx.splits : [tx]
     );
 
+    // ── Separate categories by CategoryType ──────────────────────────────
+    const expenseCategories = allCategories.filter(c => c.type === "EXPENSE");
+    const incomeCategories  = allCategories.filter(c => c.type === "INCOME");
+    const expenseCategoryIds = new Set(expenseCategories.map(c => c.id));
+    const incomeCategoryIds  = new Set(incomeCategories.map(c => c.id));
+
     // ── Leaf categories for expense seed ─────────────────────────────────
-    const leafCategories = allCategories
+    const leafExpenseCategories = expenseCategories
       .filter(c => c.children.length === 0)
       .map(c => ({
         id:         c.id,
@@ -406,30 +411,26 @@ export async function GET(
         parentName: c.parent?.name ?? null,
       }));
 
-    // ── Actual maps — no rollup to parent ────────────────────────────────
-    const actualExpenseMap = buildExpenseActualMap(expenseTransactions);
-    const actualIncomeMap  = buildIncomeActualMap(incomeTransactions);
+    // ── Bucket map — effective bucket for every active category ───────────
+    const categoryBucketMap = new Map<string, string | null>();
+    for (const c of allCategories) {
+      categoryBucketMap.set(c.id, effectiveBucket(c) as string | null);
+    }
+
+    // ── Actual maps ───────────────────────────────────────────────────────
+    // CategoryType determines routing: EXPENSE categories net reimbursements,
+    // INCOME categories accumulate income only.
+    const actualExpenseMap = buildExpenseActualMap(expenseTransactions, incomeTransactions, expenseCategoryIds);
+    const actualIncomeMap  = buildIncomeActualMap(incomeTransactions, expenseTransactions, incomeCategoryIds);
 
     // ── Budget maps ───────────────────────────────────────────────────────
     const { expenseBudgetMap, incomeBudgetMap } = buildBudgetMaps(budgets);
 
-    // ── Net off reimbursements — income in expense categories ─────────────
-    // Income transactions assigned to an expense category (e.g. an insurance
-    // reimbursement categorised as "Health") are treated as contra-expenses:
-    //   • They reduce the expense actual → net out-of-pocket cost
-    //   • They are removed from the income actual → not double-counted
-    //
-    // A category is "in expense context" when it has expense transactions or
-    // an expense budget target. Pure income categories (salary, freelance)
-    // are untouched.
-    netOffReimbursements(actualExpenseMap, actualIncomeMap, incomeTransactions, expenseBudgetMap);
-
-    // ── Build grouped category lists ──────────────────────────────────────
-    // Expense: seeded from all active leaf categories
-    const expenseGroups = buildGroupsFromSeeds(leafCategories, expenseBudgetMap, actualExpenseMap, false);
-
-    // Income: seeded from union of budget+actual keys only
-    const incomeGroups = buildGroupsFromUnion(incomeBudgetMap, actualIncomeMap, true);
+    // ── Build groups ──────────────────────────────────────────────────────
+    // Expense: seeded from all active EXPENSE leaf categories (shows empty rows too)
+    const expenseGroups = buildGroupsFromSeeds(leafExpenseCategories, expenseBudgetMap, actualExpenseMap, false, categoryBucketMap);
+    // Income: seeded from INCOME categories that have budgets or transactions
+    const incomeGroups = buildGroupsFromUnion(incomeBudgetMap, actualIncomeMap, true, categoryBucketMap);
 
     // ── Totals ────────────────────────────────────────────────────────────
     const totalBudgetedExpense = expenseGroups.reduce((s, g) => s + g.budgeted, 0);
@@ -437,9 +438,11 @@ export async function GET(
     const totalBudgetedIncome  = incomeGroups.reduce( (s, g) => s + g.budgeted, 0);
     const totalActualIncome    = incomeGroups.reduce( (s, g) => s + g.actual,   0);
 
-    // ── Planned 50/30/20 — leaf categories only (no double-count) ────────
+    // ── Planned 50·30·20 — leaf EXPENSE categories only (no double-count) ──
     const plannedBuckets = { NEEDS: 0, WANTS: 0, SAVINGS: 0, unclassified: 0 };
-    for (const b of budgets.filter((b) => b.type === "EXPENSE")) {
+    for (const b of budgets) {
+      if (b.category.type !== "EXPENSE") continue;
+      if (!expenseCategoryIds.has(b.categoryId)) continue; // exclude hidden/inactive categories
       if (b.category.children.length > 0) continue;
       const bucket = effectiveBucket(b.category);
       plannedBuckets[bucket ?? "unclassified"] += Number(b.amount);

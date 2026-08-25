@@ -40,6 +40,12 @@ interface AnnualCategoryTableProps {
   emptyMessage?: string;
   selectedId?: string | null;
   onSelect?: (id: string | null) => void;
+  // When true: month cells show any non-zero value (including negative net amounts)
+  // and the Total column is colored green (net income) or red (net expense).
+  signedValues?: boolean;
+  // Number of months to divide by for the monthly average column.
+  // Pass the current month (1-12) for the current year; defaults to 12 for past years.
+  monthCount?: number;
 }
 
 export function AnnualCategoryTable({
@@ -47,6 +53,8 @@ export function AnnualCategoryTable({
   emptyMessage = "No data for this year",
   selectedId,
   onSelect,
+  signedValues = false,
+  monthCount = 12,
 }: Readonly<AnnualCategoryTableProps>) {
   const locale = useLocale();
   const t = useTranslations("summary");
@@ -94,6 +102,9 @@ export function AnnualCategoryTable({
                 {m}
               </th>
             ))}
+            <th className="px-3 py-2 text-right font-medium text-muted-foreground">
+              {t("tableMonthlyAvg")}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -136,7 +147,7 @@ export function AnnualCategoryTable({
                       )}
                       {category.id === "__uncategorized__" ? (
                         <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                          <TriangleAlert className="h-3.5 w-3.5" />
+                          <TriangleAlert className="h-4 w-4" />
                           {category.name}
                         </span>
                       ) : (
@@ -144,17 +155,29 @@ export function AnnualCategoryTable({
                       )}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums font-semibold">
-                    {formatAmount(category.total, locale)}
+                  <td
+                    className={cn(
+                      "px-3 py-2 text-right tabular-nums font-semibold",
+                      signedValues && category.total >= 0 && "text-positive"
+                    )}
+                  >
+                    {signedValues && category.total >= 0 ? "+" : signedValues ? "−" : ""}
+                    {formatAmount(Math.abs(category.total), locale)}
                   </td>
                   {monthLabels.map((monthLabel, i) => (
                     <td
                       key={monthLabel}
                       className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                     >
-                      {category.months[i] > 0 ? formatAmount(category.months[i], locale) : "—"}
+                      {(signedValues ? category.months[i] !== 0 : category.months[i] > 0)
+                        ? `${signedValues ? (category.months[i] >= 0 ? "+" : "−") : ""}${formatAmount(Math.abs(category.months[i]), locale)}`
+                        : "—"}
                     </td>
                   ))}
+                  <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                    {signedValues && category.total >= 0 ? "+" : signedValues && category.total < 0 ? "−" : ""}
+                    {formatAmount(Math.abs(category.total) / monthCount, locale)}
+                  </td>
                 </tr>
 
                 {/* ── Child rows (shown when expanded) ────────────────────── */}
@@ -179,17 +202,29 @@ export function AnnualCategoryTable({
                           {child.name}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {formatAmount(child.total, locale)}
+                      <td
+                        className={cn(
+                          "px-3 py-2 text-right tabular-nums",
+                          signedValues && child.total >= 0 && "text-positive"
+                        )}
+                      >
+                        {signedValues && child.total >= 0 ? "+" : signedValues ? "−" : ""}
+                        {formatAmount(Math.abs(child.total), locale)}
                       </td>
                       {monthLabels.map((monthLabel, i) => (
                         <td
                           key={monthLabel}
                           className="px-3 py-2 text-right tabular-nums text-muted-foreground"
                         >
-                          {child.months[i] > 0 ? formatAmount(child.months[i], locale) : "—"}
+                          {(signedValues ? child.months[i] !== 0 : child.months[i] > 0)
+                            ? `${signedValues ? (child.months[i] >= 0 ? "+" : "−") : ""}${formatAmount(Math.abs(child.months[i]), locale)}`
+                            : "—"}
                         </td>
                       ))}
+                      <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+                        {signedValues && child.total >= 0 ? "+" : signedValues && child.total < 0 ? "−" : ""}
+                        {formatAmount(Math.abs(child.total) / monthCount, locale)}
+                      </td>
                     </tr>
                   );
                 })}
@@ -200,14 +235,26 @@ export function AnnualCategoryTable({
           {/* Grand total row */}
           <tr className="bg-muted/50 font-semibold">
             <td className="sticky left-0 bg-muted/50 px-3 py-2">{t("tableTotal")}</td>
-            <td className="px-3 py-2 text-right tabular-nums">
-              {formatAmount(grandTotal, locale)}
+            <td
+              className={cn(
+                "px-3 py-2 text-right tabular-nums",
+                signedValues && grandTotal >= 0 && "text-positive"
+              )}
+            >
+              {signedValues && grandTotal >= 0 ? "+" : signedValues ? "−" : ""}
+              {formatAmount(Math.abs(grandTotal), locale)}
             </td>
             {monthLabels.map((monthLabel, i) => (
               <td key={monthLabel} className="px-3 py-2 text-right tabular-nums">
-                {monthlyTotals[i] > 0 ? formatAmount(monthlyTotals[i], locale) : "—"}
+                {(signedValues ? monthlyTotals[i] !== 0 : monthlyTotals[i] > 0)
+                  ? `${signedValues ? (monthlyTotals[i] >= 0 ? "+" : "−") : ""}${formatAmount(Math.abs(monthlyTotals[i]), locale)}`
+                  : "—"}
               </td>
             ))}
+            <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
+              {signedValues && grandTotal >= 0 ? "+" : signedValues && grandTotal < 0 ? "−" : ""}
+              {formatAmount(Math.abs(grandTotal) / monthCount, locale)}
+            </td>
           </tr>
         </tbody>
       </table>

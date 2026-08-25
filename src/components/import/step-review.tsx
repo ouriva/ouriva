@@ -39,11 +39,13 @@ import {
 import { matchRule, type CategoryRuleInput } from "@/lib/category-rules";
 import { parseDate, parseAmount } from "./step-review-utils";
 import type { ImportState } from "./import-wizard";
+import type { TransactionType, CategoryType } from "@/generated/prisma/client";
 
 interface Category {
   id: string;
   name: string;
   parentId: string | null;
+  type: CategoryType;
 }
 
 interface ParsedRow {
@@ -51,14 +53,14 @@ interface ParsedRow {
   description: string;
   amount: number;
   reference?: string;
-  type: "INCOME" | "EXPENSE";
+  type: TransactionType;
   importRef: string;
 }
 
 interface ReviewResult {
   selectedRows: boolean[];
   categoryIds: (string | undefined)[];
-  transactionTypes: ("INCOME" | "EXPENSE")[];
+  transactionTypes: TransactionType[];
   importRefs: string[];
   duplicateRefs: Set<string>;
   friendlyNames: (string | undefined)[];
@@ -89,14 +91,14 @@ interface ReviewRowProps {
   isSelected: boolean;
   categoryId: string | undefined;
   autoApplied: boolean;
-  transactionType: "INCOME" | "EXPENSE";
+  transactionType: TransactionType;
   friendlyName: string | undefined;
   note: string | undefined;
   needsReview: boolean;
   parentCategories: Category[];
   childCategories: Category[];
   onSelectChange: (i: number, checked: boolean) => void;
-  onTypeChange: (i: number, type: "INCOME" | "EXPENSE") => void;
+  onTypeChange: (i: number, type: TransactionType) => void;
   onCategoryChange: (i: number, id: string | undefined) => void;
   onFriendlyNameChange: (i: number, value: string) => void;
   onNoteChange: (i: number, value: string) => void;
@@ -185,58 +187,72 @@ const ReviewRow = memo(function ReviewRow({
         <div className="flex items-center gap-2">
           <Select
             value={transactionType}
-            onValueChange={(v) => onTypeChange(i, v as "INCOME" | "EXPENSE")}
+            onValueChange={(v) => onTypeChange(i, v as TransactionType)}
           >
-            <SelectTrigger className="h-7 w-24 text-xs">
+            <SelectTrigger className="h-7 w-28 text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="INCOME">{t("incomeBadge")}</SelectItem>
               <SelectItem value="EXPENSE">{t("expenseBadge")}</SelectItem>
+              <SelectItem value="TRANSFER">{t("transferBadge")}</SelectItem>
             </SelectContent>
           </Select>
 
+          {/* Category picker — always visible.
+              TRANSFER rows show only Transfer In / Transfer Out;
+              INCOME/EXPENSE rows show their respective categories. */}
           <div className="flex-1">
-            <Select
-              value={categoryId ?? "none"}
-              onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
-            >
-              <SelectTrigger className="h-7 w-full text-xs">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
-                {parentCategories.map((parent) => {
-                  const children = childCategories.filter(
-                    (c) => c.parentId === parent.id
-                  );
-                  if (children.length > 0) {
-                    return (
-                      <SelectGroup key={parent.id}>
-                        <SelectLabel className="text-xs">{parent.name}</SelectLabel>
-                        {children.map((child) => (
-                          <SelectItem key={child.id} value={child.id} className="text-xs">
-                            {child.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    );
-                  }
-                  return (
-                    <SelectItem key={parent.id} value={parent.id} className="text-xs">
-                      {parent.name}
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            {(() => {
+              const displayParents = transactionType === "TRANSFER"
+                ? parentCategories.filter((p) => p.type === "TRANSFER")
+                : parentCategories.filter((p) => p.type !== "TRANSFER")
+                    .sort((a, b) => (a.type === b.type ? 0 : a.type === "INCOME" ? -1 : 1));
+              return (
+                <Select
+                  value={categoryId ?? "none"}
+                  onValueChange={(v) => onCategoryChange(i, v === "none" ? undefined : v)}
+                >
+                  <SelectTrigger className="h-7 w-full text-xs">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {transactionType !== "TRANSFER" && (
+                      <SelectItem value="none">{t("noCategoryOption")}</SelectItem>
+                    )}
+                    {displayParents.map((parent) => {
+                      const children = childCategories.filter(
+                        (c) => c.parentId === parent.id
+                      );
+                      if (children.length > 0) {
+                        return (
+                          <SelectGroup key={parent.id}>
+                            <SelectLabel className="text-xs">{parent.name}</SelectLabel>
+                            {children.map((child) => (
+                              <SelectItem key={child.id} value={child.id} className="text-xs">
+                                {child.name}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        );
+                      }
+                      return (
+                        <SelectItem key={parent.id} value={parent.id} className="text-xs">
+                          {parent.name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              );
+            })()}
           </div>
         </div>
       </div>
 
       <span
         className={`whitespace-nowrap text-sm font-semibold ${
-          row.amount >= 0 ? "text-green-600" : "text-red-600"
+          row.amount >= 0 ? "text-positive" : "text-danger"
         }`}
       >
         {row.amount >= 0 ? "+" : "−"}
@@ -255,7 +271,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<boolean[]>([]);
   const [categoryIds, setCategoryIds] = useState<(string | undefined)[]>([]);
-  const [transactionTypes, setTransactionTypes] = useState<("INCOME" | "EXPENSE")[]>([]);
+  const [transactionTypes, setTransactionTypes] = useState<TransactionType[]>([]);
   const [duplicateRefs, setDuplicateRefs] = useState<Set<string>>(new Set());
   const [friendlyNames, setFriendlyNames] = useState<(string | undefined)[]>([]);
   const [notes, setNotes] = useState<(string | undefined)[]>([]);
@@ -287,7 +303,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
 
           // Parse amount based on mode
           let amount: number;
-          let type: "INCOME" | "EXPENSE";
+          let type: CategoryType;
 
           if (isSplitMode) {
             // Split mode: separate Debit (expense) and Credit (income) columns
@@ -418,6 +434,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const duplicateCount = parsedRows.filter((r) =>
     duplicateRefs.has(r.importRef)
   ).length;
+  const uncategorizedTransferCount = parsedRows.filter(
+    (_, i) => selectedRows[i] && transactionTypes[i] === "TRANSFER" && !categoryIds[i]
+  ).length;
 
   // Net change from the selected rows, using the (possibly user-overridden)
   // transaction type to determine direction. Recomputes whenever the user
@@ -426,9 +445,18 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
     return parsedRows.reduce((sum, row, i) => {
       if (!selectedRows[i]) return sum;
       const abs = Math.abs(row.amount);
+      if (transactionTypes[i] === "TRANSFER") {
+        // Direction from category: Transfer In = +, Transfer Out = −.
+        // If not yet selected, fall back to the raw sign from the file.
+        const catId = categoryIds[i];
+        const cat = categories.find((c) => c.id === catId);
+        if (cat?.name === "Transfer In") return sum + abs;
+        if (cat?.name === "Transfer Out") return sum - abs;
+        return sum + row.amount; // fallback: use raw sign
+      }
       return transactionTypes[i] === "INCOME" ? sum + abs : sum - abs;
     }, 0);
-  }, [parsedRows, selectedRows, transactionTypes]);
+  }, [parsedRows, selectedRows, transactionTypes, categoryIds, categories]);
 
   function toggleAll(checked: boolean) {
     setSelectedRows(
@@ -447,8 +475,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
     setSelectedRows((prev) => { const n = [...prev]; n[i] = checked; return n; });
   }, []);
 
-  const handleTypeChange = useCallback((i: number, type: "INCOME" | "EXPENSE") => {
+  const handleTypeChange = useCallback((i: number, type: TransactionType) => {
     setTransactionTypes((prev) => { const n = [...prev]; n[i] = type; return n; });
+    setCategoryIds((prev) => { const n = [...prev]; n[i] = undefined; return n; });
   }, []);
 
   const handleCategoryChange = useCallback((i: number, id: string | undefined) => {
@@ -502,6 +531,9 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
           {duplicateCount > 0 && (
             <Badge variant="destructive">{t("duplicateRows", { count: duplicateCount })}</Badge>
           )}
+          {uncategorizedTransferCount > 0 && (
+            <Badge variant="destructive">{t("uncategorizedTransferRows", { count: uncategorizedTransferCount })}</Badge>
+          )}
         </div>
 
         {/* Balance preview — only shown once the account balance has loaded.
@@ -516,7 +548,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
             </div>
             <div>
               <p className="text-muted-foreground">{t("balanceChange")}</p>
-              <p className={`mt-0.5 font-semibold tabular-nums ${netChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}>
+              <p className={`mt-0.5 font-semibold tabular-nums ${netChange >= 0 ? "text-positive" : "text-danger"}`}>
                 {netChange >= 0 ? "+" : "−"}{accountCurrency.symbol}{formatAmount(Math.abs(netChange), locale)}
               </p>
             </div>
@@ -586,7 +618,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
                 needsReview,
               })
             }
-            disabled={selectedCount === 0}
+            disabled={selectedCount === 0 || uncategorizedTransferCount > 0}
             className="flex-1"
           >
             {t("nextConfirm", { count: selectedCount })}

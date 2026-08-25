@@ -33,7 +33,7 @@ A comprehensive guide to every part of this application: what each technology do
 This is a **personal finance application** that replaces an Excel spreadsheet. It lets you:
 
 - Track multiple bank accounts across different currencies (EUR, USD, BRL, etc.)
-- Record income and expenses, with a configurable transfer category for inter-account movements
+- Record income, expenses, and inter-account transfers (INCOME / EXPENSE / TRANSFER transaction types)
 - Import bank statements from CSV and Excel files with column mapping and duplicate detection
 - Auto-categorize imported transactions using configurable text-matching rules (contains / starts with / exact / regex)
 - Add friendly display names and notes to transactions
@@ -42,7 +42,7 @@ This is a **personal finance application** that replaces an Excel spreadsheet. I
 - Search and filter transactions by text, type, account, category, date range, or review status
 - Export transactions to CSV (with active filters applied) for use in spreadsheets
 - Organize transactions with hierarchical categories (e.g., Food > Groceries)
-- Set annual budgets per category and track spending against them; reimbursements (income in an expense category) are automatically netted off the expense actual
+- Set annual budgets per category and track spending against them; reimbursements (income in an expense category) and corrections (expense in an income category) are automatically netted off the relevant actual
 - View monthly and annual summaries with charts; drill into subcategory breakdowns in the annual view
 - Access everything from your phone as a PWA (Progressive Web App)
 
@@ -318,7 +318,7 @@ ouriva/
 │   │   └── settings/             # Settings-specific
 │   ├── lib/                      # Shared utilities
 │   │   ├── prisma.ts             # Database client singleton
-│   │   ├── settings.ts           # Transfer category helper (reads AppSettings)
+│   │   ├── settings.ts           # Excluded category IDs helper (reads AppSettings)
 │   │   ├── utils.ts              # cn() class merger
 │   │   ├── formatters.ts         # Currency/date formatting
 │   │   ├── import-ref.ts         # Import deduplication hash generation
@@ -627,7 +627,7 @@ enum CategoryBucket {
 }
 ```
 
-This enum powers the **50/30/20 Budget Rule** feature. Each category can be assigned to one of three buckets that map to the personal finance rule-of-thumb: 50% of income on needs (rent, groceries, utilities), 30% on wants (dining out, entertainment), and 20% on savings/debt repayment.
+This enum powers the **50·30·20 Budget Rule** feature. Each category can be assigned to one of three buckets that map to the personal finance rule-of-thumb: 50% of income on needs (rent, groceries, utilities), 30% on wants (dining out, entertainment), and 20% on savings/debt repayment.
 
 **Bucket inheritance**: A category's effective bucket follows this chain — `category.bucket ?? category.parent?.bucket ?? null`. If a subcategory has no bucket set, it inherits the parent's bucket. This lets you assign a bucket once to a top-level category and have all its children participate automatically.
 
@@ -637,17 +637,19 @@ This enum powers the **50/30/20 Budget Rule** feature. Each category can be assi
 
 ```prisma
 model Category {
-  id          String          @id @default(uuid())
-  name        String                               // "Food", "Groceries"
-  isActive    Boolean         @default(true)
-  parentId    String?                              // null = top-level
-  bucket      CategoryBucket?                      // NEEDS, WANTS, SAVINGS, or null
-  icon        String?                              // Lucide icon name, e.g. "ShoppingCart"
-  color       String?                              // Palette key, e.g. "emerald"
-  parent      Category?       @relation("CategoryTree", fields: [parentId], references: [id])
-  children    Category[]      @relation("CategoryTree")
-  transactions Transaction[]
-  budgets     Budget[]
+  id               String          @id @default(uuid())
+  name             String                               // "Food", "Groceries"
+  isActive         Boolean         @default(true)
+  type             CategoryType    @default(EXPENSE)    // INCOME or EXPENSE
+  parentId         String?                              // null = top-level
+  excludeFromStats Boolean         @default(false)
+  bucket           CategoryBucket?                      // NEEDS, WANTS, SAVINGS, or null
+  icon             String?                              // Lucide icon name, e.g. "ShoppingCart"
+  color            String?                              // Palette key, e.g. "emerald"
+  parent           Category?       @relation("CategoryTree", fields: [parentId], references: [id])
+  children         Category[]      @relation("CategoryTree")
+  transactions     Transaction[]
+  budgets          Budget[]
 }
 ```
 
@@ -667,7 +669,7 @@ Food (parentId: null, bucket: NEEDS)
 ```prisma
 model Transaction {
   id            String          @id @default(uuid())
-  type          TransactionType                    // INCOME, EXPENSE
+  type          TransactionType                    // INCOME, EXPENSE, TRANSFER
   amount        Decimal         @db.Decimal(12, 2)
   description   String?
   friendlyName  String?         @db.VarChar(255)   // User-facing display name
@@ -685,8 +687,13 @@ model Transaction {
 **Transaction types**:
 - **INCOME**: Money comes into an account (e.g., Salary).
 - **EXPENSE**: Money leaves an account (e.g., Groceries).
+- **TRANSFER**: An inter-account movement (e.g., moving money from checking to savings). TRANSFER transactions have no category and are excluded from all income/expense summaries and budget actuals. They still count toward account balances.
 
-There is no TRANSFER type. Transfers between accounts are recorded as regular INCOME/EXPENSE transactions tagged with a configurable "transfer category" (see AppSettings). This matches how bank CSV statements represent transfers and simplifies the data model.
+**CategoryType** (`INCOME` | `EXPENSE`) is a separate attribute on `Category`. It determines how transactions are routed in budget reports:
+- An INCOME transaction in an EXPENSE category is a **contra-expense** (e.g., a health insurance reimbursement in the "Doctor" category reduces the net doctor expense — the reimbursement netting model).
+- An EXPENSE transaction in an INCOME category is a **contra-income** (e.g., paying back a salary overpayment in the "Salary" category reduces the net income — the mirror of reimbursement netting).
+- An INCOME transaction in an INCOME category is real income (e.g., Salary); an EXPENSE transaction in an EXPENSE category is real spending.
+- Subcategories inherit their parent's CategoryType.
 
 **Amount is always positive** — The `type` determines direction. An expense of €50 is stored as `amount: 50, type: EXPENSE`, not `amount: -50`. This avoids confusion and makes aggregation queries simpler.
 
@@ -723,19 +730,28 @@ model Budget {
 
 ```prisma
 model AppSettings {
-  id                 String    @id @default("singleton")
-  transferCategoryId String?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-  transferCategory   Category? @relation(fields: [transferCategoryId], references: [id], onDelete: SetNull)
+  id                   String   @id @default("singleton")
+  // Budget Split visibility — budgetSplitEnabled is the master switch; the
+  // two "in*" flags only take effect while it's on.
+  budgetSplitEnabled   Boolean  @default(true)
+  budgetSplitInSummary Boolean  @default(true)
+  budgetSplitInBudget  Boolean  @default(true)
+  // Budget Split targets — how income should divide across the three
+  // buckets. Default to the classic 50/30/20 rule; must sum to 100
+  // whenever changed (enforced in updateSettingsSchema, not the schema).
+  needsTarget          Int      @default(50)
+  wantsTarget          Int      @default(30)
+  savingsTarget        Int      @default(20)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 ```
 
 **Singleton pattern** — There is only one row, always with `id = "singleton"`. The API uses `upsert` to auto-create it on first access. This avoids having global settings scattered across multiple tables.
 
-**`transferCategoryId`** — Points to the category used for inter-account transfers. Transactions in this category are excluded from summaries and budgets (but still count toward account balances). The Settings > General page lets you select this category and shows a "Transfer Balance" indicator that should be 0 if all transfers are properly matched across accounts.
+**50·30·20 visibility flags** — `budgetSplitEnabled` is the master switch for the whole feature; `budgetSplitInSummary` and `budgetSplitInBudget` scope it to the Summary tabs and the Budget page respectively, but only take effect while the master switch is on (the AND-ing happens client-side in `useBudgetSplitVisibility`, not in these raw flags). All three default to `true` so existing installs see no behavior change. Updated via `PATCH /api/settings` (partial update, validated by `updateSettingsSchema` in `src/validators/settings.ts`) from the toggles in Settings > General; `GET /api/settings` returns them alongside the existing computed `transferBalance`/`nonTrackedBalance` figures. This is a stable extension point for further preferences — new fields can be added here without a schema redesign.
 
-**`onDelete: SetNull`** — If the referenced category is deleted, the setting is cleared rather than causing a foreign key error.
+**Target percentages** — `needsTarget`, `wantsTarget`, and `savingsTarget` store the user-configurable Needs/Wants/Savings split that used to be hardcoded as 50/30/20. All three default to `50`, `30`, and `20` respectively, so existing installs keep today's behavior until someone changes them. Unlike the visibility flags above, they're interdependent rather than independent: `updateSettingsSchema` (`src/validators/settings.ts`) requires that if any one of the three is present in a `PATCH /api/settings` body, all three must be present, each between 1 and 98, and together summing to exactly 100 — a partial or unbalanced update is rejected before it ever reaches the database.
 
 #### MatchType Enum
 
@@ -1039,7 +1055,9 @@ The response includes a UTF-8 BOM (`\uFEFF`) so Excel auto-detects the encoding 
 
 Columns: `Date, Type, Amount, Currency, Description, Category, Account, Notes`
 
-**`bucketBreakdown`** — Totals broken down by `CategoryBucket` value, plus `unclassified` for expenses in categories that have no bucket assignment (including via parent inheritance). This field drives the `BudgetSplit` component's 50/30/20 view. The annual summary API returns the same `bucketBreakdown` field, but aggregated across the full year.
+**`bucketBreakdown`** — Totals broken down by `CategoryBucket` value, plus `unclassified` for expenses in categories that have no bucket assignment (including via parent inheritance). This field drives the `BudgetSplit` component's 50·30·20 view. The annual summary API returns the same `bucketBreakdown` field, but aggregated across the full year.
+
+**Netting** — `totalIncome`, `totalExpense`, and `bucketBreakdown` all accumulate the same `CategoryType`-routed, netted amount used to build `categories`/`incomeCategories` (see "CategoryType Drives Budget Routing" above) — not the raw transaction amount. An INCOME transaction in an EXPENSE category (a reimbursement) reduces that category's expense total, `totalExpense`, and its bucket total together; it does not add to `totalIncome`. Symmetrically, an EXPENSE transaction in an INCOME category (a correction) reduces `totalIncome` and does not add to `totalExpense` or any bucket. This keeps `NEEDS + WANTS + SAVINGS + unclassified` always equal to `totalExpense`, and keeps every figure on the page reconciling with the category breakdown tables.
 
 #### `GET /api/budgets/[year]` — Budget vs Actual
 
@@ -1059,7 +1077,9 @@ The `percentage` drives the progress bar color: green (<75%), yellow (75-100%), 
 
 **Split transactions**: Split parents have no category of their own (`categoryId: null`). The API fetches top-level transactions with their split children included, then replaces each split parent with its children. This means each child's amount is attributed to its own category, so a single split transaction can contribute to multiple budget rows simultaneously.
 
-**Reimbursement netoff**: Income transactions assigned to an expense category (e.g. an insurance reimbursement categorised as "Health") are treated as contra-expenses. The expense `actual` = gross expenses − reimbursements in that category, giving the true out-of-pocket cost. Those same income transactions are excluded from the income tab so they are not double-counted. A category is considered "in expense context" when it has expense transactions or an expense budget target — pure income categories (salary, freelance) are unaffected.
+**Reimbursement/correction netoff**: routing is driven by `Category.type`, not `Transaction.type` (see "CategoryType Drives Budget Routing" above). Income transactions assigned to an EXPENSE category (e.g. an insurance reimbursement categorised as "Health") are treated as contra-expenses: the expense `actual` = gross expenses − reimbursements in that category, giving the true out-of-pocket cost. Symmetrically, expense transactions assigned to an INCOME category (e.g. paying back a salary overpayment) are treated as contra-income: the income `actual` = gross income − corrections in that category. Either way, the netted-off transaction is excluded from the opposite tab so it is not double-counted.
+
+**`plannedBucketBreakdown`** — The planned counterpart to the summary endpoints' `bucketBreakdown`: sums each active leaf EXPENSE category's *budgeted* amount (not actual spend) into `NEEDS`/`WANTS`/`SAVINGS`/`unclassified`, using the same effective-bucket inheritance (`category.bucket ?? category.parent?.bucket ?? null`). Drives the `BudgetSplit` component on the Budget page, compared against `income.totalBudgeted`. Only budgets on *active* leaf categories count, matching the universe used for `expense.totalBudgeted` — a budget left over on a category that's since been marked inactive (`isActive: false`) is excluded from both, so the two figures always reconcile.
 
 #### `POST /api/budgets` — Bulk Upsert
 
@@ -1432,12 +1452,21 @@ A reusable icon circle component used in both `TransactionCard` and `DashboardCo
 
 #### `GeneralSettings` (`src/components/settings/general-settings.tsx`)
 
-The app-wide preferences panel, accessible from Settings > General. Currently supports:
+The app-wide preferences panel, accessible from Settings > General. Includes:
 
-- **Transfer Category selector** — A dropdown to pick which category represents inter-account transfers. Transactions in this category are excluded from summaries and budgets. Saves immediately on change via `PUT /api/settings`.
-- **Transfer Balance indicator** — Shows the net sum of all transfer-categorized transactions (INCOME minus EXPENSE). Displayed in green if 0 (all transfers are matched), amber if non-zero (some transfers are missing a counterpart).
+- **Budget Split** — a single card holding everything related to the feature. A master toggle (`budgetSplitEnabled`) plus three scoped sub-rows, indented under the master switch: "Show in Summary" (`budgetSplitInSummary`), "Show in Budget" (`budgetSplitInBudget`), and "Budget bucket colours" (a `localStorage`-only, per-device preference read by the Budget page's category rows — unrelated to `AppSettings`, just co-located here since it's meaningless without the feature it colour-codes). All three sub-rows render `disabled` (and visually dimmed) whenever the master switch is off, but keep their own last-set value rather than resetting, so turning the master switch back on restores whatever was previously chosen. The two `AppSettings`-backed toggles update optimistically, then `PATCH` `/api/settings` with just that one field; on a failed request the local state reverts so the switch never drifts from what's actually persisted.
 
-This is a client component that fetches categories and settings on mount, then re-fetches settings after each save to update the transfer balance.
+  Below a divider in the same card sits **`UnclassifiedCategories`** (`src/components/settings/unclassified-categories.tsx`) — a collapsible list of active EXPENSE categories whose *effective* bucket is null, i.e. the same set that falls into `BudgetSplit`'s `unclassified` slice. Two different rules, matching how `effectiveBucket` actually resolves: a root category is listed only if it has no children (a root with children isn't meaningfully unclassified on its own — its bucket only matters as a fallback for children that don't set their own); a child category is listed only if *both* its own bucket and its parent's bucket are null, since a child with no bucket but a bucketed parent already counts toward that bucket. Renders nothing when the 50·30·20 feature is disabled.
+
+  Also below the divider, **`BudgetSplitTargets`** (`src/components/settings/budget-split-targets.tsx`) renders the three target percentages as editable number inputs, with a live "X% allocated" indicator that turns red whenever the sum isn't exactly 100. Unlike the toggles above, the three values save together on an explicit click rather than instantly on change — the Save button only appears once a field has been touched, and only enables once the sum is exactly 100, since a partial save would leave the split inconsistent. This is also where the card's own title lives: what used to read "50·30·20 Budget Rule" is now simply **Budget Split** — the feature's identity no longer hardcodes a ratio now that it's configurable, though 50/30/20 remains what a fresh install defaults to. Everywhere else in the app that displays the literal split — the Summary tab labels, the Budget page's planned-allocation heading, and this same card's own sub-row descriptions — now interpolates these three live values instead of a hardcoded string.
+- **Transfer Balance** — the total volume of all TRANSFER-type transactions for the current data set. This is an informational figure (not a net balance) — since each transfer side is recorded independently, the number tells you how much money has been moved between accounts in total.
+- **Non-tracked Balance** — the combined balance of all categories with `excludeFromStats: true` (configured per-category in Settings > Categories, and not specific to any one use case — the toggle itself is described generally as "Transactions won't appear in summaries or budgets"). The description text frames the €0-when-settled expectation as conditional ("if you're using this to track money spent on behalf of others...") rather than a blanket claim, since the flag is a general-purpose exclusion mechanism, not specific to that one scenario. Below it sits **`NonTrackedCategories`** (`src/components/settings/non-tracked-categories.tsx`), listing those same categories. Unlike the bucket rule above, `excludeFromStats` has no parent/child inheritance (see `getExcludedCategoryIds` in `src/lib/settings.ts` — it reads the flag straight off each category, never the parent), so the rule here is simply "list any active category whose own flag is set," no matter its type or whether it has children.
+
+  Kept as two separate cards deliberately — Transfer Balance and Non-tracked Balance are unrelated concepts that happen to share the same `BalanceIndicator` layout, not sub-features of one another. That sub-component takes an explicit `label` prop per caller ("Total Transferred" / "Non-tracked Total") rather than a shared hardcoded string — a mislabeled shared string previously made the Non-tracked box display "Total Transferred" too.
+
+  `UnclassifiedCategories` and `NonTrackedCategories` both share one presentational component, **`CollapsibleCategoryList`** (`src/components/settings/collapsible-category-list.tsx`) — collapsed by default with a count badge or a checkmark when nothing needs attention, expanded rows grouped under their parent's name and linking to Settings > Categories. Each caller owns its own data-fetching and row-selection rule; the shared piece only renders the disclosure.
+
+This is a client component that fetches settings on mount via `GET /api/settings`, which computes both balances server-side.
 
 #### `SimpleSettingsList` — Generic CRUD Component
 
@@ -1486,7 +1515,7 @@ Displays categories in a collapsible tree. Each row is intentionally minimal —
 - Bucket selector (NEEDS / WANTS / SAVINGS) with full label descriptions
 - Active and Exclude from Stats checkboxes
 
-All changes are staged locally; a single "Save" button commits them via `PUT /api/categories/:id`.
+All changes are staged locally; a single "Save" button commits them via `PUT /api/categories/:id`. The footer also has a **Delete category** button (destructive, with a confirmation dialog) that calls `DELETE /api/categories/:id`.
 
 **Icon and color system**: Stored as `icon` (Lucide icon name string, e.g. `"ShoppingCart"`) and `color` (palette key, e.g. `"emerald"`). The constants live in `src/lib/category-icons.ts`:
 - `CATEGORY_ICONS` — `Record<string, LucideIcon>` mapping name → component
@@ -1497,7 +1526,7 @@ All changes are staged locally; a single "Save" button commits them via `PUT /ap
 
 **Safe child lookup**: When opening the edit sheet for a child category, the component looks up the full category from the flat `categories` array rather than using the nested `parent.children[i]` object. Prisma's nested includes only fetch one level of children — the child objects don't have their own `children` array, so using them directly would crash on `category.children.length`.
 
-**Cascade soft-delete**: When you deactivate a parent category, the API also deactivates all its children. This maintains data consistency — you shouldn't have active children under an inactive parent.
+**Deleting a category**: `DELETE /api/categories/:id` hard-deletes the category — unlike accounts, categories have no `isActive`-based soft-delete for removal (the `isActive` checkbox in the edit sheet is a separate "hide from pickers" toggle, not a delete mechanism). The endpoint blocks deletion entirely with `409 CONSTRAINT_ERROR` if the category or any of its children still has transactions. Deleting a parent cascades to delete all of its children, plus any `Budget` and `CategoryRule` rows referencing the category or its children, in a single transaction. The three system Transfer categories are protected and always return `403 FORBIDDEN`.
 
 **Header integration**: `CategoryTree` accepts `pageTitle` and `pageDescription` props and renders its own page header row (title on the left, "Add" button on the right) at the top of the component. This keeps the Add button co-located with the data state it depends on, while placing it visually alongside the page title.
 
@@ -1662,19 +1691,22 @@ The client component for the annual summary. Uses the same 2+1 stat card layout 
 
 #### `BudgetSplit` (`src/components/summary/budget-split.tsx`)
 
-The 50/30/20 Budget Rule visualization, rendered in the third tab of both monthly and annual summaries.
+The 50·30·20 Budget Rule visualization. Rendered in the third tab of both monthly and annual summaries (actual spending vs. actual income), and in a standalone card on the Budget page (planned budget vs. budgeted income) — same component, different data, in all three places.
 
 Displays:
-- **Three stat cards** — NEEDS, WANTS, SAVINGS. Each shows the actual amount spent, the actual percentage of total income, and the target percentage (50% / 30% / 20%) with a colored indicator (green if at/under target, red if over).
-- **Stacked bar** — A single horizontal bar divided into three colored segments (one per bucket) proportional to actual spending. Gives a visual gestalt of the overall split at a glance.
+- **Total readout + stacked bar** — one bar, 100% = income. Segments show each bucket's share of income, in priority order (Needs, then Wants, then Savings, then unclassified) — a bucket only gets whatever room is left after the ones before it, deliberately: Needs is essential spending and should visually "win" the available space over discretionary buckets when you're over budget, rather than all three shrinking proportionally. A text readout above the bar always states the total ("68% of income spent"), and turns red with the €-over figure ("115% of income spent — €5,400 over") plus a red-tinted track when total spending exceeds income — the segment shapes alone can't be trusted to show that once one bucket has consumed all the remaining room.
+- **Target markers** — three thin vertical lines under the bar at the configured cumulative boundaries (`needsTarget`, `needsTarget + wantsTarget`, and always 100%), colour-matched to their segment (blue/amber/emerald) so the ideal split reads at a glance.
+- **Three stat cards** — NEEDS, WANTS, SAVINGS. Each shows the actual amount, its % of income, an On track/Review/Off track badge, and a target-relative progress bar (`min(actual/target, 1) * 100`, i.e. a full bar means you've hit your target — not "double your target," which an earlier version of this formula used). The bar and badge turn red together when off target; for Savings specifically, "off target" means falling *short* of the 20% floor, not exceeding it, so the red condition is inverted relative to Needs/Wants. When off target, the percentage line also grows a currency figure ("+15.0% — €5,400.00 over" / "15.0% — €5,400.00 short"), matching the top bar's phrasing.
 - **Unclassified warning** — If any expenses fall into categories with no bucket assignment, a warning badge shows the unclassified total and prompts the user to assign buckets in Settings > Categories.
 
 ```tsx
 <BudgetSplit
-  bucketBreakdown={{ NEEDS: 980, WANTS: 430, SAVINGS: 200, unclassified: 240 }}
+  breakdown={{ NEEDS: 980, WANTS: 430, SAVINGS: 200, unclassified: 240 }}
   totalIncome={3500}
 />
 ```
+
+**Visibility** — Gated by `useBudgetSplitVisibility()` (`src/hooks/use-budget-split-visibility.ts`), which reads the `budgetSplitEnabled`/`budgetSplitInSummary`/`budgetSplitInBudget` flags on `AppSettings` (see below) and returns `{ showInSummary, showInBudget }` — each already ANDed with the master switch. When a surface is hidden, its `TabsTrigger`/`TabsContent` pair (or, on the Budget page, the whole card) is omitted from the tree entirely, not just visually hidden, and the summary tab grid collapses from 4 to 3 columns.
 
 ### Dashboard Component
 
@@ -2470,17 +2502,43 @@ SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END) AS total_income
 SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END) AS total_expense
 ```
 
-### Transfers Are Category-Based, Not a Type
+### TRANSFER as a First-Class Transaction Type
 
-Instead of a dedicated TRANSFER transaction type (with `fromAccountId` / `toAccountId`), transfers are regular INCOME/EXPENSE transactions tagged with a configurable "transfer category" in Settings > General. This approach was chosen because:
-- **Matches bank statement reality** — Bank CSVs show transfers as debits/credits, not as a special type. Import works without special handling.
-- **Simpler data model** — No `toAccountId`, `toAmount`, or type-specific branching in every API and UI component.
-- **Flexible** — Users configure which category represents transfers, matching their existing workflow (e.g., from Excel budgeting).
-- **Transfer Balance indicator** — Settings > General shows the net sum of all transfer-categorized transactions, which should be 0 if all transfers are properly matched across accounts.
+Transfers between accounts are recorded as `type: TRANSFER` transactions — a dedicated enum value alongside INCOME and EXPENSE. TRANSFER transactions:
+- Have no category (the field is nullable and ignored by the UI)
+- Are excluded from all income/expense summaries, budget actuals, and monthly/annual reports
+- Still count toward account balances (they represent real money movement)
+- Are shown in a dedicated Transfer tab in the transaction list
 
-### Soft-Delete for Accounts and Categories
+**Why a proper type instead of a "transfer category"?** The previous approach used a configurable category to tag transfers. This had several problems: the category appeared in category dropdowns, budget reports needed to know which category to exclude, and the configuration was easy to lose. A dedicated enum value is explicit, non-configurable, and requires no special-case logic scattered across the codebase.
 
-Accounts and categories use `isActive: false` instead of deletion. This preserves historical data — you can still see transactions from a closed account. Hard-deleting would require cascading deletes or null foreign keys, both problematic.
+**Single-entry model** — Users record each side of a transfer independently (one TRANSFER transaction per account involved). This matches how bank CSVs represent transfers and keeps the data model simple. The Transfer Balance in Settings > General shows the total volume moved (not a net figure).
+
+### CategoryType Drives Budget Routing
+
+Each `Category` has a `type: CategoryType` field (`INCOME` | `EXPENSE`, default `EXPENSE`). This is independent of `TransactionType` and determines how transactions are routed in budget reports:
+
+| Transaction type | Category type | Routed to |
+|-----------------|--------------|-----------|
+| EXPENSE | EXPENSE | Expense actual (spending) |
+| INCOME | EXPENSE | Contra-expense — subtracted from the expense actual (reimbursement netting) |
+| INCOME | INCOME | Income actual |
+| EXPENSE | INCOME | Contra-income — subtracted from the income actual (refund/correction of income already received) |
+| TRANSFER | any | Excluded entirely |
+
+**Reimbursement netting example**: A restaurant bill split where a friend pays you back is recorded as an INCOME transaction in the "Restaurants" (EXPENSE) category. The budget report shows your net out-of-pocket cost — the gross expense minus the reimbursement — without any manual adjustment.
+
+**Contra-income example**: A salary overpayment that you pay back is recorded as an EXPENSE transaction in the "Salary" (INCOME) category. The budget report shows your net income — the gross salary minus the correction — without any manual adjustment.
+
+**Category picker**: the transaction form shows a single merged list of INCOME + EXPENSE categories for both INCOME and EXPENSE transactions, so either netting direction is selectable. TRANSFER transactions keep their own restricted list (the two system Transfer In/Out categories).
+
+**Subcategory inheritance**: When creating a subcategory, the API inherits the parent's CategoryType automatically, keeping the tree consistent.
+
+### Soft-Delete for Accounts, Hard-Delete for Categories
+
+Accounts use `isActive: false` instead of deletion. This preserves historical data — you can still see transactions from a closed account. Hard-deleting an account would require cascading deletes or null foreign keys, both problematic.
+
+Categories are hard-deleted via `DELETE /api/categories/:id`, but only when it's safe: the endpoint counts transactions on the category and, for a parent, all of its children, and refuses with `409` if any exist. This sidesteps the "null foreign key" problem entirely — a category is only ever removed once nothing references it. Deleting a parent cascades to its children (and their `Budget`/`CategoryRule` rows) in one transaction, so you never end up with orphaned children under a deleted parent. The `isActive` flag on `Category` is unrelated to this — it's a "hide from pickers" toggle, not a delete mechanism.
 
 Transactions are hard-deleted because they don't have dependent records and the user explicitly confirms deletion.
 

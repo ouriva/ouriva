@@ -28,7 +28,7 @@ import { fetchTodayRate } from "@/lib/exchange-rate";
 // on top of each account's initial balance.
 function buildBalanceMap(
   accounts: { id: string; initialBalance: unknown }[],
-  transactions: { type: string; amount: unknown; fromAccountId: string }[]
+  transactions: { type: string; amount: unknown; fromAccountId: string; category: { name: string } | null }[]
 ): Map<string, number> {
   const balanceMap = new Map<string, number>();
 
@@ -44,6 +44,14 @@ function buildBalanceMap(
       balanceMap.set(tx.fromAccountId, current + amount);
     } else if (tx.type === "EXPENSE") {
       balanceMap.set(tx.fromAccountId, current - amount);
+    } else if (tx.type === "TRANSFER") {
+      // Direction is encoded in the category: Transfer In = money arriving (+),
+      // Transfer Out = money leaving (−).
+      if (tx.category?.name === "Transfer In") {
+        balanceMap.set(tx.fromAccountId, current + amount);
+      } else {
+        balanceMap.set(tx.fromAccountId, current - amount);
+      }
     }
   }
 
@@ -98,6 +106,7 @@ export async function GET() {
           type: true,
           amount: true,
           fromAccountId: true,
+          category: { select: { name: true } },
         },
       }),
     ]);
