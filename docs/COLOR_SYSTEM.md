@@ -1,6 +1,6 @@
 # Ouriva — Color System
 
-A reference for every color token in the app: what it means, where it's used, and the rules for adding new UI without reintroducing the sprawl this document replaces.
+A reference for every color token in the app: what it means, where it's used, and the rules for adding new UI without reintroducing the sprawl this document replaces. Companion to `docs/UI_SYSTEM.md`, which covers the same kind of consistency for icon sizing, touch targets, and button hierarchy.
 
 ## Why this exists
 
