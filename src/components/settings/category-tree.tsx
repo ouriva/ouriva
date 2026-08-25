@@ -390,7 +390,7 @@ function AddCategorySheet({ onSuccess }: Readonly<{ onSuccess: () => void }>) {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button size="sm">
           <Plus className="mr-2 h-4 w-4" />
           {tCommon("add")}
         </Button>

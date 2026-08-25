@@ -125,7 +125,7 @@ export function SimpleSettingsList({
           apiEndpoint={apiEndpoint}
           onSuccess={() => setRefreshKey((k) => k + 1)}
           trigger={
-            <Button variant="outline" size="sm">
+            <Button size="sm">
               <Plus className="mr-2 h-4 w-4" />
               {tCommon("add")}
             </Button>

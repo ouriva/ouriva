@@ -323,7 +323,7 @@ function AccountForm({
     >
       <SheetTrigger asChild>
         {trigger || (
-          <Button variant="outline" size="sm">
+          <Button size="sm">
             <Plus className="mr-2 h-4 w-4" />
             {t("addButton")}
           </Button>
