@@ -95,7 +95,7 @@ export function CategoryBreakdown({
                       "inline-flex items-center gap-1 text-amber-600 dark:text-amber-400"
                   )}
                 >
-                  {isUncategorized && <TriangleAlert className="h-3.5 w-3.5 shrink-0" />}
+                  {isUncategorized && <TriangleAlert className="h-4 w-4 shrink-0" />}
                   {category.name}
                 </span>
                 <div className="flex shrink-0 items-baseline gap-1.5">

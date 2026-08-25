@@ -400,7 +400,7 @@ export function DashboardContent() {
       {!isLoading && balances.length === 0 && (
         <div className="rounded-2xl border-2 border-dashed p-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <Landmark className="h-7 w-7 text-primary" />
+            <Landmark className="h-8 w-8 text-primary" />
           </div>
           <h2 className="text-lg font-semibold">{t("emptyTitle")}</h2>
           <p className="mx-auto mt-1.5 max-w-[260px] text-sm text-muted-foreground">

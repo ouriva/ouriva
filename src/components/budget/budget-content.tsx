@@ -283,7 +283,7 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
               >
                 <MessageSquare
                   className={cn(
-                    "h-3.5 w-3.5 transition-colors",
+                    "h-4 w-4 transition-colors",
                     note
                       ? "text-primary"
                       : "text-muted-foreground/30 hover:text-muted-foreground"

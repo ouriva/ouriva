@@ -170,6 +170,11 @@ export function AccountList({ pageTitle, pageDescription }: Readonly<AccountList
             </div>
             <div className="flex items-center gap-1">
               {account.isActive && (
+                // Deliberate exception to the 44px touch-target rule: a
+                // compact up/down stepper stacked in one row's height.
+                // Bumping each half to 44px would roughly double the row's
+                // height for a secondary reordering action — out of scope
+                // for this pass, revisit if this control gets redesigned.
                 <div className="flex flex-col">
                   <Button
                     variant="ghost"
@@ -177,9 +182,10 @@ export function AccountList({ pageTitle, pageDescription }: Readonly<AccountList
                     className="h-6 w-8"
                     onClick={() => move(activeIndex, "up")}
                     disabled={activeIndex === 0}
-                    title="Move up"
+                    title={t("moveUpAriaLabel")}
                   >
                     <ChevronUp className="h-4 w-4" />
+                    <span className="sr-only">{t("moveUpAriaLabel")}</span>
                   </Button>
                   <Button
                     variant="ghost"
@@ -187,9 +193,10 @@ export function AccountList({ pageTitle, pageDescription }: Readonly<AccountList
                     className="h-6 w-8"
                     onClick={() => move(activeIndex, "down")}
                     disabled={activeIndex === activeAccounts.length - 1}
-                    title="Move down"
+                    title={t("moveDownAriaLabel")}
                   >
                     <ChevronDown className="h-4 w-4" />
+                    <span className="sr-only">{t("moveDownAriaLabel")}</span>
                   </Button>
                 </div>
               )}
@@ -208,7 +215,6 @@ export function AccountList({ pageTitle, pageDescription }: Readonly<AccountList
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
                 onClick={() => toggleActive(account)}
                 title={account.isActive ? t("deactivate") : t("activate")}
               >
@@ -217,6 +223,7 @@ export function AccountList({ pageTitle, pageDescription }: Readonly<AccountList
                 ) : (
                   <ToggleLeft className="h-5 w-5 text-muted-foreground" />
                 )}
+                <span className="sr-only">{account.isActive ? t("deactivate") : t("activate")}</span>
               </Button>
             </div>
           </CardContent>

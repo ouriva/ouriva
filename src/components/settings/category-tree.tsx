@@ -569,8 +569,9 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
                     apiEndpoint="/api/categories"
                     onSuccess={() => setRefreshKey((k) => k + 1)}
                     trigger={
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <Plus className="h-4 w-4" />
+                      <Button variant="ghost" size="icon">
+                        <Plus className="h-5 w-5" />
+                        <span className="sr-only">{t("addSubcategoryAriaLabel")}</span>
                       </Button>
                     }
                   />

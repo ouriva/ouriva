@@ -85,14 +85,14 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
   if (isUncategorized) {
     categoryIndicator = (
       <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-        <TriangleAlert className="h-3.5 w-3.5" />
+        <TriangleAlert className="h-4 w-4" />
         {t("uncategorizedLabel")}
       </span>
     );
   } else if (isSplit) {
     categoryIndicator = (
       <span className="inline-flex items-center gap-1">
-        <Split className="h-3.5 w-3.5" />
+        <Split className="h-4 w-4" />
         {t("splitBadge")}
       </span>
     );
@@ -134,7 +134,7 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
               <>
                 <span className="mx-1">·</span>
                 <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                  <CircleDot className="h-3.5 w-3.5" />
+                  <CircleDot className="h-4 w-4" />
                   {t("reviewBadge")}
                 </span>
               </>

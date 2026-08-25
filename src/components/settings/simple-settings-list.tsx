@@ -168,12 +168,13 @@ export function SimpleSettingsList({
                 {isDefaultField && setDefaultAction && !item[isDefaultField] && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     className="text-muted-foreground"
                     onClick={() => handleSetDefault(item.id)}
-                    title="Set as default currency"
+                    title={tCommon("setAsDefault")}
                   >
-                    <Star className="h-4 w-4" />
+                    <Star className="h-5 w-5" />
+                    <span className="sr-only">{tCommon("setAsDefault")}</span>
                   </Button>
                 )}
                 <SettingsItemForm
@@ -192,10 +193,11 @@ export function SimpleSettingsList({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-destructive"
+                  className="text-destructive"
                   onClick={() => handleDelete(item.id)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
+                  <span className="sr-only">{tCommon("delete")}</span>
                 </Button>
               </div>
             </CardContent>

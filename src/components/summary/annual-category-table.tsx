@@ -147,7 +147,7 @@ export function AnnualCategoryTable({
                       )}
                       {category.id === "__uncategorized__" ? (
                         <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                          <TriangleAlert className="h-3.5 w-3.5" />
+                          <TriangleAlert className="h-4 w-4" />
                           {category.name}
                         </span>
                       ) : (

@@ -73,12 +73,14 @@ export function MonthYearPicker({ mode, basePath }: Readonly<MonthYearPickerProp
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={handlePrev}>
           <ChevronLeft className="h-5 w-5" />
+          <span className="sr-only">{t("previousPeriodAriaLabel")}</span>
         </Button>
         <span className="min-w-[160px] text-center text-lg font-semibold">
           {label}
         </span>
         <Button variant="ghost" size="icon" onClick={handleNext}>
           <ChevronRight className="h-5 w-5" />
+          <span className="sr-only">{t("nextPeriodAriaLabel")}</span>
         </Button>
       </div>
 

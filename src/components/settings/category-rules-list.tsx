@@ -178,10 +178,11 @@ export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<Categ
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive"
                     onClick={() => deleteRule(rule.id)}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-5 w-5" />
+                    <span className="sr-only">{tCommon("delete")}</span>
                   </Button>
                 </div>
               </CardContent>
