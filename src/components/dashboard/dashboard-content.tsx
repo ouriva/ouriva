@@ -290,7 +290,7 @@ function NetWorthHero({ balances, aggregatedTotal, defaultCurrency, trend, local
           {trend && (
             <p className={cn("mt-1 text-xs font-semibold", trend.isPositive ? "text-hero-positive" : "text-hero-danger")}>
               {trend.isPositive ? "▲" : "▼"} {defaultCurrency.symbol}{formatAmount(Math.abs(trend.delta), locale)}
-              {trend.deltaPercent !== null && ` (${formatPercent(Math.abs(trend.deltaPercent), 1, locale)})`}
+              {trend.deltaPercent !== null && ` (${formatPercent(Math.abs(trend.deltaPercent), 1, locale)}%)`}
               {" "}{t("trendThisMonth")}
             </p>
           )}
