@@ -1,0 +1,31 @@
+# ============================================================
+# Ouriva — Reverse Proxy Template (Caddy)
+# ============================================================
+# Caddy terminates HTTPS (automatic Let's Encrypt certificates,
+# no config needed) and forwards each subdomain to the matching
+# container's published host port.
+#
+# One-time setup on the host:
+#   1. Point DNS at the host: a wildcard record
+#        *.ouriva.app  A  <host public IP>
+#      (or one A record per subdomain if you'd rather not use
+#      a wildcard) — plus ouriva.app itself if this host also
+#      serves the main site.
+#   2. Install Caddy: https://caddyserver.com/docs/install
+#   3. Copy this file to /etc/caddy/Caddyfile and fill in the
+#      real port numbers below.
+#   4. sudo systemctl enable --now caddy
+#
+# After this file is in place at /etc/caddy/Caddyfile,
+# provision-instance.sh appends a new block to it automatically
+# for every instance it creates — you only need to hand-write
+# the demo block below once.
+# ============================================================
+
+demo.ouriva.app {
+    reverse_proxy localhost:3100
+}
+
+# provision-instance.sh appends one block like this per tester,
+# right after this line — do not remove it, new blocks are
+# inserted below.

@@ -32,8 +32,9 @@ yarn-error.log*
 
 # env files — never commit real credentials
 .env*
-# Exception: the example template (has no real values, safe to commit)
+# Exception: the example templates (have no real values, safe to commit)
 !.env.production.example
+!.env.demo.example
 
 # vercel
 .vercel

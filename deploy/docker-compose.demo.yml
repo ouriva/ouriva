@@ -1,0 +1,61 @@
+# ============================================================
+# Ouriva — Public Demo Stack
+# ============================================================
+# A self-contained, throwaway instance meant for strangers to
+# click around in with no signup. Reset to a clean state on a
+# schedule (see reset-demo.sh) — never treat this data as real.
+#
+# "name:" pins the Compose project name so the network and
+# volume are always ouriva-demo_default / ouriva-demo_db_data,
+# regardless of which directory this file is launched from.
+# reset-demo.sh and provision-instance.sh both rely on that
+# name being stable.
+#
+# Build context is ".." because this file lives in deploy/ but
+# the Dockerfile and source are one level up, at the repo root.
+#
+# Usage (run from the ouriva-app repo root on the host):
+#   docker compose -f deploy/docker-compose.demo.yml up -d
+#   ./deploy/reset-demo.sh   # first run: builds, migrates, seeds
+# ============================================================
+
+name: ouriva-demo
+
+services:
+  app:
+    build:
+      context: ..
+    image: ouriva:latest
+    ports:
+      - "3100:3000"
+    environment:
+      - DATABASE_URL=postgresql://ouriva:${DEMO_DB_PASSWORD}@db:5432/ouriva
+      - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ouriva
+      POSTGRES_USER: ouriva
+      POSTGRES_PASSWORD: ${DEMO_DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ouriva -d ouriva"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
