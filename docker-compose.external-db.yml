@@ -1,0 +1,52 @@
+# ============================================================
+# Ouriva — Docker Compose (External Database)
+# ============================================================
+# Runs the app against a Postgres database you already run
+# elsewhere. If you don't have one yet, use the default
+# docker-compose.yml instead — it runs both together.
+#
+# Setup:
+#   1. Clone this repo and cd into it
+#   2. Create .env with your DATABASE_URL:
+#      cp .env.production.example .env
+#      # then edit .env with your actual DATABASE_URL
+#   3. Run:
+#        docker compose -f docker-compose.external-db.yml up -d
+#   4. Run migrations on first start:
+#        docker compose -f docker-compose.external-db.yml run --rm migrate
+#
+# Usage:
+#   Logs:     docker compose -f docker-compose.external-db.yml logs -f
+#   Stop:     docker compose -f docker-compose.external-db.yml down
+# ============================================================
+
+services:
+  app:
+    build: .
+    image: ouriva:latest
+    ports:
+      - "3000:3000"
+    environment:
+      # DATABASE_URL is read from the .env file in the same directory.
+      # Docker Compose loads .env automatically; ${VAR} substitutes it.
+      - DATABASE_URL=${DATABASE_URL}
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # One-off migration runner — see docker-compose.yml for why this
+  # can't just be `docker compose exec app npx prisma migrate deploy`.
+  migrate:
+    build:
+      context: .
+      target: builder
+    image: ouriva:migrator
+    profiles: ["tools"]
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    command: ["npx", "prisma", "migrate", "deploy"]
