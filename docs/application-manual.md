@@ -352,7 +352,8 @@ ouriva/
 ├── eslint.config.mjs             # Linting rules
 ├── components.json               # shadcn/ui configuration
 ├── Dockerfile                    # Multi-stage Docker build
-├── docker-compose.yml            # Production deployment
+├── docker-compose.yml            # Self-host, all-in-one (app + Postgres)
+├── docker-compose.external-db.yml # Self-host against an existing Postgres
 ├── docker-compose.dev.yml        # Development database
 ├── .env                          # Dev environment variables
 ├── .env.production.example       # Prod env var template
@@ -2442,25 +2443,32 @@ services:
 
 **Named volume** (`ouriva_dev_data`) — Data persists across container restarts. `docker compose down` keeps the volume; `docker compose down -v` deletes it.
 
-**`docker-compose.yml`** — Production deployment:
+**`docker-compose.yml`** — All-in-one self-host (the default — app + Postgres together):
 
 ```yaml
 services:
   app:
-    image: ouriva:latest
+    image: ghcr.io/your-org/ouriva:latest
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=${DATABASE_URL}  # From .env on the server
-      - NODE_ENV=production
+      - DATABASE_URL=postgresql://ouriva:CHANGE_ME_APP_PASSWORD@db:5432/ouriva
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "http://127.0.0.1:3000/"]
+
+  migrate:
+    build: { context: ., target: builder }
+    profiles: ["tools"]     # only runs via `docker compose run`, never `up`
+    command: ["npx", "prisma", "migrate", "deploy"]
 ```
 
-**`${DATABASE_URL}`** — Docker Compose reads `.env` from the same directory. The `${}` syntax substitutes the value. This keeps credentials out of the compose file.
-
 **`restart: unless-stopped`** — Restarts the container automatically if it crashes or the server reboots. It only stays stopped if you explicitly `docker compose down`.
+
+**The `migrate` service** — The published app image's final stage deliberately removes `npm`/`npx` to shrink its attack surface (see the Dockerfile), so the running `app` container can't invoke Prisma itself. `migrate` instead builds the `builder` stage — one step earlier in the same multi-stage Dockerfile, which still has the full toolchain — and runs once via `docker compose run --rm migrate`. The `profiles: ["tools"]` line is what keeps it from starting as a normal service on `docker compose up`.
+
+**`docker-compose.external-db.yml`** — Same idea, but for a Postgres you already run elsewhere: only the `app` (and a matching `migrate`) service, reading `DATABASE_URL` from a `.env` file instead of pointing at a bundled `db` container. Docker Compose reads `.env` from the same directory; the `${}` syntax substitutes the value, keeping credentials out of the compose file itself.
 
 **Health check** — Docker periodically hits `http://127.0.0.1:3000/` to verify the app is responsive. If 3 checks fail, Docker marks the container as unhealthy. Uses `127.0.0.1` instead of `localhost` because Alpine's DNS resolves `localhost` to IPv6 (`::1`), but Node.js listens on IPv4.
 

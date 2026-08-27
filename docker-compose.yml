@@ -1,35 +1,77 @@
 # ============================================================
-# Ouriva — Docker Compose (Production)
+# Ouriva — Docker Compose (All-in-One)
 # ============================================================
-# Runs the pre-built app image against an external database.
+# Runs the app and a PostgreSQL database together on a single
+# server. The default, recommended way to self-host — if you
+# already run your own Postgres elsewhere, use
+# docker-compose.external-db.yml instead.
 #
-# Setup (one-time on your server):
-#   1. mkdir ~/ouriva && cd ~/ouriva
-#   2. Copy this file to the server
-#   3. Create .env with your DATABASE_URL:
-#      echo 'DATABASE_URL=postgresql://user:pass@db-host:5432/ouriva' > .env
+# Quick start:
+#   1. Change the passwords below (search for CHANGE_ME)
+#   2. Run:
+#        docker compose up -d
+#   3. Run migrations on first start:
+#        docker compose run --rm migrate
+#   4. Open http://localhost:3000
 #
-# Usage:
-#   Start:    docker compose up -d
-#   Logs:     docker compose logs -f
-#   Stop:     docker compose down
+# For HTTPS, put a reverse proxy (Caddy recommended) in front:
+#   https://caddyserver.com/docs/quick-starts/reverse-proxy
 # ============================================================
 
 services:
   app:
-    build: .
-    image: ouriva:latest
+    image: ghcr.io/your-org/ouriva:latest  # or build: . to build locally
     ports:
       - "3000:3000"
     environment:
-      # DATABASE_URL is read from the .env file in the same directory.
-      # Docker Compose loads .env automatically; ${VAR} substitutes it.
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://ouriva:CHANGE_ME_APP_PASSWORD@db:5432/ouriva
       - NODE_ENV=production
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ouriva
+      POSTGRES_USER: ouriva
+      POSTGRES_PASSWORD: CHANGE_ME_APP_PASSWORD
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ouriva -d ouriva"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-off migration runner — not started by `docker compose up`
+  # (the "tools" profile only activates for an explicit `run`).
+  # The published app image's final stage deliberately removes
+  # npm/npx to shrink its attack surface, so it can't run Prisma
+  # itself; this builds the "builder" stage instead, one step
+  # earlier in the same multi-stage build, which still has the
+  # full toolchain. Only needed on first start and after upgrades
+  # that add new migrations.
+  migrate:
+    build:
+      context: .
+      target: builder
+    image: ouriva:migrator
+    profiles: ["tools"]
+    environment:
+      - DATABASE_URL=postgresql://ouriva:CHANGE_ME_APP_PASSWORD@db:5432/ouriva
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["npx", "prisma", "migrate", "deploy"]
+
+volumes:
+  db_data:
