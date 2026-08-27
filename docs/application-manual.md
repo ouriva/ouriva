@@ -341,8 +341,6 @@ ouriva/
 ├── public/                       # Static files (served as-is)
 │   ├── icons/                    # PWA icons
 │   └── sw.js                     # Compiled service worker (generated)
-├── scripts/
-│   └── deploy.sh                 # Build + deploy to production server
 ├── docs/                         # Documentation and SQL scripts
 ├── src/proxy.ts                  # Next.js 16 request proxy (replaces middleware.ts)
 ├── next.config.ts                # Next.js + Serwist + next-intl configuration
@@ -355,7 +353,7 @@ ouriva/
 ├── docker-compose.yml            # Production deployment
 ├── docker-compose.dev.yml        # Development database
 ├── .env                          # Dev environment variables
-├── .env.production.example       # Prod env var template
+├── .env.production.example       # DATABASE_URL template for the Docker quick start
 ├── .dockerignore                 # Docker build exclusions
 └── .gitignore                    # Git exclusions
 ```
@@ -2463,31 +2461,6 @@ services:
 **`restart: unless-stopped`** — Restarts the container automatically if it crashes or the server reboots. It only stays stopped if you explicitly `docker compose down`.
 
 **Health check** — Docker periodically hits `http://127.0.0.1:3000/` to verify the app is responsive. If 3 checks fail, Docker marks the container as unhealthy. Uses `127.0.0.1` instead of `localhost` because Alpine's DNS resolves `localhost` to IPv6 (`::1`), but Node.js listens on IPv4.
-
-### Deploy Script (`scripts/deploy.sh`)
-
-A 6-step automated deployment:
-
-1. **Build** — `docker build` with version tag + `latest` tag
-2. **Migrate** — SSH tunnel to production DB, run `prisma migrate deploy`
-3. **Export** — `docker save | gzip` creates a compressed image file
-4. **Transfer** — `scp` copies the file to the app server
-5. **Load** — `docker load` on the app server imports the image
-6. **Verify** — Check the container is running and healthy
-
-**Configuration** is read from `.env.production.local` (gitignored):
-- `APP_SSH` — SSH host for the app server
-- `APP_DIR` — Where `docker-compose.yml` lives on the app server (full path, not `~`)
-- `DB_SSH` — SSH host for the database server
-- `MIGRATE_DB_URL` — Connection string through the SSH tunnel
-
-**SSH tunnel for migrations**:
-```bash
-ssh -f -N -L 5433:localhost:5432 "${DB_SSH}"
-```
-This forwards local port 5433 to the database server's port 5432 through SSH. Prisma connects to `localhost:5433` which tunnels to the production database securely.
-
-**Git tag versioning**: The script reads the latest git tag (e.g., `v1.0.0`) and uses it as the Docker image tag. Safety checks warn about uncommitted changes and tag/HEAD mismatches.
 
 ---
 
