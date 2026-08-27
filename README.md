@@ -37,7 +37,6 @@ Always deploy from a [tagged release](https://github.com/ouriva/ouriva/releases)
 ### Prerequisites
 
 - Docker and Docker Compose
-- A PostgreSQL database (can run in Docker too)
 
 ### 1. Clone the repository
 
@@ -46,31 +45,44 @@ git clone https://github.com/ouriva/ouriva.git
 cd ouriva
 ```
 
-### 2. Configure environment
+### 2. Set passwords
 
-```bash
-cp .env.production.example .env
-```
+Open `docker-compose.yml` and replace `CHANGE_ME_APP_PASSWORD` (appears twice)
+with a real password.
 
-Edit `.env` and set your `DATABASE_URL`:
-
-```
-DATABASE_URL="postgresql://db_user:db_password@db_host:5432/ouriva"
-```
-
-### 3. Run database migrations
-
-```bash
-docker compose run --rm app npx prisma migrate deploy
-```
-
-### 4. Start the app
+### 3. Start the app
 
 ```bash
 docker compose up -d
 ```
 
+This runs the app and a PostgreSQL database together — nothing else to set
+up first.
+
+### 4. Run database migrations
+
+```bash
+docker compose run --rm migrate
+```
+
+Needed on first start, and again after any update that adds new migrations.
+
+### 5. Open the app
+
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### Already have a Postgres database?
+
+Use `docker-compose.external-db.yml` instead — it runs just the app
+container against a database you already manage:
+
+```bash
+cp .env.production.example .env
+# edit .env with your actual DATABASE_URL
+
+docker compose -f docker-compose.external-db.yml up -d
+docker compose -f docker-compose.external-db.yml run --rm migrate
+```
 
 ## Security
 
