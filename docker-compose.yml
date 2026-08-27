@@ -20,7 +20,8 @@
 
 services:
   app:
-    image: ghcr.io/your-org/ouriva:latest  # or build: . to build locally
+    build: .
+    image: ouriva:latest
     ports:
       - "3000:3000"
     environment:
