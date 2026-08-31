@@ -1,0 +1,37 @@
+# ============================================================
+# Ouriva — Codespaces Demo Stack
+# ============================================================
+# Backs the "Open in GitHub Codespaces" button. Each visitor
+# gets their own throwaway container pair (app + db), running
+# under their own free Codespaces quota — not hosted by us.
+#
+# Deliberately not the same file as the repo-root
+# docker-compose.yml: that one runs the built production image
+# (npm/npx stripped) for self-hosting. This one runs a full dev
+# container with the toolchain intact, since devcontainer.json's
+# postCreateCommand needs npx to migrate and seed the database.
+# ============================================================
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:22
+    volumes:
+      - ..:/workspaces/ouriva:cached
+    command: sleep infinity
+    environment:
+      - DATABASE_URL=postgresql://ouriva:codespaces_demo@db:5432/ouriva
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ouriva
+      POSTGRES_USER: ouriva
+      POSTGRES_PASSWORD: codespaces_demo
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ouriva -d ouriva"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
