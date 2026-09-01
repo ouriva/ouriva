@@ -4,11 +4,19 @@
   "service": "app",
   "workspaceFolder": "/workspaces/ouriva",
 
+  // Port visibility defaults to Private, which requires the viewer
+  // to be authenticated as the codespace owner — fine for one
+  // person's own Codespace, but this one is meant to be opened by
+  // any visitor clicking "Try it now" on the landing page, who
+  // isn't authenticated as anyone. Without "public" here, every
+  // new codespace hits the exact same auth wall this one did
+  // before it was manually toggled — this makes that automatic.
   "forwardPorts": [3000],
   "portsAttributes": {
     "3000": {
       "label": "Ouriva",
-      "onAutoForward": "openPreview"
+      "onAutoForward": "openPreview",
+      "visibility": "public"
     }
   },
 
