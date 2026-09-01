@@ -25,17 +25,19 @@
 
   // Starts the dev server automatically so the app is already
   // running by the time the codespace finishes opening — nothing
-  // for the visitor to type. Real Codespaces killed a plain
-  // "nohup ... &" the moment this lifecycle command returned: nohup
-  // only blocks the hangup signal, it doesn't detach the process
-  // from its process group, so the container runtime reaping that
-  // group after the hook "finishes" took the dev server with it —
-  // silently, with an empty log and a 502 on the forwarded port.
-  // setsid starts it in a brand new session (fully detached from
-  // that process group) and </dev/null closes stdin, which together
-  // is the standard way to actually daemonize a background process
-  // rather than just suppress one signal.
-  "postStartCommand": "setsid nohup npm run dev -- -H 0.0.0.0 </dev/null >/tmp/ouriva-dev.log 2>&1 &",
+  // for the visitor to type. Two earlier attempts at this failed
+  // on real Codespaces (plain "nohup ... &", then "setsid nohup
+  // ... &") — both left an empty log and no running process, which
+  // was my own reasoning about signals/process groups, not a
+  // documented pattern, and it was wrong twice.
+  //
+  // This is Microsoft's own documented pattern instead:
+  // https://code.visualstudio.com/remote/advancedcontainers/start-processes
+  // "nohup bash -c '<command> &'" — the inner bash backgrounds the
+  // command and then exits immediately, which orphans it to be
+  // reparented by the kernel to init. That's a real OS-level
+  // detachment guarantee, not a session/group trick.
+  "postStartCommand": "nohup bash -c 'npm run dev -- -H 0.0.0.0 > /tmp/ouriva-dev.log 2>&1 &'",
 
   "customizations": {
     "vscode": {
