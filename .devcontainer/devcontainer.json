@@ -1,0 +1,30 @@
+{
+  "name": "Ouriva Demo",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/ouriva",
+
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Ouriva",
+      "onAutoForward": "openPreview"
+    }
+  },
+
+  // Installs deps, applies migrations, and seeds realistic sample
+  // data once, when the container is first created.
+  "postCreateCommand": "npm ci && npx prisma migrate deploy && npx prisma db seed",
+
+  // Starts the dev server automatically so the app is already
+  // running by the time the codespace finishes opening — nothing
+  // for the visitor to type. Backgrounded so this command can
+  // return immediately.
+  "postStartCommand": "nohup npm run dev -- -H 0.0.0.0 > /tmp/ouriva-dev.log 2>&1 &",
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["dbaeumer.vscode-eslint", "bradlc.vscode-tailwindcss"]
+    }
+  }
+}

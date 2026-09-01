@@ -299,19 +299,7 @@ async function main() {
   console.log(`  ✓ Categories: 2 special + 9 parents + 25 children (icons, colors, buckets set)`);
 
   // ----------------------------------------------------------
-  // 5. App Settings
-  // ----------------------------------------------------------
-
-  await prisma.appSettings.upsert({
-    where: { id: "singleton" },
-    update: { transferCategoryId: transfer.id },
-    create: { id: "singleton", transferCategoryId: transfer.id },
-  });
-
-  console.log(`  ✓ AppSettings: Transfer = "${transfer.name}"`);
-
-  // ----------------------------------------------------------
-  // 6. Transactions — Oct 2025 through Mar 2026
+  // 5. Transactions — Oct 2025 through Mar 2026
   // ----------------------------------------------------------
   // 6 months of data populates both the monthly and annual views.
   //
@@ -650,7 +638,7 @@ async function main() {
   );
 
   // ----------------------------------------------------------
-  // 7. Category Rules — auto-categorization during import
+  // 6. Category Rules — auto-categorization during import
   // ----------------------------------------------------------
   // These rules are applied in priority order (higher = first).
   // They demonstrate the auto-categorization feature during CSV import.
@@ -675,7 +663,7 @@ async function main() {
   console.log(`  ✓ Category Rules: ${rules.length} rules for auto-categorization`);
 
   // ----------------------------------------------------------
-  // 8. Budgets — 2025 and 2026
+  // 7. Budgets — 2025 and 2026
   // ----------------------------------------------------------
 
   const budgetEntries = [

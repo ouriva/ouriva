@@ -4,8 +4,11 @@
 [![CodeQL](https://github.com/ouriva/ouriva/actions/workflows/codeql.yml/badge.svg)](https://github.com/ouriva/ouriva/actions/workflows/codeql.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=ouriva_ouriva&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=ouriva_ouriva)
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ouriva/ouriva)
 
 > Privacy-first personal finance tracking. Your data stays on your server.
+
+**[Try it now, no install needed](https://codespaces.new/ouriva/ouriva)** — opens a real, working instance pre-loaded with sample data in your browser in a couple of minutes, via GitHub Codespaces. Nothing to set up, nothing saved anywhere but that session.
 
 If Ouriva saves you time, a ⭐ on GitHub helps others find it. Running it
 yourself? Share feedback, ideas, or your setup in [Discussions](https://github.com/ouriva/ouriva/discussions).
