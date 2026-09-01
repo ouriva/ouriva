@@ -12,9 +12,16 @@
     }
   },
 
-  // Installs deps, applies migrations, and seeds realistic sample
-  // data once, when the container is first created.
-  "postCreateCommand": "npm ci && npx prisma migrate deploy && npx prisma db seed",
+  // Installs deps, generates the Prisma client, applies migrations,
+  // and seeds realistic sample data once, when the container is
+  // first created. "prisma generate" is explicit rather than relied
+  // on as an install side-effect — there's no postinstall hook in
+  // package.json, and whatever generated it implicitly during local
+  // testing didn't happen the same way in real Codespaces, which
+  // failed with "Cannot find module '../src/generated/prisma/client.js'".
+  // The production Dockerfile already calls this explicitly for the
+  // same reason.
+  "postCreateCommand": "npm ci && npx prisma generate && npx prisma migrate deploy && npx prisma db seed",
 
   // Starts the dev server automatically so the app is already
   // running by the time the codespace finishes opening — nothing
