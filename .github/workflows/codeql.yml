@@ -38,7 +38,7 @@ jobs:
       # "security-extended" runs the full security query suite — broader
       # than the default "security-and-quality" but still fast for TS/JS.
       - name: Initialise CodeQL
-        uses: github/codeql-action/init@v4.37.3
+        uses: github/codeql-action/init@v4.37.9
         with:
           languages: javascript-typescript
           queries: security-extended
@@ -47,11 +47,11 @@ jobs:
       # the project — it uses its own parser. The autobuild step is
       # included as a no-op for consistency with compiled languages.
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v4.37.3
+        uses: github/codeql-action/autobuild@v4.37.9
 
       # Run the queries and upload results to the GitHub Security tab.
       # Findings appear as code scanning alerts and as PR annotations.
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.3
+        uses: github/codeql-action/analyze@v4.37.9
         with:
           category: "/language:javascript-typescript"
