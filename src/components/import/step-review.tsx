@@ -37,7 +37,7 @@ import {
   getAmountString,
 } from "@/lib/import-ref";
 import { matchRule, type CategoryRuleInput } from "@/lib/category-rules";
-import { parseDate, parseAmount } from "./step-review-utils";
+import { parseDate, parseAmount, resolveDirectionSign } from "./step-review-utils";
 import type { ImportState } from "./import-wizard";
 import type { TransactionType, CategoryType } from "@/generated/prisma/client";
 
@@ -92,6 +92,7 @@ interface ReviewRowProps {
   categoryId: string | undefined;
   autoApplied: boolean;
   transactionType: TransactionType;
+  isPositive: boolean;
   friendlyName: string | undefined;
   note: string | undefined;
   needsReview: boolean;
@@ -113,6 +114,7 @@ const ReviewRow = memo(function ReviewRow({
   categoryId,
   autoApplied,
   transactionType,
+  isPositive,
   friendlyName,
   note,
   needsReview,
@@ -252,10 +254,10 @@ const ReviewRow = memo(function ReviewRow({
 
       <span
         className={`whitespace-nowrap text-sm font-semibold ${
-          row.amount >= 0 ? "text-positive" : "text-danger"
+          isPositive ? "text-positive" : "text-danger"
         }`}
       >
-        {row.amount >= 0 ? "+" : "−"}
+        {isPositive ? "+" : "−"}
         {formatAmount(Math.abs(row.amount), locale)}
       </span>
     </div>
@@ -444,19 +446,22 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
   const netChange = useMemo(() => {
     return parsedRows.reduce((sum, row, i) => {
       if (!selectedRows[i]) return sum;
-      const abs = Math.abs(row.amount);
-      if (transactionTypes[i] === "TRANSFER") {
-        // Direction from category: Transfer In = +, Transfer Out = −.
-        // If not yet selected, fall back to the raw sign from the file.
-        const catId = categoryIds[i];
-        const cat = categories.find((c) => c.id === catId);
-        if (cat?.name === "Transfer In") return sum + abs;
-        if (cat?.name === "Transfer Out") return sum - abs;
-        return sum + row.amount; // fallback: use raw sign
-      }
-      return transactionTypes[i] === "INCOME" ? sum + abs : sum - abs;
+      const cat = categories.find((c) => c.id === categoryIds[i]);
+      const sign = resolveDirectionSign(transactionTypes[i], cat?.name, row.amount);
+      return sum + sign * Math.abs(row.amount);
     }, 0);
   }, [parsedRows, selectedRows, transactionTypes, categoryIds, categories]);
+
+  // Per-row display sign — same direction rule as netChange above, so the
+  // amount shown on each row (color + / −) always matches what it
+  // contributes to the "After import" total, regardless of the raw sign
+  // in the source file.
+  const rowIsPositive = useMemo(() => {
+    return parsedRows.map((row, i) => {
+      const cat = categories.find((c) => c.id === categoryIds[i]);
+      return resolveDirectionSign(transactionTypes[i], cat?.name, row.amount) > 0;
+    });
+  }, [parsedRows, transactionTypes, categoryIds, categories]);
 
   function toggleAll(checked: boolean) {
     setSelectedRows(
@@ -585,6 +590,7 @@ export function StepReview({ state, onComplete, onBack }: Readonly<StepReviewPro
               categoryId={categoryIds[i]}
               autoApplied={autoApplied[i] || false}
               transactionType={transactionTypes[i]}
+              isPositive={rowIsPositive[i]}
               friendlyName={friendlyNames[i]}
               note={notes[i]}
               needsReview={needsReview[i] || false}
