@@ -305,10 +305,12 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
         router.push("/transactions");
         router.refresh();
       }
+      // On success, isSubmitting stays true: the page is leaving (and a
+      // side tab may take a moment to close), so Save must not re-enable
+      // and allow a second submit.
     } catch (error) {
       console.error("Transaction save error:", error);
       alert(error instanceof Error ? error.message : "Failed to save");
-    } finally {
       setIsSubmitting(false);
     }
   }

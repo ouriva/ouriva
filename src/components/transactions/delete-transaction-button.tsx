@@ -51,10 +51,11 @@ export function DeleteTransactionButton({
         router.push("/transactions");
         router.refresh();
       });
+      // On success, isDeleting stays true until the page is gone, so a
+      // second tap can't send another DELETE.
     } catch (error) {
       console.error("Delete error:", error);
       alert(t("errorMessage"));
-    } finally {
       setIsDeleting(false);
     }
   }
