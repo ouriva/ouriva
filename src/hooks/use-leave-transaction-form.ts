@@ -57,8 +57,8 @@ export function useLeaveTransactionForm() {
   }
 
   // `otherwise` is the normal in-tab navigation for the calling action:
-  // router.back() for Save/Cancel when editing, the list (the default)
-  // for Create and Delete.
+  // router.back() for Save, Cancel and Delete, the list (the default) for
+  // Create, so Duplicate → Create lands on the list, not the original.
   return function leaveTransactionForm(otherwise: () => void = goToList) {
     // An Ouriva page to go back to: the normal case.
     if (canGoBackInApp()) {
