@@ -1384,7 +1384,9 @@ The form uses `CreateTransactionFormInput` (`z.input<typeof createTransactionSch
 
 #### `TransactionCard` (`src/components/transactions/transaction-card.tsx`)
 
-A single transaction display. Server component (no interactivity needed for display).
+A single transaction display. A Client Component (it uses `next-intl` hooks for translations and locale-aware formatting).
+
+**Rendered as a link, not a button**: The whole card is a `next/link` `<Link href="/transactions/<id>">`, which renders a real `<a>` element. An earlier version was a `<button>` calling `router.push()`, which navigated fine on a plain click, but the browser had no URL to work with, so Cmd+click (Ctrl+click on Windows/Linux), middle-click and the right-click "Open in new tab" menu did nothing useful. With a real link, the browser provides all of these for free, while a plain click is still intercepted by `Link` for fast client-side navigation. It also improves accessibility: screen readers announce the card as a link to a page, which is what it is.
 
 **Icon circle**: Uses the `CategoryIcon` component. If the transaction's category has an `icon` and `color` set, the circle shows that Lucide icon on the category's color background. For split transactions (multiple categories) or categories with no icon, it falls back to a type arrow: `ArrowDownLeft` on an emerald background for income, `ArrowUpRight` on a red background for expenses.
 
@@ -1419,6 +1421,26 @@ Groups transactions by date and displays them with search, filtering, and load-m
 A trash icon that opens a confirmation dialog before deleting.
 
 **Why a confirmation dialog?** Deleting a transaction is destructive (hard-delete, not soft-delete). The dialog prevents accidental deletions from mistaken taps on mobile.
+
+#### Leaving the edit form (`src/hooks/use-leave-edit-form.ts`)
+
+Save, Cancel and Delete on the edit page all leave the form through one shared hook, `useLeaveEditForm`, so they behave identically.
+
+**The problem it solves**: In a normal tab, Save and Cancel call `router.back()` to return the user to the list exactly as they left it (filters, search). But a transaction opened with Cmd/Ctrl+click lives in a **new tab with no history**: `router.back()` has nowhere to go and silently does nothing, leaving the user stuck on the form.
+
+**The rule**, checked in order:
+
+1. **The tab has history** (`window.history.length > 1`): do the normal in-tab navigation. Save and Cancel go back; Delete goes to `/transactions`.
+2. **No history, and the referrer is not Ouriva** (a bookmark or pasted URL): there is nothing to go back to and the user did not come from the list, so go to `/transactions`. The tab is never closed in this case: closing a tab the user opened themselves would be surprising.
+3. **No history, and the referrer is Ouriva's own origin** (`document.referrer`): this is a side tab opened from the list. Call `window.close()`, returning the user to the list tab they came from.
+
+**Why the referrer check?** History length alone cannot tell "opened by Cmd+clicking a card" apart from "opened from a bookmark" — both start with a single history entry. When a link is opened in a new tab, the browser sends the opening page's URL as the referrer (the default `strict-origin-when-cross-origin` policy keeps it for same-origin links), so a same-origin referrer is a reliable sign the tab came from Ouriva.
+
+**Fallback when closing is refused**: Browsers only let scripts close certain tabs, and Safari in particular may ignore `window.close()`. The hook schedules a navigation to `/transactions` after a short delay (150 ms); if the tab closed, that callback never runs, and if it didn't, the user lands on the list instead of being stuck.
+
+The Cancel button is shared with the New Transaction page, so Cancel there follows the same rule (a "new transaction" page opened in a side tab closes on Cancel).
+
+Out of scope: the original list tab does not refresh itself after an edit made in a side tab — reload it to see the change.
 
 #### Duplicate Transaction
 

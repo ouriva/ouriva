@@ -7,6 +7,18 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Added
+- Cmd+click (Ctrl+click on Windows/Linux), middle-click or right-click →
+  "Open in new tab" on a transaction opens its edit form in a new tab.
+  Transaction cards are now real links instead of buttons
+- In an edit form opened in a new tab from the transactions list, Save,
+  Cancel and Delete close the tab and return you to the list. If the
+  browser refuses to close it, the tab shows the transactions list instead
+
+---
+
 ## [1.23.2] — 2026-07-01
 
 ### Security
