@@ -106,8 +106,12 @@ export function TransactionCard({ transaction, href }: Readonly<TransactionCardP
   }
 
   return (
+    // prefetch={false}: a long list would otherwise prefetch one edit
+    // route per card as it scrolls into view. The edit page is rendered
+    // on the server per request, so prefetching saves little.
     <Link
       href={href}
+      prefetch={false}
       className="block w-full rounded-lg p-3 text-left transition-colors hover:bg-muted/50 active:bg-muted"
     >
       {/* ── Main row ── */}
