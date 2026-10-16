@@ -1430,11 +1430,13 @@ Save, Cancel and Delete on the edit page all leave the form through one shared h
 
 **The rule**, checked in order:
 
-1. **The tab has history** (`window.history.length > 1`): do the normal in-tab navigation. Save and Cancel go back; Delete goes to `/transactions`.
-2. **No history, and the referrer is not Ouriva** (a bookmark or pasted URL): there is nothing to go back to and the user did not come from the list, so go to `/transactions`. The tab is never closed in this case: closing a tab the user opened themselves would be surprising.
-3. **No history, and the referrer is Ouriva's own origin** (`document.referrer`): this is a side tab opened from the list. Call `window.close()`, returning the user to the list tab they came from.
+1. **The tab has an Ouriva page to go back to** (`navigation.canGoBack`): do the normal in-tab navigation. Save and Cancel go back; Delete goes to `/transactions`.
+2. **Nothing to go back to, and the referrer is not Ouriva** (a bookmark or pasted URL): there is nothing to go back to and the user did not come from the list, so go to `/transactions`. The tab is never closed in this case: closing a tab the user opened themselves would be surprising.
+3. **Nothing to go back to, and the referrer is Ouriva's own origin** (`document.referrer`): this is a side tab opened from the list. Call `window.close()`, returning the user to the list tab they came from.
 
-**Why the referrer check?** History length alone cannot tell "opened by Cmd+clicking a card" apart from "opened from a bookmark" — both start with a single history entry. When a link is opened in a new tab, the browser sends the opening page's URL as the referrer (the default `strict-origin-when-cross-origin` policy keeps it for same-origin links), so a same-origin referrer is a reliable sign the tab came from Ouriva.
+**Why `navigation.canGoBack` and not `history.length`?** `history.length` counts every entry in the tab, including other sites and the browser's blank new-tab page. A URL pasted into a new tab therefore has a length of 2, and `router.back()` would leave the app for the blank page. The Navigation API's `canGoBack` only considers same-origin entries, so it is `false` there. Browsers without the Navigation API fall back to `history.length > 1`.
+
+**Why the referrer check?** "Nothing to go back to" alone cannot tell "opened by Cmd+clicking a card" apart from "opened from a bookmark" — both start with a single history entry. When a link is opened in a new tab, the browser sends the opening page's URL as the referrer (the default `strict-origin-when-cross-origin` policy keeps it for same-origin links), so a same-origin referrer is a reliable sign the tab came from Ouriva.
 
 **Fallback when closing is refused**: Browsers only let scripts close certain tabs, and Safari in particular may ignore `window.close()`. The hook schedules a navigation to `/transactions` after a short delay (150 ms); if the tab closed, that callback never runs, and if it didn't, the user lands on the list instead of being stuck.
 
