@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/hooks/use-confirm";
+import {
+  useLeaveTransactionForm,
+  useResetOnPageRestore,
+} from "@/hooks/use-leave-transaction-form";
 
 interface DeleteTransactionButtonProps {
   transactionId: string;
@@ -22,7 +26,9 @@ export function DeleteTransactionButton({
   const t = useTranslations("deleteTransaction");
   const router = useRouter();
   const { confirm } = useConfirm();
+  const leaveTransactionForm = useLeaveTransactionForm();
   const [isDeleting, setIsDeleting] = useState(false);
+  useResetOnPageRestore(() => setIsDeleting(false));
 
   async function handleClick() {
     const ok = await confirm({
@@ -45,12 +51,14 @@ export function DeleteTransactionButton({
         throw new Error("Failed to delete transaction");
       }
 
-      router.push("/transactions");
-      router.refresh();
+      // Go back like Save/Cancel: the deleted page leaves history and the
+      // list (or dashboard) refetches on mount, so the transaction is gone.
+      leaveTransactionForm(() => router.back());
+      // On success, isDeleting stays true until the page is gone, so a
+      // second tap can't send another DELETE.
     } catch (error) {
       console.error("Delete error:", error);
       alert(t("errorMessage"));
-    } finally {
       setIsDeleting(false);
     }
   }

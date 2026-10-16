@@ -427,7 +427,6 @@ function TransactionListContent({
 }: Readonly<TransactionListContentProps>) {
   const t = useTranslations("transactions");
   const tCommon = useTranslations("common");
-  const router = useRouter();
 
   if (isLoading) return <TransactionListSkeleton />;
 
@@ -481,7 +480,7 @@ function TransactionListContent({
                   {index > 0 && <div className="mx-3 border-t" />}
                   <TransactionCard
                     transaction={tx}
-                    onClick={() => router.push(`/transactions/${tx.id}`)}
+                    href={`/transactions/${tx.id}`}
                   />
                 </div>
               ))}
