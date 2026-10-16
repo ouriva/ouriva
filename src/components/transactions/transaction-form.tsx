@@ -650,6 +650,9 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           variant="outline"
           className="flex-1"
           onClick={() => leaveTransactionForm(() => router.back())}
+          // Leaving mid-save would close a side tab (or go back) while the
+          // request may still be committed.
+          disabled={isSubmitting}
         >
           {tCommon("cancel")}
         </Button>
