@@ -19,10 +19,12 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instead
 
 ### Fixed
-- After deleting a transaction, pressing Back no longer reopens the
+- After deleting a transaction, you return to the page you came from
+  (e.g. your filtered list) and pressing Back no longer reopens the
   deleted transaction's page (404)
-- Save and Delete no longer become clickable again while the page is
-  leaving, which could send a duplicate request
+- After a successful request, the Save and Delete buttons no longer
+  re-enable themselves while the page is leaving, which could send a
+  duplicate request; Cancel is disabled while a save is in flight
 
 ---
 

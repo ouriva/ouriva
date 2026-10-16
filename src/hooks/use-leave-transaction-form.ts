@@ -8,7 +8,8 @@
 // returns to the (possibly filtered) list. But a card Cmd/Ctrl+clicked
 // opens the edit page in a NEW tab with no history: router.back() would
 // do nothing there. In that case we close the tab instead, returning the
-// user to the list tab they came from.
+// user to the Ouriva tab it was opened from (the list, the dashboard, or
+// an edit page for Duplicate).
 //
 // A tab only counts as "opened from Ouriva" when it has no Ouriva page to
 // go back to AND the referrer is our own origin. A bookmark or pasted URL
