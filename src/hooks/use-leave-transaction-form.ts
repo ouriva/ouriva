@@ -17,6 +17,7 @@
 
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 // Browsers ignore window.close() for some tabs (Safari is strict). If the
@@ -80,4 +81,19 @@ export function useLeaveTransactionForm() {
       if (!window.closed) goToList();
     }, CLOSE_FALLBACK_DELAY_MS);
   };
+}
+
+// After a successful save or delete, forms keep their button disabled
+// while the page leaves. If the browser later restores this page from its
+// back/forward cache (e.g. Forward after router.back() left the site in a
+// browser without the Navigation API), that frozen state would leave the
+// button disabled forever. `reset` re-enables it on such a restore.
+export function useResetOnPageRestore(reset: () => void) {
+  useEffect(() => {
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) reset();
+    }
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [reset]);
 }

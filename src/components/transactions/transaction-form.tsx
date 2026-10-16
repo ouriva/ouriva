@@ -20,7 +20,10 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useLeaveTransactionForm } from "@/hooks/use-leave-transaction-form";
+import {
+  useLeaveTransactionForm,
+  useResetOnPageRestore,
+} from "@/hooks/use-leave-transaction-form";
 import { format } from "date-fns";
 import { Plus, X, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -144,6 +147,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
   const [categories, setCategories] = useState<Category[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState<DefaultCurrency | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  useResetOnPageRestore(() => setIsSubmitting(false));
 
   // Split mode tracks whether the user has toggled the split UI.
   // It's a local UI state, not a form field.

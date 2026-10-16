@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/hooks/use-confirm";
-import { useLeaveTransactionForm } from "@/hooks/use-leave-transaction-form";
+import {
+  useLeaveTransactionForm,
+  useResetOnPageRestore,
+} from "@/hooks/use-leave-transaction-form";
 
 interface DeleteTransactionButtonProps {
   transactionId: string;
@@ -23,6 +26,7 @@ export function DeleteTransactionButton({
   const { confirm } = useConfirm();
   const leaveTransactionForm = useLeaveTransactionForm();
   const [isDeleting, setIsDeleting] = useState(false);
+  useResetOnPageRestore(() => setIsDeleting(false));
 
   async function handleClick() {
     const ok = await confirm({
