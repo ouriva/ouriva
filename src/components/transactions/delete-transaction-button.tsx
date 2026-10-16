@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useConfirm } from "@/hooks/use-confirm";
+import { useLeaveEditForm } from "@/hooks/use-leave-edit-form";
 
 interface DeleteTransactionButtonProps {
   transactionId: string;
@@ -22,6 +23,7 @@ export function DeleteTransactionButton({
   const t = useTranslations("deleteTransaction");
   const router = useRouter();
   const { confirm } = useConfirm();
+  const leaveEditForm = useLeaveEditForm();
   const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleClick() {
@@ -45,8 +47,10 @@ export function DeleteTransactionButton({
         throw new Error("Failed to delete transaction");
       }
 
-      router.push("/transactions");
-      router.refresh();
+      leaveEditForm(() => {
+        router.push("/transactions");
+        router.refresh();
+      });
     } catch (error) {
       console.error("Delete error:", error);
       alert(t("errorMessage"));

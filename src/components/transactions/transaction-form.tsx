@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useLeaveEditForm } from "@/hooks/use-leave-edit-form";
 import { format } from "date-fns";
 import { Plus, X, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -138,6 +139,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
   const t = useTranslations("transactionForm");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const leaveEditForm = useLeaveEditForm();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState<DefaultCurrency | null>(null);
@@ -297,7 +299,8 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
       if (isEditing) {
         // Go back to wherever the user came from (e.g., filtered list).
         // The useTransactions hook will refetch fresh data on mount.
-        router.back();
+        // In a tab opened with Cmd/Ctrl+click, close the tab instead.
+        leaveEditForm(() => router.back());
       } else {
         router.push("/transactions");
         router.refresh();
@@ -648,7 +651,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           type="button"
           variant="outline"
           className="flex-1"
-          onClick={() => router.back()}
+          onClick={() => leaveEditForm(() => router.back())}
         >
           {tCommon("cancel")}
         </Button>
