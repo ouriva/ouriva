@@ -1,7 +1,8 @@
-// Leave Edit Form
-// ===============
+// Leave Transaction Form
+// ======================
 // Decides where the user goes after Save, Cancel or Delete on the
-// transaction edit page.
+// transaction edit page, and after Create or Cancel on the new
+// transaction page.
 //
 // The edit page is normally reached by clicking a card, so "go back"
 // returns to the (possibly filtered) list. But a card Cmd/Ctrl+clicked
@@ -43,7 +44,7 @@ function isReferrerSameOrigin(): boolean {
   }
 }
 
-export function useLeaveEditForm() {
+export function useLeaveTransactionForm() {
   const router = useRouter();
 
   // replace, not push: the form being left (or the transaction just
@@ -55,8 +56,9 @@ export function useLeaveEditForm() {
   }
 
   // `otherwise` is the normal in-tab navigation for the calling action:
-  // router.back() for Save/Cancel, the list (the default) for Delete.
-  return function leaveEditForm(otherwise: () => void = goToList) {
+  // router.back() for Save/Cancel when editing, the list (the default)
+  // for Create and Delete.
+  return function leaveTransactionForm(otherwise: () => void = goToList) {
     // An Ouriva page to go back to: the normal case.
     if (canGoBackInApp()) {
       otherwise();

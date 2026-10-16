@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { useForm, useFieldArray, type Path } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useLeaveEditForm } from "@/hooks/use-leave-edit-form";
+import { useLeaveTransactionForm } from "@/hooks/use-leave-transaction-form";
 import { format } from "date-fns";
 import { Plus, X, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -139,7 +139,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
   const t = useTranslations("transactionForm");
   const tCommon = useTranslations("common");
   const router = useRouter();
-  const leaveEditForm = useLeaveEditForm();
+  const leaveTransactionForm = useLeaveTransactionForm();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState<DefaultCurrency | null>(null);
@@ -296,15 +296,11 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
       }
 
       onSuccess?.();
-      if (isEditing) {
-        // Go back to wherever the user came from (e.g., filtered list).
-        // The useTransactions hook will refetch fresh data on mount.
-        // In a tab opened with Cmd/Ctrl+click, close the tab instead.
-        leaveEditForm(() => router.back());
-      } else {
-        router.push("/transactions");
-        router.refresh();
-      }
+      // Editing: go back to wherever the user came from (e.g., filtered
+      // list); the useTransactions hook refetches fresh data on mount.
+      // Creating: go to the list. Either way, a tab opened with
+      // Cmd/Ctrl+click closes instead.
+      leaveTransactionForm(isEditing ? () => router.back() : undefined);
       // On success, isSubmitting stays true: the page is leaving (and a
       // side tab may take a moment to close), so Save must not re-enable
       // and allow a second submit.
@@ -653,7 +649,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
           type="button"
           variant="outline"
           className="flex-1"
-          onClick={() => leaveEditForm(() => router.back())}
+          onClick={() => leaveTransactionForm(() => router.back())}
         >
           {tCommon("cancel")}
         </Button>
