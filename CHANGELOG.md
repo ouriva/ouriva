@@ -13,9 +13,16 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Cmd+click (Ctrl+click on Windows/Linux), middle-click or right-click →
   "Open in new tab" on a transaction opens its edit form in a new tab.
   Transaction cards are now real links instead of buttons
-- In an edit form opened in a new tab from the transactions list, Save,
-  Cancel and Delete close the tab and return you to the list. If the
-  browser refuses to close it, the tab shows the transactions list instead
+- In an edit or new transaction form opened in a new tab from Ouriva,
+  Save, Cancel and Delete close the tab and return you to the list. If
+  the browser refuses to close it, the tab shows the transactions list
+  instead
+
+### Fixed
+- After deleting a transaction, pressing Back no longer reopens the
+  deleted transaction's page (404)
+- Save and Delete no longer become clickable again while the page is
+  leaving, which could send a duplicate request
 
 ---
 

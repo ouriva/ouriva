@@ -1388,6 +1388,8 @@ A single transaction display. A Client Component (it uses `next-intl` hooks for 
 
 **Rendered as a link, not a button**: The whole card is a `next/link` `<Link href="/transactions/<id>">`, which renders a real `<a>` element. An earlier version was a `<button>` calling `router.push()`, which navigated fine on a plain click, but the browser had no URL to work with, so Cmd+click (Ctrl+click on Windows/Linux), middle-click and the right-click "Open in new tab" menu did nothing useful. With a real link, the browser provides all of these for free, while a plain click is still intercepted by `Link` for fast client-side navigation. It also improves accessibility: screen readers announce the card as a link to a page, which is what it is.
 
+**`prefetch={false}`**: By default, `Link` prefetches its route when it scrolls into view (in production). With "Load more", the list can hold hundreds of cards, which would mean one prefetch request per card. The edit page is rendered on the server per request, so prefetching it saves little; the cards opt out.
+
 **Icon circle**: Uses the `CategoryIcon` component. If the transaction's category has an `icon` and `color` set, the circle shows that Lucide icon on the category's color background. For split transactions (multiple categories) or categories with no icon, it falls back to a type arrow: `ArrowDownLeft` on an emerald background for income, `ArrowUpRight` on a red background for expenses.
 
 **Amount color**: Income amounts are emerald (`text-emerald-600 dark:text-emerald-400`). Expense amounts use the default foreground color — they are distinguished by the `−` sign and the red icon circle, not by text color. The `typeConfig` object separates `color` (used for the icon arrow color) from `amountColor` (used for the amount text) so both can be controlled independently.
@@ -1422,25 +1424,27 @@ A trash icon that opens a confirmation dialog before deleting.
 
 **Why a confirmation dialog?** Deleting a transaction is destructive (hard-delete, not soft-delete). The dialog prevents accidental deletions from mistaken taps on mobile.
 
-#### Leaving the edit form (`src/hooks/use-leave-edit-form.ts`)
+#### Leaving a transaction form (`src/hooks/use-leave-transaction-form.ts`)
 
-Save, Cancel and Delete on the edit page all leave the form through one shared hook, `useLeaveEditForm`, so they behave identically.
+Save, Cancel and Delete on the edit page, and Create and Cancel on the new transaction page, all leave the form through one shared hook, `useLeaveTransactionForm`, so they behave identically.
 
 **The problem it solves**: In a normal tab, Save and Cancel call `router.back()` to return the user to the list exactly as they left it (filters, search). But a transaction opened with Cmd/Ctrl+click lives in a **new tab with no history**: `router.back()` has nowhere to go and silently does nothing, leaving the user stuck on the form.
 
 **The rule**, checked in order:
 
-1. **The tab has an Ouriva page to go back to** (`navigation.canGoBack`): do the normal in-tab navigation. Save and Cancel go back; Delete goes to `/transactions`.
+1. **The tab has an Ouriva page to go back to** (`navigation.canGoBack`): do the normal in-tab navigation. Save and Cancel on the edit page go back; Create and Delete go to `/transactions`.
 2. **Nothing to go back to, and the referrer is not Ouriva** (a bookmark or pasted URL): there is nothing to go back to and the user did not come from the list, so go to `/transactions`. The tab is never closed in this case: closing a tab the user opened themselves would be surprising.
 3. **Nothing to go back to, and the referrer is Ouriva's own origin** (`document.referrer`): this is a side tab opened from the list. Call `window.close()`, returning the user to the list tab they came from.
 
-**Why `navigation.canGoBack` and not `history.length`?** `history.length` counts every entry in the tab, including other sites and the browser's blank new-tab page. A URL pasted into a new tab therefore has a length of 2, and `router.back()` would leave the app for the blank page. The Navigation API's `canGoBack` only considers same-origin entries, so it is `false` there. Browsers without the Navigation API fall back to `history.length > 1`.
+**Why `navigation.canGoBack` and not `history.length`?** `history.length` counts every entry in the tab, including other sites and the browser's blank new-tab page. A URL pasted into a new tab therefore has a length of 2, and `router.back()` would leave the app for the blank page. The Navigation API's `canGoBack` only considers same-origin entries, so it is `false` there. Browsers without the Navigation API fall back to `history.length > 1`. **Known limitation**: in those browsers (e.g. Safari before 26), an edit URL pasted into a tab that previously showed another site still goes back to that site after Save or Cancel. A stricter fallback isn't possible without breaking the normal case: `document.referrer` doesn't change during in-app navigation, so it can't tell "came from the list" apart from "pasted in".
 
 **Why the referrer check?** "Nothing to go back to" alone cannot tell "opened by Cmd+clicking a card" apart from "opened from a bookmark" — both start with a single history entry. When a link is opened in a new tab, the browser sends the opening page's URL as the referrer (the default `strict-origin-when-cross-origin` policy keeps it for same-origin links), so a same-origin referrer is a reliable sign the tab came from Ouriva.
 
-**Fallback when closing is refused**: Browsers only let scripts close certain tabs, and Safari in particular may ignore `window.close()`. The hook schedules a navigation to `/transactions` after a short delay (150 ms); if the tab closed, that callback never runs, and if it didn't, the user lands on the list instead of being stuck.
+**Fallback when closing is refused**: Browsers only let scripts close certain tabs, and Safari in particular may ignore `window.close()`. The hook schedules a navigation to `/transactions` after a short delay (150 ms). `window.closed` turns `true` as soon as a close is under way, so the callback checks it and only navigates when the browser refused to close the tab: the user lands on the list instead of being stuck.
 
-The Cancel button is shared with the New Transaction page, so Cancel there follows the same rule (a "new transaction" page opened in a side tab closes on Cancel).
+**`router.replace`, not `push`**: Whenever the hook goes to the list, it replaces the current history entry. Otherwise the form (or, after Delete, the deleted transaction's page, which now 404s) would sit behind the list, and Back would reopen it.
+
+**Buttons stay disabled after success**: Save and Delete only re-enable when the request fails. On success the page is leaving, and a side tab may take a moment to close (or fall back to the list); re-enabling the button in between would allow a second submit or a DELETE that fails with 404.
 
 Out of scope: the original list tab does not refresh itself after an edit made in a side tab — reload it to see the change.
 
