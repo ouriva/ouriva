@@ -46,14 +46,17 @@ function isReferrerSameOrigin(): boolean {
 export function useLeaveEditForm() {
   const router = useRouter();
 
+  // replace, not push: the form being left (or the transaction just
+  // deleted) must not sit behind the list in history, or Back would
+  // reopen it.
   function goToList() {
-    router.push("/transactions");
+    router.replace("/transactions");
     router.refresh();
   }
 
-  // `otherwise` is the normal in-tab navigation for the calling action
-  // (router.back() for Save/Cancel, the list for Delete).
-  return function leaveEditForm(otherwise: () => void) {
+  // `otherwise` is the normal in-tab navigation for the calling action:
+  // router.back() for Save/Cancel, the list (the default) for Delete.
+  return function leaveEditForm(otherwise: () => void = goToList) {
     // An Ouriva page to go back to: the normal case.
     if (canGoBackInApp()) {
       otherwise();
@@ -68,7 +71,11 @@ export function useLeaveEditForm() {
     }
 
     // Side tab opened from Ouriva: close it.
+    // window.closed turns true as soon as a close is under way, so the
+    // fallback only runs when the browser refused to close the tab.
     window.close();
-    setTimeout(goToList, CLOSE_FALLBACK_DELAY_MS);
+    setTimeout(() => {
+      if (!window.closed) goToList();
+    }, CLOSE_FALLBACK_DELAY_MS);
   };
 }

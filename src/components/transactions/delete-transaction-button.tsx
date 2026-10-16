@@ -6,7 +6,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -21,7 +20,6 @@ export function DeleteTransactionButton({
   transactionId,
 }: Readonly<DeleteTransactionButtonProps>) {
   const t = useTranslations("deleteTransaction");
-  const router = useRouter();
   const { confirm } = useConfirm();
   const leaveEditForm = useLeaveEditForm();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -47,10 +45,7 @@ export function DeleteTransactionButton({
         throw new Error("Failed to delete transaction");
       }
 
-      leaveEditForm(() => {
-        router.push("/transactions");
-        router.refresh();
-      });
+      leaveEditForm();
       // On success, isDeleting stays true until the page is gone, so a
       // second tap can't send another DELETE.
     } catch (error) {
