@@ -9,6 +9,10 @@
 #   Stage 2 (builder): Build the Next.js app
 #   Stage 3 (runner):  Copy only the output into a clean image
 #
+# A separate "migrate" stage builds a small image that only runs
+# Prisma migrations (docker build --target migrate). The default
+# build, with no --target, is still the runner.
+#
 # Each stage starts from a fresh base image. Only files explicitly
 # copied with COPY --from=<stage> end up in the final image.
 # This keeps the final image small (~150MB vs ~1GB+ with full
@@ -62,6 +66,45 @@ RUN npx prisma generate
 # The --webpack flag is needed because @serwist/next uses
 # webpack hooks to compile the service worker.
 RUN npm run build
+
+# ------------------------------------
+# Stage: Migrations only (built with --target migrate)
+# ------------------------------------
+# A small image that can only apply Prisma migrations, published
+# next to the app image as ouriva-migrate. The app image (runner)
+# has no npm/npx, so it can't run Prisma; the builder stage can,
+# but it carries the full node_modules and source (~1GB) — too
+# much to pull onto a small server for every release.
+#
+# Usage:
+#   docker run --rm -e DATABASE_URL=... ouriva-migrate            # migrate deploy
+#   docker run --rm -e DATABASE_URL=... ouriva-migrate migrate status
+FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS migrate
+
+WORKDIR /app
+
+# Install only the Prisma CLI and dotenv (prisma.config.ts imports
+# it), at the exact versions package-lock.json pins, so migrations
+# run with the same Prisma as the app. Installing inside Alpine
+# also downloads the schema engine built for this platform.
+COPY package-lock.json ./
+RUN npm install --no-save --no-package-lock --no-audit --no-fund \
+      "prisma@$(node -p "require('./package-lock.json').packages['node_modules/prisma'].version")" \
+      "dotenv@$(node -p "require('./package-lock.json').packages['node_modules/dotenv'].version")" && \
+    rm package-lock.json
+
+# The schema, the migrations and the config that points at them
+COPY prisma.config.ts ./
+COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma/migrations ./prisma/migrations
+
+# Run as the image's built-in unprivileged user
+USER node
+
+# The entrypoint is the Prisma CLI itself, so arguments are Prisma
+# commands; with none, it applies pending migrations.
+ENTRYPOINT ["node_modules/.bin/prisma"]
+CMD ["migrate", "deploy"]
 
 # ------------------------------------
 # Stage 3: Production runner
