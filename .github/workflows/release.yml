@@ -102,10 +102,12 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/digests"
           touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
 
+      # The image name goes last: "digests-*-ouriva" must not also
+      # match the "ouriva-migrate" artifacts in the publish job.
       - name: Upload the digest
         uses: actions/upload-artifact@v7
         with:
-          name: digests-${{ matrix.image.name }}-${{ matrix.platform.arch }}
+          name: digests-${{ matrix.platform.arch }}-${{ matrix.image.name }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -135,7 +137,7 @@ jobs:
       - name: Download the digests
         uses: actions/download-artifact@v8
         with:
-          pattern: digests-${{ matrix.image }}-*
+          pattern: digests-*-${{ matrix.image }}
           path: ${{ runner.temp }}/digests
           merge-multiple: true
 
