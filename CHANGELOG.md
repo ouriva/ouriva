@@ -17,6 +17,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Save, Cancel and Delete close the tab and return you to the list. If
   the browser refuses to close it, the tab shows the transactions list
   instead
+- Each release now publishes ready-made Docker images for amd64 and
+  arm64: `ghcr.io/ouriva/ouriva` (the app) and
+  `ghcr.io/ouriva/ouriva-migrate` (applies database migrations), with
+  signed build provenance. Self-hosters can pull instead of building
 
 ### Fixed
 - After deleting a transaction, you return to the page you came from

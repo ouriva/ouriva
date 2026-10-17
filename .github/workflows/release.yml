@@ -1,0 +1,179 @@
+name: Release images
+
+# Builds and publishes Ouriva's Docker images to the GitHub Container
+# Registry (GHCR) whenever a version tag is pushed, so servers pull a
+# tested image instead of building it themselves:
+#
+#   ghcr.io/ouriva/ouriva:<tag>           the app (Dockerfile "runner" stage)
+#   ghcr.io/ouriva/ouriva-migrate:<tag>   applies Prisma migrations ("migrate" stage)
+#
+# Each image is built for both linux/amd64 (most cloud servers) and
+# linux/arm64 (Raspberry Pi, Ampere and Graviton VMs), natively on
+# GitHub's runner of each CPU type — emulating arm64 on an amd64
+# runner makes a Next.js build several times slower. The two builds
+# are then joined into one multi-arch tag: `docker pull` picks the
+# right one for the machine automatically.
+#
+# There is deliberately no "latest" tag: servers deploy an explicit
+# version, so what runs is always known and rollback is just the
+# previous tag.
+#
+# Every published image gets a signed provenance attestation, which
+# records the workflow run and commit that built it. Verify with:
+#   gh attestation verify oci://ghcr.io/ouriva/ouriva:<tag> --owner ouriva
+#
+# Runs on: a pushed tag like v1.42.0 (or v1.42.0-rc.1 for a test run).
+
+on:
+  push:
+    tags: ["v[0-9]*.[0-9]*.[0-9]*"]
+
+# Nothing by default; each job asks only for what it needs.
+permissions: {}
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+
+jobs:
+  # ----------------------------------------------------------
+  # One job per image × CPU type (4 in total). Each pushes its
+  # image to GHCR by digest only (no tag yet) and hands the
+  # digest to the publish job.
+  # ----------------------------------------------------------
+  build:
+    name: Build ${{ matrix.image.name }} (${{ matrix.platform.arch }})
+    runs-on: ${{ matrix.platform.runner }}
+
+    permissions:
+      contents: read
+      # Required to push images to GHCR with the built-in GITHUB_TOKEN
+      packages: write
+
+    strategy:
+      matrix:
+        image:
+          - { name: ouriva, target: runner }
+          - { name: ouriva-migrate, target: migrate }
+        platform:
+          - { arch: amd64, runner: ubuntu-24.04 }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # GITHUB_TOKEN is created for this run and expires with it,
+      # so there is no registry password to store or rotate.
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: ${{ matrix.image.target }}
+          platforms: linux/${{ matrix.platform.arch }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.licenses=AGPL-3.0
+          outputs: type=image,name=${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }},push-by-digest=true,name-canonical=true,push=true
+          # Reuse unchanged layers (e.g. npm ci) from the previous release
+          cache-from: type=gha,scope=${{ matrix.image.name }}-${{ matrix.platform.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}-${{ matrix.platform.arch }}
+          # Buildx's own attestations would wrap each image in an extra
+          # index; the publish job attests the final multi-arch image instead.
+          provenance: false
+          sbom: false
+
+      - name: Save the digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/digests"
+          touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
+
+      - name: Upload the digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.image.name }}-${{ matrix.platform.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # ----------------------------------------------------------
+  # One job per image: joins the amd64 and arm64 digests under
+  # the version tag, then attests the result.
+  # ----------------------------------------------------------
+  publish:
+    name: Publish ${{ matrix.image }}
+    needs: build
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: write
+      # Required to sign and store the provenance attestation
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+
+    strategy:
+      matrix:
+        image: [ouriva, ouriva-migrate]
+
+    steps:
+      - name: Download the digests
+        uses: actions/download-artifact@v8
+        with:
+          pattern: digests-${{ matrix.image }}-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The tag name is passed through env, never pasted into the
+      # script, so a crafted tag can't inject shell commands.
+      - name: Create the multi-arch tag
+        id: manifest
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          IMAGE: ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
+          TAG: ${{ github.ref_name }}
+          SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          # One file per digest, named after it (see "Save the digest")
+          refs=()
+          for digest in *; do refs+=("${IMAGE}@sha256:${digest}"); done
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${TAG}" \
+            --annotation "index:org.opencontainers.image.source=${SOURCE}" \
+            --annotation "index:org.opencontainers.image.licenses=AGPL-3.0" \
+            "${refs[@]}"
+          DIGEST=$(docker buildx imagetools inspect "${IMAGE}:${TAG}" --format '{{json .Manifest}}' | jq -r .digest)
+          echo "digest=${DIGEST}" >> "${GITHUB_OUTPUT}"
+          docker buildx imagetools inspect "${IMAGE}:${TAG}"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ${{ env.IMAGE_PREFIX }}/${{ matrix.image }}
+          subject-digest: ${{ steps.manifest.outputs.digest }}
+          push-to-registry: true
