@@ -1170,6 +1170,12 @@ for (const dateStr of sortedDates) {
 export type Period = "1m" | "3m" | "6m" | "1y" | "all";
 ```
 
+#### `GET /api/health` — Health Probe
+
+Runs `SELECT 1` against the database and returns `200 { "data": { "status": "ok" } }`, or `503 { "error": { "message": "Database unavailable", "code": "DATABASE_UNAVAILABLE" } }` when the query fails or takes longer than 5 seconds. A page such as `/` renders even with the database down, so it can't tell a healthy app from a broken one; this route can. The Docker image's `HEALTHCHECK` and the compose files probe it every 30 seconds, and three failures in a row mark the container unhealthy.
+
+The 503 body never carries the underlying error (it is a public route and a connection error can name the database host or user); the detail is logged on the server. Responses are sent with `Cache-Control: no-store`.
+
 ---
 
 ## 7. Validation with Zod
