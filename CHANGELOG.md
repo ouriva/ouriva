@@ -9,6 +9,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [1.43.0] — 2026-10-28
+
 ### Added
 - `GET /api/health` answers 200 only when the app can reach its
   database (it runs `SELECT 1`, with a 5-second limit) and 503
