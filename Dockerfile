@@ -153,5 +153,13 @@ ENV HOSTNAME="0.0.0.0"
 ENV PORT=3000
 ENV NODE_ENV=production
 
+# Docker marks the container unhealthy after 3 failed probes in a row.
+# /api/health runs SELECT 1, so the probe fails when the database is
+# unreachable, not only when the Node process is down. BusyBox wget is
+# part of Alpine; --spider requests without saving, and a non-2xx answer
+# (503) makes it exit non-zero. Compose files can override this block.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1:3000/api/health || exit 1
+
 # Start the standalone server
 CMD ["node", "server.js"]
