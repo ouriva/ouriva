@@ -9,6 +9,13 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- `GET /api/health` answers 200 only when the app can reach its
+  database (it runs `SELECT 1`, with a 5-second limit) and 503
+  otherwise. The Docker image's new `HEALTHCHECK` and the compose files
+  probe it, so a database outage now marks the container unhealthy
+  instead of passing as healthy
+
 ---
 
 ## [1.42.0] — 2026-10-17
