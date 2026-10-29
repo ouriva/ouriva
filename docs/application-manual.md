@@ -2459,7 +2459,7 @@ CMD ["node", "server.js"]
 ```yaml
 services:
   db:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     container_name: ouriva-db
     ports:
       - "5432:5432"
@@ -2468,12 +2468,12 @@ services:
       POSTGRES_USER: budget_app_dev
       POSTGRES_PASSWORD: dev_password_change_me
     volumes:
-      - ouriva_dev_data:/var/lib/postgresql/data
+      - ouriva_dev_data_18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U budget_app_dev -d personal_finance_dev"]
 ```
 
-**Named volume** (`ouriva_dev_data`) — Data persists across container restarts. `docker compose down` keeps the volume; `docker compose down -v` deletes it.
+**Named volume** (`ouriva_dev_data_18`) — Data persists across container restarts. PostgreSQL 18's image stores its data in `/var/lib/postgresql/18/docker`, so the volume is mounted at `/var/lib/postgresql`; a volume created by another major version can't be reused. `docker compose down` keeps the volume; `docker compose down -v` deletes it.
 
 **`docker-compose.yml`** — All-in-one self-host (the default — app + Postgres together):
 
