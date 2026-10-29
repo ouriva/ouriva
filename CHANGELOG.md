@@ -9,6 +9,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Development database (`docker-compose.dev.yml`, `.devcontainer/`) moves to PostgreSQL 18. The dev volume is now `ouriva_dev_data_18`: run `npx prisma migrate dev` and `npx prisma db seed` once after `docker compose -f docker-compose.dev.yml up -d`. The self-hosting `docker-compose.yml` stays on PostgreSQL 17.
+
 ---
 
 ## [1.43.0] — 2026-10-28
