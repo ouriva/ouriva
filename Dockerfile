@@ -28,7 +28,7 @@
 # ------------------------------------
 # Stage 1: Install dependencies
 # ------------------------------------
-FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS deps
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS deps
 
 # Set working directory inside the container
 WORKDIR /app
@@ -45,7 +45,7 @@ RUN npm ci
 # ------------------------------------
 # Stage 2: Build the application
 # ------------------------------------
-FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS builder
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS builder
 
 WORKDIR /app
 
@@ -79,7 +79,7 @@ RUN npm run build
 # Usage:
 #   docker run --rm -e DATABASE_URL=... ouriva-migrate            # migrate deploy
 #   docker run --rm -e DATABASE_URL=... ouriva-migrate migrate status
-FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS migrate
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS migrate
 
 WORKDIR /app
 
@@ -109,7 +109,7 @@ CMD ["migrate", "deploy"]
 # ------------------------------------
 # Stage 3: Production runner
 # ------------------------------------
-FROM node:26-alpine@sha256:a4fb14143ee24c038c851864fe85fd90f9121abc8fdca3092798bcc02e06b1d8 AS runner
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS runner
 
 WORKDIR /app
 
