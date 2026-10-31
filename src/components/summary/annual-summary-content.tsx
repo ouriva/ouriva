@@ -56,6 +56,67 @@ interface AnnualSummary {
   };
 }
 
+// ─── Merge for the "All" tab ─────────────────────────────────────────────────
+
+type Amounts = Pick<AnnualCategoryData, "total" | "months">;
+
+function addAmounts(target: Amounts, source: Amounts) {
+  target.total += source.total;
+  for (let i = 0; i < 12; i++) target.months[i] += source.months[i];
+}
+
+// Expenses count against the net, so they enter the merge negated
+function negateCategory(cat: AnnualCategoryData): AnnualCategoryData {
+  return {
+    id: cat.id,
+    name: cat.name,
+    total: -cat.total,
+    months: cat.months.map((v) => -v),
+    children: cat.children.map((c) => ({ id: c.id, name: c.name, total: -c.total, months: c.months.map((v) => -v) })),
+  };
+}
+
+function copyCategory(cat: AnnualCategoryData): AnnualCategoryData {
+  return {
+    id: cat.id,
+    name: cat.name,
+    total: cat.total,
+    months: [...cat.months],
+    children: cat.children.map((c) => ({ ...c, months: [...c.months] })),
+  };
+}
+
+function mergeIncomeInto(entry: AnnualCategoryData, cat: AnnualCategoryData) {
+  addAmounts(entry, cat);
+  const childMap = new Map(entry.children.map((c) => [c.id, c]));
+  for (const child of cat.children) {
+    const existing = childMap.get(child.id);
+    if (existing) addAmounts(existing, child);
+    else childMap.set(child.id, { id: child.id, name: child.name, total: child.total, months: [...child.months] });
+  }
+  entry.children = Array.from(childMap.values());
+}
+
+// Merge expense and income annual categories by ID for the "All" tab.
+// net total = incomeTotal - expenseTotal per category.
+// net months = incomeMonths[i] - expenseMonths[i] per month.
+function mergeAnnualCategories(
+  expenseCategories: AnnualCategoryData[],
+  incomeCategories: AnnualCategoryData[]
+): AnnualCategoryData[] {
+  const map = new Map(expenseCategories.map((cat) => [cat.id, negateCategory(cat)]));
+
+  for (const cat of incomeCategories) {
+    const entry = map.get(cat.id);
+    if (entry) mergeIncomeInto(entry, cat);
+    else map.set(cat.id, copyCategory(cat));
+  }
+
+  return Array.from(map.values())
+    .map((cat) => ({ ...cat, children: cat.children.toSorted((a, b) => Math.abs(b.total) - Math.abs(a.total)) }))
+    .toSorted((a, b) => Math.abs(b.total) - Math.abs(a.total));
+}
+
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
 function AnnualSkeleton() {
@@ -112,46 +173,10 @@ export function AnnualSummaryContent() {
 
   useEffect(() => { void fetchData(); }, [fetchData]);
 
-  // Merge expense and income annual categories by ID for the "All" tab.
-  // net total = incomeTotal - expenseTotal per category.
-  // net months = incomeMonths[i] - expenseMonths[i] per month.
-  const mergedAnnualCategories = useMemo<AnnualCategoryData[]>(() => {
-    if (!data) return [];
-    const map = new Map<string, AnnualCategoryData>();
-
-    for (const cat of data.categories) {
-      const childMap = new Map<string, AnnualCategoryData["children"][number]>();
-      for (const child of cat.children) {
-        childMap.set(child.id, { id: child.id, name: child.name, total: -child.total, months: child.months.map((v) => -v) });
-      }
-      map.set(cat.id, { id: cat.id, name: cat.name, total: -cat.total, months: cat.months.map((v) => -v), children: Array.from(childMap.values()) });
-    }
-
-    for (const cat of data.incomeCategories ?? []) {
-      if (map.has(cat.id)) {
-        const entry = map.get(cat.id)!;
-        entry.total += cat.total;
-        for (let i = 0; i < 12; i++) entry.months[i] += cat.months[i];
-        const childMap = new Map(entry.children.map((c) => [c.id, c]));
-        for (const child of cat.children) {
-          if (childMap.has(child.id)) {
-            const ec = childMap.get(child.id)!;
-            ec.total += child.total;
-            for (let i = 0; i < 12; i++) ec.months[i] += child.months[i];
-          } else {
-            childMap.set(child.id, { id: child.id, name: child.name, total: child.total, months: [...child.months] });
-          }
-        }
-        entry.children = Array.from(childMap.values());
-      } else {
-        map.set(cat.id, { id: cat.id, name: cat.name, total: cat.total, months: [...cat.months], children: cat.children.map((c) => ({ ...c, months: [...c.months] })) });
-      }
-    }
-
-    return Array.from(map.values())
-      .map((cat) => ({ ...cat, children: cat.children.toSorted((a, b) => Math.abs(b.total) - Math.abs(a.total)) }))
-      .toSorted((a, b) => Math.abs(b.total) - Math.abs(a.total));
-  }, [data]);
+  const mergedAnnualCategories = useMemo<AnnualCategoryData[]>(
+    () => (data ? mergeAnnualCategories(data.categories, data.incomeCategories ?? []) : []),
+    [data]
+  );
 
   // Resolve the selected category's monthly data for the chart.
   // When on the "All" tab, uses merged net months so the chart reflects
