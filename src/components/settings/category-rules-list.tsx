@@ -95,7 +95,7 @@ export function CategoryRulesList({ pageTitle, pageDescription }: Readonly<Categ
       if (catRes.ok)   setCategories((await catRes.json()).data);
       setIsLoading(false);
     }
-    load();
+    void load();
     return () => { cancelled = true; };
   }, [refreshKey]);
 

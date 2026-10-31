@@ -68,7 +68,7 @@ export function SimpleSettingsList({
       }
       setIsLoading(false);
     }
-    load();
+    void load();
     return () => { cancelled = true; };
   }, [apiEndpoint, refreshKey]);
 

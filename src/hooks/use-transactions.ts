@@ -119,7 +119,7 @@ export function useTransactions(
   // useEffect runs side effects after render. Here, it fetches data
   // when the component mounts and whenever filters change.
   useEffect(() => {
-    fetchData();
+    void fetchData();
   }, [fetchData]);
 
   return {

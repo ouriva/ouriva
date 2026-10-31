@@ -240,7 +240,7 @@ function useDashboardData() {
         setIsLoading(false);
       }
     }
-    fetchAll();
+    void fetchAll();
   }, []);
 
   return { balancesData, monthly, recentTx, netWorthTrend, isLoading };

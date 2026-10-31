@@ -378,7 +378,7 @@ function useTransactionData(filterParams: string) {
 
   useEffect(() => {
     setAllTransactions([]);
-    fetchPage(1, false);
+    void fetchPage(1, false);
   }, [fetchPage]);
 
   async function loadMore() {
@@ -540,7 +540,7 @@ function useFilterDropdowns() {
         setCategories(data.data || data);
       }
     }
-    loadFilterData();
+    void loadFilterData();
   }, []);
 
   return { accounts, categories };

@@ -32,7 +32,7 @@ export function ConfirmProvider({ children }: Readonly<{ children: React.ReactNo
       action: {
         label: options.undoLabel,
         onClick: () => {
-          options.onUndo();
+          void options.onUndo();
         },
       },
     });

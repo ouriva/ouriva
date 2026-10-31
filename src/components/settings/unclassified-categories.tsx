@@ -67,7 +67,7 @@ export function UnclassifiedCategories({ enabled, splitLabel }: Readonly<{ enabl
         setRows(computeUnclassified(json.data as Category[]));
       }
     }
-    load();
+    void load();
   }, []);
 
   useEffect(() => {

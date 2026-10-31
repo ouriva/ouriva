@@ -126,7 +126,7 @@ export function MonthlySummaryContent() {
     }
   }, [year, month]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   const prevMonthLabel = MONTH_SHORT[(month === 1 ? 11 : month - 2)];
 

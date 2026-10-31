@@ -567,7 +567,7 @@ function useBudgetData(year: number) {
     }
   }, [year]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   const hasEdits = Object.keys(edits).length > 0 || Object.keys(noteEdits).length > 0;
 

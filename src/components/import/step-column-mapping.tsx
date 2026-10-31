@@ -115,7 +115,7 @@ export function StepColumnMapping({
 
       setShowExchangeRateColumn(!!accCode && !!defCode && accCode !== defCode);
     }
-    checkCurrencies();
+    void checkCurrencies();
   }, [state.accountId]);
 
   // Build column options from headers

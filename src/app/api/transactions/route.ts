@@ -34,9 +34,9 @@ const transactionInclude = {
 function parseSearchAmount(search: string): number | null {
   const trimmed = search.trim();
   const direct = Number(trimmed);
-  if (!isNaN(direct) && isFinite(direct) && direct > 0) return direct;
+  if (Number.isFinite(direct) && direct > 0) return direct;
   const withDot = Number(trimmed.replace(",", "."));
-  if (!isNaN(withDot) && isFinite(withDot) && withDot > 0) return withDot;
+  if (Number.isFinite(withDot) && withDot > 0) return withDot;
   return null;
 }
 

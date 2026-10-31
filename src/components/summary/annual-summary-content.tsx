@@ -110,7 +110,7 @@ export function AnnualSummaryContent() {
     }
   }, [year]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   // Merge expense and income annual categories by ID for the "All" tab.
   // net total = incomeTotal - expenseTotal per category.

@@ -465,7 +465,7 @@ export function CategoryTree({ pageTitle, pageDescription }: Readonly<CategoryTr
       }
       setIsLoading(false);
     }
-    load();
+    void load();
     return () => { cancelled = true; };
   }, [refreshKey]);
 

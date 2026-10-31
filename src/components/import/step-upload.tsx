@@ -80,7 +80,7 @@ export function StepUpload({ onComplete }: Readonly<StepUploadProps>) {
         setProfiles(data.data || []);
       }
     }
-    loadData();
+    void loadData();
   }, []);
 
   const selectedProfile = profiles.find((p) => p.id === profileId);
