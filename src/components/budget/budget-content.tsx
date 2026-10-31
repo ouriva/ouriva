@@ -192,6 +192,23 @@ function GroupHeader({ group }: Readonly<GroupHeaderProps>) {
 
 type NoteState = "closed" | "preview" | "edit";
 
+// Color and message for the amount remaining. Income budgets are targets,
+// so reaching them is good; expense budgets are limits.
+function remainingStatus(isIncome: boolean, remaining: number) {
+  if (isIncome) {
+    return {
+      className: remaining <= 0 ? "text-positive" : "text-muted-foreground",
+      messageKey: remaining > 0 ? "remainingToGo" : "remainingOver",
+      amount: Math.abs(remaining),
+    } as const;
+  }
+  return {
+    className: remaining >= 0 ? "text-positive" : "text-red-600 dark:text-red-400",
+    messageKey: remaining >= 0 ? "remainingLeft" : "remainingOver",
+    amount: Math.abs(remaining),
+  } as const;
+}
+
 interface CategoryRowProps {
   category: BudgetCategory;
   editedBudget: number;
@@ -239,27 +256,9 @@ function CategoryRow({ category, editedBudget, note, onChange, onNoteChange, isC
       ? Math.round((category.actual / editedBudget) * 100)
       : 0;
 
-  let remainingClass: string;
-  if (category.isIncome) {
-    remainingClass = remaining <= 0
-      ? "text-positive"
-      : "text-muted-foreground";
-  } else {
-    remainingClass = remaining >= 0
-      ? "text-positive"
-      : "text-red-600 dark:text-red-400";
-  }
-
-  let remainingLabel: string;
-  if (category.isIncome) {
-    remainingLabel = remaining > 0
-      ? t("remainingToGo", { symbol: "€", amount: formatAmount(remaining, locale) })
-      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) });
-  } else {
-    remainingLabel = remaining >= 0
-      ? t("remainingLeft", { symbol: "€", amount: formatAmount(remaining, locale) })
-      : t("remainingOver", { symbol: "€", amount: formatAmount(Math.abs(remaining), locale) });
-  }
+  const status = remainingStatus(category.isIncome, remaining);
+  const remainingClass = status.className;
+  const remainingLabel = t(status.messageKey, { symbol: "€", amount: formatAmount(status.amount, locale) });
 
   const bucketColor = showBucketColors && category.bucket ? BUCKET_COLORS[category.bucket] : undefined;
 
