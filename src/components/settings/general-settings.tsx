@@ -123,7 +123,7 @@ export function GeneralSettings() {
       }
       setIsLoading(false);
     }
-    load();
+    void load();
   }, []);
 
   useEffect(() => {

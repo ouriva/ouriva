@@ -106,7 +106,7 @@ export function NetWorthChart() {
         if (!cancelled) setIsLoading(false);
       }
     }
-    fetchData();
+    void fetchData();
     return () => {
       cancelled = true;
     };

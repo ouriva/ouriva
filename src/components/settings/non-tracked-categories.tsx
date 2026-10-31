@@ -54,7 +54,7 @@ export function NonTrackedCategories() {
         setRows(computeNonTracked(json.data as Category[]));
       }
     }
-    load();
+    void load();
   }, []);
 
   useEffect(() => {

@@ -40,7 +40,7 @@ export function CopyPreviousYearButton({ year, onCopied }: Readonly<CopyPrevious
   }, [prevYear]);
 
   useEffect(() => {
-    checkExists();
+    void checkExists();
   }, [checkExists]);
 
   async function handleClick() {
