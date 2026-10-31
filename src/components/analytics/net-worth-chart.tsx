@@ -77,6 +77,72 @@ const TOOLTIP_STYLE = {
   fontSize: "12px",
 };
 
+// ─── Headline ─────────────────────────────────────────────────────────────────
+
+interface NetWorthHeadlineProps {
+  isLoading: boolean;
+  hasError: boolean;
+  currentNetWorth: number | null;
+  firstValue: number;
+  currency: NetWorthResponse["currency"];
+}
+
+// Hero value plus its change since the first point of the period. With no
+// value to show after a load error it renders nothing; the card body
+// already reports the error.
+function NetWorthHeadline({
+  isLoading,
+  hasError,
+  currentNetWorth,
+  firstValue,
+  currency,
+}: Readonly<NetWorthHeadlineProps>) {
+  const t = useTranslations("analytics");
+  const locale = useLocale();
+
+  if (isLoading) {
+    return (
+      <>
+        <Skeleton className="mt-1 h-8 w-40" />
+        <Skeleton className="mt-1 h-4 w-24" />
+      </>
+    );
+  }
+
+  if (currentNetWorth === null || !currency) {
+    if (hasError) return null;
+    return <p className="mt-1 text-sm text-muted-foreground">{t("noCurrency")}</p>;
+  }
+
+  const delta = currentNetWorth - firstValue;
+  const deltaPercent = firstValue === 0 ? null : (delta / Math.abs(firstValue)) * 100;
+  const isPositive = delta >= 0;
+
+  return (
+    <div>
+      <p className="text-3xl font-bold tabular-nums">
+        {formatCurrency(currentNetWorth, currency.code, locale)}
+      </p>
+      {deltaPercent !== null && (
+        <p
+          className={cn(
+            "mt-0.5 text-xs font-semibold",
+            isPositive
+              ? "text-positive"
+              : "text-danger"
+          )}
+        >
+          {isPositive ? "+" : "−"}
+          {currency.symbol}
+          {formatAmount(Math.abs(delta), locale)}{" "}
+          ({isPositive ? "+" : ""}
+          {deltaPercent.toFixed(1)}%)
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function NetWorthChart() {
@@ -118,12 +184,6 @@ export function NetWorthChart() {
   const currentNetWorth = response?.currentNetWorth ?? null;
 
   const firstValue = data[0]?.netWorth ?? 0;
-  const delta = currentNetWorth !== null ? currentNetWorth - firstValue : null;
-  const deltaPercent =
-    delta !== null && firstValue !== 0
-      ? (delta / Math.abs(firstValue)) * 100
-      : null;
-  const isPositive = delta !== null && delta >= 0;
 
   // Axis colors must be explicit values — SVG fill= doesn't process CSS vars.
   const axisColor = isDark ? "hsl(240, 5%, 55%)" : "hsl(240, 5%, 45%)";
@@ -141,36 +201,13 @@ export function NetWorthChart() {
         </p>
 
         {/* Hero value + delta */}
-        {isLoading ? (
-          <>
-            <Skeleton className="mt-1 h-8 w-40" />
-            <Skeleton className="mt-1 h-4 w-24" />
-          </>
-        ) : currentNetWorth !== null && currency ? (
-          <div>
-            <p className="text-3xl font-bold tabular-nums">
-              {formatCurrency(currentNetWorth, currency.code, locale)}
-            </p>
-            {delta !== null && deltaPercent !== null && (
-              <p
-                className={cn(
-                  "mt-0.5 text-xs font-semibold",
-                  isPositive
-                    ? "text-positive"
-                    : "text-danger"
-                )}
-              >
-                {isPositive ? "+" : "−"}
-                {currency.symbol}
-                {formatAmount(Math.abs(delta), locale)}{" "}
-                ({isPositive ? "+" : ""}
-                {deltaPercent.toFixed(1)}%)
-              </p>
-            )}
-          </div>
-        ) : !hasError ? (
-          <p className="mt-1 text-sm text-muted-foreground">{t("noCurrency")}</p>
-        ) : null}
+        <NetWorthHeadline
+          isLoading={isLoading}
+          hasError={hasError}
+          currentNetWorth={currentNetWorth}
+          firstValue={firstValue}
+          currency={currency}
+        />
 
         {/* Period selector */}
         <div className="mt-3">
@@ -248,7 +285,7 @@ export function NetWorthChart() {
                   try {
                     return format(parseISO(String(label)), "d MMM yyyy");
                   } catch {
-                    return String(label ?? "");
+                    return typeof label === "string" ? label : "";
                   }
                 }}
               />

@@ -209,7 +209,8 @@ const ReviewRow = memo(function ReviewRow({
               const displayParents = transactionType === "TRANSFER"
                 ? parentCategories.filter((p) => p.type === "TRANSFER")
                 : parentCategories.filter((p) => p.type !== "TRANSFER")
-                    .sort((a, b) => (a.type === b.type ? 0 : a.type === "INCOME" ? -1 : 1));
+                    // INCOME parents first
+                    .sort((a, b) => Number(b.type === "INCOME") - Number(a.type === "INCOME"));
               return (
                 <Select
                   value={categoryId ?? "none"}
