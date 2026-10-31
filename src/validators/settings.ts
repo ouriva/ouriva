@@ -21,7 +21,7 @@ export const updateSettingsSchema = z
     const anyTargetSet = targets.some((v) => v !== undefined);
     if (!anyTargetSet) return;
 
-    if (targets.some((v) => v === undefined)) {
+    if (targets.includes(undefined)) {
       ctx.addIssue({
         code: "custom",
         path: ["needsTarget"],

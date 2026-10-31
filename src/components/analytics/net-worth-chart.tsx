@@ -248,7 +248,7 @@ export function NetWorthChart() {
                   try {
                     return format(parseISO(String(label)), "d MMM yyyy");
                   } catch {
-                    return String(label ?? "");
+                    return typeof label === "string" ? label : "";
                   }
                 }}
               />

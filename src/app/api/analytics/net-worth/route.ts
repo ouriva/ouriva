@@ -29,10 +29,10 @@ import { subMonths, format } from "date-fns";
 
 export type Period = "1m" | "3m" | "6m" | "1y" | "all";
 
-const VALID_PERIODS: Period[] = ["1m", "3m", "6m", "1y", "all"];
+const VALID_PERIODS: ReadonlySet<string> = new Set<Period>(["1m", "3m", "6m", "1y", "all"]);
 
 function parsePeriod(raw: string | null): Period {
-  if (raw && VALID_PERIODS.includes(raw as Period)) return raw as Period;
+  if (raw && VALID_PERIODS.has(raw)) return raw as Period;
   return "1y";
 }
 
@@ -168,8 +168,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const currentNetWorth =
-      data.length > 0 ? data[data.length - 1].netWorth : null;
+    const currentNetWorth = data.at(-1)?.netWorth ?? null;
 
     return NextResponse.json({
       data,
