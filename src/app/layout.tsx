@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ConfirmProvider } from "@/components/providers/confirm-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,14 +7,19 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
-const geistSans = Geist({
+// Geist is self-hosted (src/app/fonts, SIL OFL 1.1 — see OFL.txt) so builds
+// never need to reach Google Fonts. The files are Google's "latin" subset
+// (U+0000-00FF + common punctuation/€), variable across weights 100–900.
+const geistSans = localFont({
+  src: "./fonts/geist-latin.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  weight: "100 900",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/geist-mono-latin.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: "100 900",
 });
 
 export const metadata: Metadata = {
