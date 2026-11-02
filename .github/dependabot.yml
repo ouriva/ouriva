@@ -16,6 +16,14 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Majors the toolchain can't take yet: ESLint 10 crashes eslint-plugin-react
+      # (react/display-name), typescript-eslint doesn't support TypeScript 7.
+      # Remove each rule once eslint-config-next / typescript-eslint support it.
+      - dependency-name: "eslint"
+        versions: [">=10"]
+      - dependency-name: "typescript"
+        versions: [">=7"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
