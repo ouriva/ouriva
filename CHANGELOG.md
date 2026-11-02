@@ -9,9 +9,34 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Changed
+---
 
+## [1.43.1] — 2026-11-02
+
+### Security
+- Next.js 16.4.3 fixes three critical remote code execution advisories
+  and the other open Next.js advisories; zod, sharp and transitive
+  dependencies updated for the remaining npm advisories
+- The Docker image is re-pinned to Node 26.13.0 on Alpine 3.24.3, which
+  fixes the Node (Brotli, TLS) and zlib findings
+
+### Fixed
+- Data loads that were started without being awaited now handle their
+  failures; if loading the Budget Split visibility setting fails, the
+  default settings stay in place
+- The disabled "copy previous year" button keeps its tooltip reachable
+  by mouse and keyboard, and screen readers announce it as dimmed
+
+### Changed
+- The Geist fonts ship with the app instead of being downloaded from
+  Google Fonts at build time; they look the same, and builds no longer
+  need to reach Google
+- Dependency updates: lucide-react, read-excel-file, @hookform/resolvers
+  6, dotenv 18 and other minor and patch versions
 - Development database (`docker-compose.dev.yml`, `.devcontainer/`) moves to PostgreSQL 18. The dev volume is now `ouriva_dev_data_18`: run `npx prisma migrate dev` and `npx prisma db seed` once after `docker compose -f docker-compose.dev.yml up -d`. The self-hosting `docker-compose.yml` stays on PostgreSQL 17.
+
+### CI
+- Lint, build and SonarCloud run on Node 26, like the Docker image
 
 ---
 
