@@ -11,7 +11,7 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.9.1",
+    "@hookform/resolvers": "^6.0.2",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@swc/helpers": "^0.5.23",
