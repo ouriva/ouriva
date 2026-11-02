@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { formatAmount } from "@/lib/formatters";
@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import type { ImportState } from "./import-wizard";
-import { parseAmount, parseDate } from "./step-review-utils";
+import { parseAmount, parseDate, resolveDirectionSign } from "./step-review-utils";
 
 interface StepConfirmProps {
   state: ImportState;
@@ -27,11 +27,25 @@ export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
   const locale = useLocale();
   const router = useRouter();
   const [isImporting, setIsImporting] = useState(false);
+  const [categoryNames, setCategoryNames] = useState<Map<string, string>>(new Map());
   const [result, setResult] = useState<{
     success: boolean;
     imported?: number;
     error?: string;
   } | null>(null);
+
+  // Needed to resolve TRANSFER direction (Transfer In vs. Transfer Out) for
+  // the summary below — the transaction list itself only carries categoryId.
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        const list: { id: string; name: string }[] = data.data || data;
+        setCategoryNames(new Map(list.map((c) => [c.id, c.name])));
+      })
+      .catch(() => {});
+  }, []);
 
   // Build the list of transactions to import
   const transactions = useMemo(() => {
@@ -92,12 +106,21 @@ export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
   // Summary stats
   const incomeCount = transactions.filter((t) => t.type === "INCOME").length;
   const expenseCount = transactions.filter((t) => t.type === "EXPENSE").length;
+  const transferCount = transactions.filter((t) => t.type === "TRANSFER").length;
   const totalIncome = transactions
     .filter((t) => t.type === "INCOME")
     .reduce((sum, t) => sum + t.amount, 0);
   const totalExpense = transactions
     .filter((t) => t.type === "EXPENSE")
     .reduce((sum, t) => sum + t.amount, 0);
+  // Net transfer amount: Transfer In adds, Transfer Out subtracts — same
+  // direction rule used in the review step's balance preview.
+  const netTransfer = transactions
+    .filter((t) => t.type === "TRANSFER")
+    .reduce((sum, t) => {
+      const categoryName = t.categoryId ? categoryNames.get(t.categoryId) : undefined;
+      return sum + resolveDirectionSign("TRANSFER", categoryName, 0) * t.amount;
+    }, 0);
 
   async function handleImport() {
     setIsImporting(true);
@@ -215,6 +238,21 @@ export function StepConfirm({ state, onBack }: Readonly<StepConfirmProps>) {
               </div>
               <span className="font-semibold text-danger">
                 −{formatAmount(totalExpense, locale)}
+              </span>
+            </div>
+          )}
+          {transferCount > 0 && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{t("transferBadge")}</Badge>
+                <span className="text-sm text-muted-foreground">
+                  {transferCount} {t("statTransactions")}
+                </span>
+              </div>
+              <span
+                className={`font-semibold ${netTransfer >= 0 ? "text-positive" : "text-danger"}`}
+              >
+                {netTransfer >= 0 ? "+" : "−"}{formatAmount(Math.abs(netTransfer), locale)}
               </span>
             </div>
           )}

@@ -7,6 +7,72 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- Development database (`docker-compose.dev.yml`, `.devcontainer/`) moves to PostgreSQL 18. The dev volume is now `ouriva_dev_data_18`: run `npx prisma migrate dev` and `npx prisma db seed` once after `docker compose -f docker-compose.dev.yml up -d`. The self-hosting `docker-compose.yml` stays on PostgreSQL 17.
+
+---
+
+## [1.43.0] — 2026-10-28
+
+### Added
+- `GET /api/health` answers 200 only when the app can reach its
+  database (it runs `SELECT 1`, with a 5-second limit) and 503
+  otherwise. The Docker image's new `HEALTHCHECK` and the compose files
+  probe it, so a database outage now marks the container unhealthy
+  instead of passing as healthy
+
+---
+
+## [1.42.0] — 2026-10-17
+
+### Added
+- Cmd+click (Ctrl+click on Windows/Linux), middle-click or right-click →
+  "Open in new tab" on a transaction opens its edit form in a new tab.
+  Transaction cards are now real links instead of buttons
+- In an edit or new transaction form opened in a new tab from Ouriva,
+  Save, Cancel and Delete close the tab and return you to the list. If
+  the browser refuses to close it, the tab shows the transactions list
+  instead
+- Each release now publishes ready-made Docker images for amd64 and
+  arm64: `ghcr.io/ouriva/ouriva` (the app) and
+  `ghcr.io/ouriva/ouriva-migrate` (applies database migrations), with
+  signed build provenance. Self-hosters can pull instead of building
+- "Open in GitHub Codespaces" instant demo: a ready-to-use dev
+  environment with sample data, from the README
+
+### Fixed
+- After deleting a transaction, you return to the page you came from
+  (e.g. your filtered list) and pressing Back no longer reopens the
+  deleted transaction's page (404)
+- After a successful request, the Save and Delete buttons no longer
+  re-enable themselves while the page is leaving, which could send a
+  duplicate request; Cancel is disabled while a save is in flight
+- Import review: each row's +/- and color now follow the transaction
+  type you selected, matching the "After import" balance, instead of
+  the raw sign in the file
+- `npx prisma db seed` works again on a fresh database (it still set a
+  setting that a migration had removed)
+
+### Changed
+- Self-hosting: `docker-compose.yml` now runs the app and Postgres
+  together. The previous file, for an existing external Postgres, is
+  now `docker-compose.external-db.yml`: if you used it, pass
+  `-f docker-compose.external-db.yml`
+- Self-hosters can leave feedback in GitHub Discussions (README)
+- Bumped minor and patch dependencies, including next 16.2.12 → 16.3.3
+
+### Security
+- next 16.3.3 fixes two critical vulnerabilities in 16.3.2 (insecure
+  automated optimizations, directory traversal)
+- Patched transitive vulnerabilities in dev tooling (nanoid, hono,
+  js-yaml, undici and others) through npm overrides; none affect the
+  running app
+
+---
+
 ## [1.23.2] — 2026-07-01
 
 ### Security

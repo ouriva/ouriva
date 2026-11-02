@@ -55,6 +55,45 @@ interface NetCategoryBreakdownProps {
   totalCashflow: number;
 }
 
+// sign is -1 for expenses (they subtract from the net) and 1 for income
+function toNetEntry(cat: CategoryItem, sign: 1 | -1): NetEntry {
+  return {
+    id: cat.id,
+    name: cat.name,
+    net: sign * cat.total,
+    children: cat.children.map((c) => ({ id: c.id, name: c.name, net: sign * c.total })),
+  };
+}
+
+function addIncomeInto(entry: NetEntry, cat: CategoryItem) {
+  entry.net += cat.total;
+  const childMap = new Map(entry.children.map((c) => [c.id, c]));
+  for (const child of cat.children) {
+    const existing = childMap.get(child.id);
+    if (existing) existing.net += child.total;
+    else childMap.set(child.id, { id: child.id, name: child.name, net: child.total });
+  }
+  entry.children = Array.from(childMap.values());
+}
+
+// Build a unified list keyed by category ID, largest net first.
+function mergeNetCategories(expenseCategories: CategoryItem[], incomeCategories: CategoryItem[]): NetEntry[] {
+  const map = new Map(expenseCategories.map((cat) => [cat.id, toNetEntry(cat, -1)]));
+
+  for (const cat of incomeCategories) {
+    const entry = map.get(cat.id);
+    if (entry) addIncomeInto(entry, cat);
+    else map.set(cat.id, toNetEntry(cat, 1));
+  }
+
+  return Array.from(map.values())
+    .map((cat) => ({
+      ...cat,
+      children: cat.children.toSorted((a, b) => Math.abs(b.net) - Math.abs(a.net)),
+    }))
+    .toSorted((a, b) => Math.abs(b.net) - Math.abs(a.net));
+}
+
 export function NetCategoryBreakdown({
   expenseCategories,
   incomeCategories,
@@ -63,48 +102,10 @@ export function NetCategoryBreakdown({
   const t = useTranslations("summary");
   const locale = useLocale();
 
-  // Build a unified map keyed by category ID.
-  // Expenses subtract from the net; income adds to it.
-  const merged = useMemo<NetEntry[]>(() => {
-    const map = new Map<string, NetEntry>();
-
-    for (const cat of expenseCategories) {
-      const childMap = new Map<string, { id: string; name: string; net: number }>();
-      for (const child of cat.children) {
-        childMap.set(child.id, { id: child.id, name: child.name, net: -child.total });
-      }
-      map.set(cat.id, { id: cat.id, name: cat.name, net: -cat.total, children: Array.from(childMap.values()) });
-    }
-
-    for (const cat of incomeCategories) {
-      if (map.has(cat.id)) {
-        const entry = map.get(cat.id)!;
-        entry.net += cat.total;
-        const childMap = new Map(entry.children.map((c) => [c.id, c]));
-        for (const child of cat.children) {
-          if (childMap.has(child.id)) {
-            childMap.get(child.id)!.net += child.total;
-          } else {
-            childMap.set(child.id, { id: child.id, name: child.name, net: child.total });
-          }
-        }
-        entry.children = Array.from(childMap.values());
-      } else {
-        const childMap = new Map<string, { id: string; name: string; net: number }>();
-        for (const child of cat.children) {
-          childMap.set(child.id, { id: child.id, name: child.name, net: child.total });
-        }
-        map.set(cat.id, { id: cat.id, name: cat.name, net: cat.total, children: Array.from(childMap.values()) });
-      }
-    }
-
-    return Array.from(map.values())
-      .map((cat) => ({
-        ...cat,
-        children: cat.children.toSorted((a, b) => Math.abs(b.net) - Math.abs(a.net)),
-      }))
-      .toSorted((a, b) => Math.abs(b.net) - Math.abs(a.net));
-  }, [expenseCategories, incomeCategories]);
+  const merged = useMemo(
+    () => mergeNetCategories(expenseCategories, incomeCategories),
+    [expenseCategories, incomeCategories]
+  );
 
   if (merged.length === 0) {
     return (

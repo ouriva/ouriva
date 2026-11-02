@@ -6,10 +6,15 @@
 // For split transactions, each split is shown as its own sub-row
 // below the main row, so the user can see exactly how much was
 // allocated to each category without opening the edit form.
+//
+// The card is a real link (<a> via next/link) rather than a <button>
+// with router.push: the browser then natively supports Cmd/Ctrl+click,
+// middle-click and "Open in new tab" to edit a transaction in a new tab.
 
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { ArrowDownLeft, ArrowUpRight, TriangleAlert, CircleDot, Split } from "lucide-react";
 import { formatCurrency } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -19,7 +24,7 @@ import { useTranslations, useLocale } from "next-intl";
 
 interface TransactionCardProps {
   transaction: TransactionWithRelations;
-  onClick?: () => void;
+  href: string;
 }
 
 // Map transaction types to visual properties.
@@ -52,17 +57,14 @@ function splitCategoryName(
     : split.category.name;
 }
 
-export function TransactionCard({ transaction, onClick }: Readonly<TransactionCardProps>) {
+export function TransactionCard({ transaction, href }: Readonly<TransactionCardProps>) {
   const t = useTranslations("transactions");
   const locale = useLocale();
   // TRANSFER direction is encoded in the category name:
   // "Transfer In" → INCOME styling (money arriving), anything else → EXPENSE styling.
-  const config =
-    transaction.type === "TRANSFER"
-      ? transaction.category?.name === "Transfer In"
-        ? typeConfig.INCOME
-        : typeConfig.EXPENSE
-      : typeConfig[transaction.type];
+  const transferConfig =
+    transaction.category?.name === "Transfer In" ? typeConfig.INCOME : typeConfig.EXPENSE;
+  const config = transaction.type === "TRANSFER" ? transferConfig : typeConfig[transaction.type];
   const Icon = config.icon;
   const currency = transaction.fromAccount.currency;
   const displayAmount = Number(transaction.amount);
@@ -101,9 +103,13 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
   }
 
   return (
-    <button
-      onClick={onClick}
-      className="w-full rounded-lg p-3 text-left transition-colors hover:bg-muted/50 active:bg-muted"
+    // prefetch={false}: a long list would otherwise prefetch one edit
+    // route per card as it scrolls into view. The edit page is rendered
+    // on the server per request, so prefetching saves little.
+    <Link
+      href={href}
+      prefetch={false}
+      className="block w-full rounded-lg p-3 text-left transition-colors hover:bg-muted/50 active:bg-muted"
     >
       {/* ── Main row ── */}
       <div className="flex items-center gap-3">
@@ -172,6 +178,6 @@ export function TransactionCard({ transaction, onClick }: Readonly<TransactionCa
           ))}
         </div>
       )}
-    </button>
+    </Link>
   );
 }

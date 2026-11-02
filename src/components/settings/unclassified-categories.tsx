@@ -36,7 +36,8 @@ function computeUnclassified(categories: Category[]): CategoryListRow[] {
   for (const c of categories) {
     if (c.parentId) {
       const parent = byId.get(c.parentId);
-      if (c.bucket === null && (!parent || parent.bucket === null)) {
+      // !parent?.bucket: no parent, or the parent has no bucket either
+      if (c.bucket === null && !parent?.bucket) {
         rows.push({ id: c.id, name: c.name, parentName: parent?.name ?? null });
       }
     } else {
@@ -67,7 +68,7 @@ export function UnclassifiedCategories({ enabled, splitLabel }: Readonly<{ enabl
         setRows(computeUnclassified(json.data as Category[]));
       }
     }
-    load();
+    void load();
   }, []);
 
   useEffect(() => {

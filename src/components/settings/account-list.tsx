@@ -88,7 +88,7 @@ export function AccountList({ pageTitle, pageDescription }: Readonly<AccountList
       }
       setIsLoading(false);
     }
-    load();
+    void load();
     return () => { cancelled = true; };
   }, [refreshKey]);
 

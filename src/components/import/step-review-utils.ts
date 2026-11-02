@@ -65,3 +65,28 @@ export function parseAmount(value: string): number {
 
   return Number.parseFloat(cleaned) || 0;
 }
+
+/**
+ * Resolve whether a transaction increases (+1) or decreases (-1) an
+ * account's balance, given its type and — for TRANSFER rows — the
+ * name of the selected category.
+ *
+ * Transaction amounts are always positive in this app; direction comes
+ * from `type` (INCOME / EXPENSE), never from the sign of the source
+ * amount. TRANSFER direction is encoded by category: "Transfer In"
+ * (money arriving) vs. "Transfer Out" (money leaving). `fallbackRawAmount`
+ * is only used for an uncategorized TRANSFER row, before the user has
+ * picked a direction.
+ */
+export function resolveDirectionSign(
+  type: "INCOME" | "EXPENSE" | "TRANSFER",
+  categoryName: string | undefined,
+  fallbackRawAmount: number
+): 1 | -1 {
+  if (type === "TRANSFER") {
+    if (categoryName === "Transfer In") return 1;
+    if (categoryName === "Transfer Out") return -1;
+    return fallbackRawAmount >= 0 ? 1 : -1;
+  }
+  return type === "INCOME" ? 1 : -1;
+}
