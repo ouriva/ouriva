@@ -40,7 +40,7 @@ export function CopyPreviousYearButton({ year, onCopied }: Readonly<CopyPrevious
   }, [prevYear]);
 
   useEffect(() => {
-    checkExists();
+    void checkExists();
   }, [checkExists]);
 
   async function handleClick() {
@@ -72,13 +72,19 @@ export function CopyPreviousYearButton({ year, onCopied }: Readonly<CopyPrevious
   if (isDisabled) {
     return (
       <Tooltip>
+        {/* aria-disabled instead of disabled: a disabled button gets no
+            pointer or focus events, so the tooltip explaining why could
+            never open. This one stays focusable and has no onClick. */}
         <TooltipTrigger asChild>
-          <span tabIndex={0} className="inline-flex">
-            <Button variant="outline" size="sm" disabled>
-              <Copy className="mr-2 h-4 w-4" />
-              {t("copyButton", { year: prevYear })}
-            </Button>
-          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            aria-disabled="true"
+            className="cursor-not-allowed opacity-50"
+          >
+            <Copy className="mr-2 h-4 w-4" />
+            {t("copyButton", { year: prevYear })}
+          </Button>
         </TooltipTrigger>
         {!isCheckingExists && (
           <TooltipContent side="bottom">

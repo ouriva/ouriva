@@ -62,12 +62,9 @@ export function TransactionCard({ transaction, href }: Readonly<TransactionCardP
   const locale = useLocale();
   // TRANSFER direction is encoded in the category name:
   // "Transfer In" → INCOME styling (money arriving), anything else → EXPENSE styling.
-  const config =
-    transaction.type === "TRANSFER"
-      ? transaction.category?.name === "Transfer In"
-        ? typeConfig.INCOME
-        : typeConfig.EXPENSE
-      : typeConfig[transaction.type];
+  const transferConfig =
+    transaction.category?.name === "Transfer In" ? typeConfig.INCOME : typeConfig.EXPENSE;
+  const config = transaction.type === "TRANSFER" ? transferConfig : typeConfig[transaction.type];
   const Icon = config.icon;
   const currency = transaction.fromAccount.currency;
   const displayAmount = Number(transaction.amount);

@@ -263,7 +263,7 @@ export function TransactionForm({ initialData, onSuccess }: Readonly<Transaction
         setDefaultCurrency(def ? { code: def.code } : null);
       }
     }
-    loadData();
+    void loadData();
   }, []);
 
   // Form submission handler.

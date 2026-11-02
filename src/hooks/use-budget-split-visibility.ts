@@ -59,7 +59,9 @@ export function useBudgetSplitVisibility(): BudgetSplitSettings {
             SAVINGS: json.data.savingsTarget ?? DEFAULT_TARGETS.SAVINGS,
           },
         });
-      });
+      })
+      // On a network failure keep the defaults, the same as a non-OK response
+      .catch(() => {});
 
     return () => { cancelled = true; };
   }, []);

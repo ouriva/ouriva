@@ -22,6 +22,7 @@
 //   far fewer data points — never wasteful even for "ALL" time ranges.
 
 import { NextResponse } from "next/server";
+import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getDefaultCurrency } from "@/lib/default-currency";
 import { fetchTodayRate } from "@/lib/exchange-rate";
@@ -29,10 +30,10 @@ import { subMonths, format } from "date-fns";
 
 export type Period = "1m" | "3m" | "6m" | "1y" | "all";
 
-const VALID_PERIODS: Period[] = ["1m", "3m", "6m", "1y", "all"];
+const VALID_PERIODS: ReadonlySet<string> = new Set<Period>(["1m", "3m", "6m", "1y", "all"]);
 
 function parsePeriod(raw: string | null): Period {
-  if (raw && VALID_PERIODS.includes(raw as Period)) return raw as Period;
+  if (raw && VALID_PERIODS.has(raw)) return raw as Period;
   return "1y";
 }
 
@@ -45,6 +46,88 @@ function periodStartDate(period: Period, earliestTxDate: Date | null): Date {
     "1y": 12,
   };
   return subMonths(new Date(), months[period]);
+}
+
+interface BalanceAccount {
+  id: string;
+  currency: { code: string };
+}
+
+interface BalanceTransaction {
+  type: string;
+  amount: Prisma.Decimal;
+  fromAccountId: string;
+  date: Date;
+}
+
+const dayKey = (date: Date) => format(new Date(date), "yyyy-MM-dd");
+
+// Today's rate into the default currency for every account currency.
+// fetchTodayRate uses a module-scope cache so duplicate pairs cost
+// nothing extra within the same request.
+async function fetchRates(accounts: BalanceAccount[], defaultCode: string) {
+  const foreignCurrencyCodes = [
+    ...new Set(
+      accounts
+        .filter((a) => a.currency.code !== defaultCode)
+        .map((a) => a.currency.code)
+    ),
+  ];
+  const rateMap = new Map<string, number>();
+  rateMap.set(defaultCode, 1);
+  await Promise.all(
+    foreignCurrencyCodes.map(async (code) => {
+      try {
+        const rate = await fetchTodayRate(code, defaultCode);
+        rateMap.set(code, rate);
+      } catch {
+        // Skip accounts in this currency if rate fetch fails — same
+        // resilience pattern as /api/accounts/balances.
+      }
+    })
+  );
+  return rateMap;
+}
+
+// The sorted chart dates:
+//   • Anchor: start-of-period (always present so the chart has a left edge)
+//   • One entry per transaction date within [start, today]
+function targetDates(transactions: BalanceTransaction[], startDateStr: string, todayStr: string) {
+  const dateSet = new Set<string>();
+  dateSet.add(startDateStr);
+  for (const tx of transactions) {
+    const txDateStr = dayKey(tx.date);
+    if (txDateStr >= startDateStr && txDateStr <= todayStr) {
+      dateSet.add(txDateStr);
+    }
+  }
+  return Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+}
+
+function applyTransaction(runningBalance: Map<string, number>, tx: BalanceTransaction) {
+  const current = runningBalance.get(tx.fromAccountId) ?? 0;
+  const amount = Number(tx.amount);
+  if (tx.type === "INCOME") {
+    runningBalance.set(tx.fromAccountId, current + amount);
+  } else if (tx.type === "EXPENSE") {
+    runningBalance.set(tx.fromAccountId, current - amount);
+  }
+}
+
+// Sum all account balances converted to the default currency.
+function totalNetWorth(
+  accounts: BalanceAccount[],
+  runningBalance: Map<string, number>,
+  rateMap: Map<string, number>
+) {
+  let netWorth = 0;
+  for (const account of accounts) {
+    const balance = runningBalance.get(account.id) ?? 0;
+    const rate = rateMap.get(account.currency.code);
+    if (rate === undefined) continue;
+    netWorth += balance * rate;
+  }
+  return Math.round(netWorth * 100) / 100;
 }
 
 export async function GET(request: Request) {
@@ -79,28 +162,7 @@ export async function GET(request: Request) {
     }
 
     // Fetch today's FX rates once for all foreign-currency accounts.
-    // fetchTodayRate uses a module-scope cache so duplicate pairs cost
-    // nothing extra within the same request.
-    const foreignCurrencyCodes = [
-      ...new Set(
-        accounts
-          .filter((a) => a.currency.code !== defaultCurrency.code)
-          .map((a) => a.currency.code)
-      ),
-    ];
-    const rateMap = new Map<string, number>();
-    rateMap.set(defaultCurrency.code, 1);
-    await Promise.all(
-      foreignCurrencyCodes.map(async (code) => {
-        try {
-          const rate = await fetchTodayRate(code, defaultCurrency.code);
-          rateMap.set(code, rate);
-        } catch {
-          // Skip accounts in this currency if rate fetch fails — same
-          // resilience pattern as /api/accounts/balances.
-        }
-      })
-    );
+    const rateMap = await fetchRates(accounts, defaultCurrency.code);
 
     // Determine the period window.
     const earliestTxDate =
@@ -110,18 +172,7 @@ export async function GET(request: Request) {
     const startDateStr = format(startDate, "yyyy-MM-dd");
     const todayStr = format(today, "yyyy-MM-dd");
 
-    // Collect the sorted set of target dates:
-    //   • Anchor: start-of-period (always present so the chart has a left edge)
-    //   • One entry per transaction date within [start, today]
-    const dateSet = new Set<string>();
-    dateSet.add(startDateStr);
-    for (const tx of allTransactions) {
-      const txDateStr = format(new Date(tx.date), "yyyy-MM-dd");
-      if (txDateStr >= startDateStr && txDateStr <= todayStr) {
-        dateSet.add(txDateStr);
-      }
-    }
-    const sortedDates = Array.from(dateSet).sort((a, b) => a.localeCompare(b));
+    const sortedDates = targetDates(allTransactions, startDateStr, todayStr);
 
     // Single-pass: walk transactions once in date order, snapshot net
     // worth at each target date. We include ALL transactions (not just
@@ -140,36 +191,18 @@ export async function GET(request: Request) {
       // for chronological ordering.
       while (txIndex < allTransactions.length) {
         const tx = allTransactions[txIndex];
-        const txDateStr = format(new Date(tx.date), "yyyy-MM-dd");
-        if (txDateStr > dateStr) break;
-
-        const current = runningBalance.get(tx.fromAccountId) ?? 0;
-        const amount = Number(tx.amount);
-        if (tx.type === "INCOME") {
-          runningBalance.set(tx.fromAccountId, current + amount);
-        } else if (tx.type === "EXPENSE") {
-          runningBalance.set(tx.fromAccountId, current - amount);
-        }
+        if (dayKey(tx.date) > dateStr) break;
+        applyTransaction(runningBalance, tx);
         txIndex++;
-      }
-
-      // Sum all account balances converted to the default currency.
-      let netWorth = 0;
-      for (const account of accounts) {
-        const balance = runningBalance.get(account.id) ?? 0;
-        const rate = rateMap.get(account.currency.code);
-        if (rate === undefined) continue;
-        netWorth += balance * rate;
       }
 
       data.push({
         date: dateStr,
-        netWorth: Math.round(netWorth * 100) / 100,
+        netWorth: totalNetWorth(accounts, runningBalance, rateMap),
       });
     }
 
-    const currentNetWorth =
-      data.length > 0 ? data[data.length - 1].netWorth : null;
+    const currentNetWorth = data.at(-1)?.netWorth ?? null;
 
     return NextResponse.json({
       data,
